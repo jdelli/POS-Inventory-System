@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Styles for printing the receipt */
+@media print {
+  /* Hide all elements with class `no-print` */
+  .no-print {
+    display: none;
+  }
+
+  /* Ensure receipt content is visible for printing */
+  body * {
+    visibility: hidden;
+  }
+  
+  .receipt-content, .receipt-content * {
+    visibility: visible;
+  }
+
+  .receipt-content {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background-color: white;
+  }
+
+  /* Limit the content height to fit into a single page */
+  .receipt-content {
+    height: 100vh; /* Viewport height to limit to one page */
+    overflow: hidden; /* Prevent overflow onto multiple pages */
+  }
+
+  /* Styling for printed receipt */
+  table {
+    font-size: 10px; /* Reduce font size to fit content */
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  table, th, td {
+    border: 1px solid black;
+  }
+
+  th, td {
+    padding: 3px; /* Reduce padding to fit more content */
+  }
+
+  /* Remove background and shadows for cleaner print */
+  .bg-gray-500 {
+    background-color: white !important;
+  }
+
+  .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  /* Reduce margins and padding to maximize space */
+  h2, p {
+    margin: 0;
+    padding: 0;
+    font-size: 12px; /* Reduce heading and text size */
+  }
+
+  /* Prevent page breaks inside the receipt content */
+  .receipt-content {
+    page-break-inside: avoid;
+  }
+}
+
+
+
+

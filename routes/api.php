@@ -1,0 +1,46 @@
+<?php
+
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\ProductsApiController;
+use App\Http\Controllers\Api\SalesOrderApiController;
+
+Route::get('/user', function (Request $request) {
+    return $request->user();
+})->middleware('auth:sanctum');
+
+
+
+// For Products
+Route::post("/add-products", [ProductsApiController::class, "addProduct"]);
+Route::get("/fetch-products", [ProductsApiController::class, "fetchProducts"]);
+Route::put("/edit-products/{id}", [ProductsApiController::class, "updateProduct"]);
+Route::delete("/delete-products/{id}", [ProductsApiController::class, "deleteProduct"]);
+
+
+Route::post('/add-quantity', [ProductsApiController::class, 'AddQuantity']);
+Route::post('/deduct-quantity', [ProductsApiController::class, 'deductQuantity']);
+Route::get('/search-products', [ProductsApiController::class, 'search']);
+Route::get('/get-total-products', [ProductsApiController::class, 'getTotalProducts']);
+
+
+
+
+
+// For Sales Order
+Route::post('/add-sales-order', [SalesOrderApiController::class, 'addSalesOrder']);
+Route::get('/fetch-sales-orders', [SalesOrderApiController::class, 'getSalesOrders']);
+Route::get('/get-monthly-sales', [SalesOrderApiController::class, 'getMonthlySales']);
+Route::get('/get-total-clients', [SalesOrderApiController::class, 'getTotalClients']);
+
+
+
+
+
+
+//Delivery Receipt
+Route::post('/add-delivery-receipt', [SalesOrderApiController::class, 'addDeliveryReceipt']);
+Route::get('/fetch-delivery-receipts', [SalesOrderApiController::class, 'getDeliveryReceipts']);
+
+
+
