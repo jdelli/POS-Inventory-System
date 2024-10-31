@@ -147,6 +147,16 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, refres
                   />
                 </div>
 
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Date</label>
+                  <input
+                    type="date"
+           
+                    className="border border-gray-300 p-2 w-full rounded"
+                    required
+                  />
+                </div>
+
             <div className="max-h-60 overflow-y-auto flex-grow mt-5 mb-1">
               {receiptItems.map((item, index) => (
                 <div key={index} className="flex space-x-4 mb-4">
