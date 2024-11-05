@@ -4,7 +4,7 @@ import { Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import EditProductModal from './Props/Edit';
 import AddProductModal from './Props/Add';
-import AddStocks from './Props/AddStocks';
+
 
 interface Product {
   id: number;
@@ -143,7 +143,6 @@ const ProductTable: React.FC = () => {
             setFilterCategory={setFilterCategory}
           />
           <div className="flex space-x-2">
-            <button onClick={() => setIsAddStocksModalOpen(true)} className="btn btn-green">Add Stocks</button>
             <button onClick={() => setIsAddModalOpen(true)} className="btn btn-blue">Add Product</button>
           </div>
         </div>
@@ -204,11 +203,7 @@ const ProductTable: React.FC = () => {
           closeModal={() => setIsAddModalOpen(false)}
           refreshProducts={() => fetchProducts(currentPage)}
         />
-        <AddStocks
-          showModal={isAddStocksModalOpen}
-          closeModal={() => setIsAddStocksModalOpen(false)}
-          refreshProducts={() => fetchProducts(currentPage)}
-        />
+        
       </div>
     </AuthenticatedLayout>
   );

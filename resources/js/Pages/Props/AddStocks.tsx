@@ -13,25 +13,33 @@ interface Item {
   name: string;
   price: number;
   quantity: number;
-  
 }
 
 interface AddStockModalProps {
   showModal: boolean;
   closeModal: () => void;
-  refreshProducts: () => void;
+  onSuccess: () => void;  
+  
 }
 
-const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, refreshProducts }) => {
+const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSuccess }) => {
   const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0 }]);
-  const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]); // Each row has its own suggestions
-  const [searchTerms, setSearchTerms] = useState<string[]>(['']); // Each row has its own search term
+  const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
+  const [searchTerms, setSearchTerms] = useState<string[]>(['']);
+
+  // New state for additional fields
+  const [deliveryNumber, setDeliveryNumber] = useState('');
+  const [deliveredBy, setDeliveredBy] = useState('');
+  const [date, setDate] = useState('');
 
   const closeAddStocksModal = () => {
     closeModal();
-    setReceiptItems([{ name: '', price: 0, quantity: 0 }]); // Reset receipt items on close
-    setProductSuggestions([]); // Clear suggestions
-    setSearchTerms(['']); // Clear search terms
+    setReceiptItems([{ name: '', price: 0, quantity: 0 }]);
+    setProductSuggestions([]);
+    setSearchTerms(['']);
+    setDeliveryNumber('');
+    setDeliveredBy('');
+    setDate('');
   };
 
   const handleItemChange = (index: number, field: string, value: string | number) => {
@@ -43,31 +51,50 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, refres
 
   const addReceiptItem = () => {
     setReceiptItems([...receiptItems, { name: '', price: 0, quantity: 0 }]);
-    setProductSuggestions([...productSuggestions, []]); // Add new empty suggestion array
-    setSearchTerms([...searchTerms, '']); // Add new empty search term
+    setProductSuggestions([...productSuggestions, []]);
+    setSearchTerms([...searchTerms, '']);
   };
 
-  // Function to send the sales order data to the backend
   const submitAddStocks = async () => {
+    const itemsPayload = receiptItems.map((item) => ({
+      product_name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+    }));
+  
+    const payload = {
+      delivery_number: deliveryNumber,
+      delivered_by: deliveredBy,
+      date,
+      items: itemsPayload,
+    };
+  
     try {
-      // Send each item to the backend to deduct the quantity
-      for (const item of receiptItems) {
-        await apiService.post('/add-quantity', {
-          name: item.name,
-          quantity: item.quantity,
-        });
+      const response = await apiService.post('/add-delivery-receipt', payload);
+  
+      // Check if the initial submission was successful
+      if (response.data.success) {
+        for (const item of itemsPayload) {
+          await apiService.post('/add-quantity', {
+            name: item.product_name,
+            quantity: item.quantity,
+          });
+        }
+        alert('Sales order submitted successfully!');
+        
+        closeAddStocksModal();
+      } else {
+        alert('Error submitting the sales order.');
       }
-      alert('Sales order submitted successfully!');
-      refreshProducts();
-      closeModal(); // Close the modal after successful submission
-      setReceiptItems([{ name: '', price: 0, quantity: 0 }]); // Reset receipt items
     } catch (error) {
-      console.error('Error deducting quantity:', error);
-      alert('Error submitting the sales order.');
+      console.error('Error submitting stocks:', error);
+      alert('An error occurred while submitting the stocks.');
     }
+    onSuccess();
   };
+  
+  
 
-  // Fetch product suggestions for each row based on the search term
   useEffect(() => {
     searchTerms.forEach((term, index) => {
       if (term.length > 0) {
@@ -83,7 +110,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, refres
           });
       } else {
         const updatedSuggestions = [...productSuggestions];
-        updatedSuggestions[index] = []; // Clear suggestions if the search term is empty
+        updatedSuggestions[index] = [];
         setProductSuggestions(updatedSuggestions);
       }
     });
@@ -102,18 +129,18 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, refres
         ? {
             ...item,
             name: product.name,
-            price: product.price, // Set price from the selected product
+            price: product.price,
           }
         : item
     );
     setReceiptItems(updatedItems);
 
     const updatedSearchTerms = [...searchTerms];
-    updatedSearchTerms[index] = ''; // Clear search term after selecting a suggestion
+    updatedSearchTerms[index] = '';
     setSearchTerms(updatedSearchTerms);
 
     const updatedSuggestions = [...productSuggestions];
-    updatedSuggestions[index] = []; // Clear suggestions after selection
+    updatedSuggestions[index] = [];
     setProductSuggestions(updatedSuggestions);
   };
 
@@ -128,34 +155,41 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, refres
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl h-full flex flex-col">
             <h2 className="text-lg font-bold mb-4">Add Stocks</h2>
-            <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Delivery Number:</label>
-                  <input
-                    type="text"
-                    className="border border-gray-300 p-2 w-full rounded"
-                    placeholder="Receipt Number"
-                    required
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Delivered By:</label>
-                  <input
-                    type="text"
-                    className="border border-gray-300 p-2 w-full rounded"
-                    placeholder="Receipt Number"
-                    required
-                  />
-                </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium mb-1">Date</label>
-                  <input
-                    type="date"
-           
-                    className="border border-gray-300 p-2 w-full rounded"
-                    required
-                  />
-                </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Delivery Number:</label>
+              <input
+                type="text"
+                value={deliveryNumber}
+                onChange={(e) => setDeliveryNumber(e.target.value)}
+                className="border border-gray-300 p-2 w-full rounded"
+                placeholder="Delivery Number"
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Delivered By:</label>
+              <input
+                type="text"
+                value={deliveredBy}
+                onChange={(e) => setDeliveredBy(e.target.value)}
+                className="border border-gray-300 p-2 w-full rounded"
+                placeholder="Delivered By"
+                required
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="border border-gray-300 p-2 w-full rounded"
+                required
+              />
+            </div>
 
             <div className="max-h-60 overflow-y-auto flex-grow mt-5 mb-1">
               {receiptItems.map((item, index) => (
@@ -169,7 +203,6 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, refres
                       className="border border-gray-300 p-2 w-full rounded"
                       placeholder="Item name"
                     />
-                    {/* Dropdown for product suggestions */}
                     {productSuggestions[index]?.length > 0 && (
                       <ul className="absolute z-10 bg-white border border-gray-300 w-full mt-1 max-h-40 overflow-y-auto">
                         {productSuggestions[index].map((product) => (

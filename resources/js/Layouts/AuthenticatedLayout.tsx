@@ -40,20 +40,34 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                         >
                             Products
                         </NavLink>
-                        <NavLink
-                            href={route('stocks')}
-                            active={route().current('stocks')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Manage Stocks
-                        </NavLink>
-                        <NavLink
-                            href={route('test')}
-                            active={route().current('test')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Test
-                        </NavLink>
+                        
+                        {/* Manage Stocks with Dropdown */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
+                                className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white w-full"
+                            >
+                                Manage Stocks
+                            </button>
+                            {showingNavigationDropdown && (
+                                <div className="ml-4 mt-1 bg-gray-700 rounded-md shadow-lg">
+                                    <NavLink
+                                        href={route('stocks')}
+                                        active={route().current('stocks')}
+                                        className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
+                                    >
+                                        Stock Overview
+                                    </NavLink>
+                                    <NavLink
+                                        href={route('stocksentries')}
+                                        active={route().current('stocksentries')}
+                                        className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
+                                    >
+                                        Stock Entries
+                                    </NavLink>
+                                </div>
+                            )}
+                        </div>
                     </nav>
                 </div>
             </aside>

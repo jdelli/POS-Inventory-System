@@ -41,9 +41,9 @@ Route::get('/manage-stocks', function () {
 
 
 
-Route::get('/test', function () {
-    return Inertia::render('Test/Test');
-})->name('test');
+Route::get('/stocksentries', function () {
+    return Inertia::render('StockEntries');
+})->name('stocksentries');
 
 
 

@@ -12,11 +12,12 @@ class DeliveryItems extends Model
     protected $fillable = [
         'delivery_receipts_id',
         'product_name',
+        'quantity',
         'date',
     ];
 
     public function deliveryReceipts()
     {
-        return $this->belongsTo(DeliveryReceipts::class);
+        return $this->belongsTo(DeliveryReceipt::class);
     }
 }

@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductsApiController;
 use App\Http\Controllers\Api\SalesOrderApiController;
+use App\Http\Controllers\Api\DeliveryReceiptsApiController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -39,8 +40,9 @@ Route::get('/get-total-clients', [SalesOrderApiController::class, 'getTotalClien
 
 
 //Delivery Receipt
-Route::post('/add-delivery-receipt', [SalesOrderApiController::class, 'addDeliveryReceipt']);
-Route::get('/fetch-delivery-receipts', [SalesOrderApiController::class, 'getDeliveryReceipts']);
+Route::post('/add-delivery-receipt', [DeliveryReceiptsApiController::class, 'addDeliveryReceipt']);
+Route::get('/fetch-delivery-receipts', [DeliveryReceiptsApiController::class, 'getDeliveryReceipts']);
+
 
 
 
