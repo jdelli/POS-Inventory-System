@@ -271,16 +271,16 @@ const InventoryManagement: React.FC = () => {
         <table className="min-w-full border">
           <thead>
             <tr>
-              <th className="border p-2">Client Name</th>
-              <th className="border p-2">Receipt Number</th>
-              <th className="border p-2">Date</th>
-              <th className="border p-2">Items</th>
-              <th className="border p-2">Actions</th>
+              <th className="border p-2 bg-gray-300">Client Name</th>
+              <th className="border p-2 bg-gray-300">Receipt Number</th>
+              <th className="border p-2 bg-gray-300">Date</th>
+              <th className="border p-2 bg-gray-300">Items</th>
+              <th className="border p-2 bg-gray-300">Actions</th>
             </tr>
           </thead>
           <tbody>
              {filteredOrders.map((order) => (
-              <tr key={order.id}>
+              <tr key={order.id} className="border-b hover:bg-gray-200">
                 <td className="border p-2">{order.customer_name}</td>
                 <td className="border p-2">{order.receipt_number}</td>
                 <td className="border p-2">{formatDate(order.date)}</td>

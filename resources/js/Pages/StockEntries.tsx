@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import ViewItemsModal from './Props/ViewDelivery';
 import AddStocks from './Props/AddStocks';
@@ -16,36 +17,39 @@ interface StockEntry {
   delivery_number: string;
   delivered_by: string;
   date: string;
-  items: DeliveryItem[]; // Include items in the StockEntry interface
+  items: DeliveryItem[];
 }
 
 const StockEntriesTable: React.FC = () => {
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10); // Default items per page
+  const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // State for selected month
   const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState<boolean>(false);
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
 
-  // Fetch stock entries data with pagination
-  const fetchStockEntries = async () => {
+  // Fetch stock entries data with pagination and sorting by date
+  const fetchDeliveryReceipts = async () => {
     setLoading(true);
     try {
-      const response = await apiService.get(`/fetch-delivery-receipts?page=${page}&per_page=${limit}`);
+      let url = `/fetch-delivery-receipts?sort_by=date&page=${page}&limit=${limit}`;
+      if (selectedMonth !== null) {
+        url += `&month=${selectedMonth}`;
+      }
+      const response = await apiService.get(url);
       setStockEntries(response.data.deliveryReceipts);
-      setTotalPages(Math.ceil(response.data.total / limit)); // Calculate total pages
+      setTotalPages(response.data.last_page);
+      setLoading(false);
     } catch (error) {
-      console.error('Error fetching stock entries:', error);
-    } finally {
+      console.error('Error fetching delivery receipts:', error);
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchStockEntries();
-  }, [page, limit]);
+  
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -60,15 +64,41 @@ const StockEntriesTable: React.FC = () => {
     setModalOpen(true);
   };
 
-  // Function to refetch stock entries
+  // Callback to refetch stock entries after adding stocks
   const handleAddStocksSuccess = () => {
-    fetchStockEntries(); // Refetch stock entries
+    fetchDeliveryReceipts();
   };
 
+  // Initial data fetch and fetch on sorting or page/limit change
+  useEffect(() => {
+    fetchDeliveryReceipts();
+  }, [ page, limit, selectedMonth]); // Add selectedMonth as a dependency
+
   return (
-    <AuthenticatedLayout>
+    <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stocks Entries</h2>}>
+      <Head title="Stock Entries" />
       <div className="p-4">
-        <h1 className="text-xl font-bold mb-4">Stock Entries</h1>
+      
+        
+      
+
+        {/* Month Filter */}
+        <div className="mb-1">
+          <label htmlFor="month" className="mr-2">Filter by Month:</label>
+          <select
+            id="month"
+            value={selectedMonth ?? ''}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="border px-2 py-1 rounded"
+          >
+            <option value="">All Months</option>
+            {[...Array(12)].map((_, i) => (
+              <option key={i} value={i + 1}>
+                {new Date(0, i).toLocaleString('default', { month: 'long' })}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Add Stocks Button */}
         <div className="mb-4 flex justify-end">
@@ -80,9 +110,10 @@ const StockEntriesTable: React.FC = () => {
           </button>
         </div>
 
+        {/* Stock Entries Table */}
         <div className="overflow-x-auto bg-white shadow-md rounded-lg">
           <table className="min-w-full table-auto border border-gray-200">
-            <thead className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+            <thead className="bg-gray-300 text-gray-600 uppercase text-sm leading-normal">
               <tr>
                 <th className="py-3 px-6 text-left">Delivery Receipt No.</th>
                 <th className="py-3 px-6 text-left">Delivered By</th>
@@ -97,7 +128,7 @@ const StockEntriesTable: React.FC = () => {
                 </tr>
               ) : stockEntries.length > 0 ? (
                 stockEntries.map((entry) => (
-                  <tr key={entry.id} className="border-b border-gray-200">
+                  <tr key={entry.id} className="border-b hover:bg-gray-200">
                     <td className="py-3 px-6">{entry.delivery_number}</td>
                     <td className="py-3 px-6">{entry.delivered_by}</td>
                     <td className="py-3 px-6">{new Date(entry.date).toLocaleDateString()}</td>
@@ -153,7 +184,7 @@ const StockEntriesTable: React.FC = () => {
       <AddStocks
         showModal={isAddStocksModalOpen}
         closeModal={() => setIsAddStocksModalOpen(false)}
-        onSuccess={handleAddStocksSuccess} // Pass the callback
+        onSuccess={handleAddStocksSuccess}
       />
     </AuthenticatedLayout>
   );

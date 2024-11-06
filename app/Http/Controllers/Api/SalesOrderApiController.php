@@ -57,7 +57,12 @@ class SalesOrderApiController extends Controller
     public function getSalesOrders(Request $request)
     {
         $perPage = $request->input('per_page', 10); // Get items per page from the request, default to 10
+        $month = $request->input('month');
         $salesOrders = SalesOrder::with('items')->paginate($perPage); // Eager load items and paginate
+        if ($month) {
+            // Filter by the specified month
+            $query->whereMonth('date', $month);
+        }
 
         return response()->json([
             'success' => true,

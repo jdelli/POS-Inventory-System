@@ -18,8 +18,7 @@ interface Item {
 interface AddStockModalProps {
   showModal: boolean;
   closeModal: () => void;
-  onSuccess: () => void;  
-  
+  onSuccess: () => void;
 }
 
 const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSuccess }) => {
@@ -27,7 +26,6 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
 
-  // New state for additional fields
   const [deliveryNumber, setDeliveryNumber] = useState('');
   const [deliveredBy, setDeliveredBy] = useState('');
   const [date, setDate] = useState('');
@@ -55,24 +53,27 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
     setSearchTerms([...searchTerms, '']);
   };
 
+  const removeReceiptItem = (index: number) => {
+    setReceiptItems((prevItems) => prevItems.filter((_, i) => i !== index));
+  };
+
   const submitAddStocks = async () => {
     const itemsPayload = receiptItems.map((item) => ({
       product_name: item.name,
       price: item.price,
       quantity: item.quantity,
     }));
-  
+
     const payload = {
       delivery_number: deliveryNumber,
       delivered_by: deliveredBy,
       date,
       items: itemsPayload,
     };
-  
+
     try {
       const response = await apiService.post('/add-delivery-receipt', payload);
-  
-      // Check if the initial submission was successful
+
       if (response.data.success) {
         for (const item of itemsPayload) {
           await apiService.post('/add-quantity', {
@@ -81,7 +82,6 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
           });
         }
         alert('Sales order submitted successfully!');
-        
         closeAddStocksModal();
       } else {
         alert('Error submitting the sales order.');
@@ -92,8 +92,6 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
     }
     onSuccess();
   };
-  
-  
 
   useEffect(() => {
     searchTerms.forEach((term, index) => {
@@ -125,13 +123,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
 
   const handleSuggestionClick = (index: number, product: InventoryItem) => {
     const updatedItems = receiptItems.map((item, i) =>
-      i === index
-        ? {
-            ...item,
-            name: product.name,
-            price: product.price,
-          }
-        : item
+      i === index ? { ...item, name: product.name, price: product.price } : item
     );
     setReceiptItems(updatedItems);
 
@@ -228,6 +220,15 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
                       placeholder="Quantity"
                     />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeReceiptItem(index)}
+                    className="text-red-500 hover:text-red-700"
+                    aria-label="Remove Item"
+                  >
+                    &times;
+                  </button>
                 </div>
               ))}
               <button onClick={addReceiptItem} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
