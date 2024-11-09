@@ -48,6 +48,14 @@ Route::get('/stocksentries', function () {
 
 
 
+Route::get('/quotation', function () {
+    return Inertia::render('Quotation');
+})->name('quotation');
+
+
+
+
+
 
 
 

@@ -55,24 +55,31 @@ class SalesOrderApiController extends Controller
 
 
     public function getSalesOrders(Request $request)
-    {
-        $perPage = $request->input('per_page', 10); // Get items per page from the request, default to 10
-        $month = $request->input('month');
-        $salesOrders = SalesOrder::with('items')->paginate($perPage); // Eager load items and paginate
-        if ($month) {
-            // Filter by the specified month
-            $query->whereMonth('date', $month);
-        }
+{
+    $perPage = $request->input('per_page', 10); // Get items per page from the request, default to 10
+    $month = $request->input('month');
+    
+    // Start the query
+    $query = SalesOrder::with('items');
 
-        return response()->json([
-            'success' => true,
-            'salesOrders' => $salesOrders->items(), // Get the current page items
-            'current_page' => $salesOrders->currentPage(), // Current page number
-            'per_page' => $salesOrders->perPage(), // Items per page
-            'last_page' => $salesOrders->lastPage(), // Last page number
-            'total' => $salesOrders->total(), // Total items
-        ]);
+    // Apply month filter if provided
+    if ($month) {
+        $query->whereMonth('date', $month);
     }
+
+    // Get paginated sales orders
+    $salesOrders = $query->paginate($perPage);
+
+    return response()->json([
+        'success' => true,
+        'salesOrders' => $salesOrders->items(), // Get the current page items
+        'current_page' => $salesOrders->currentPage(), // Current page number
+        'per_page' => $salesOrders->perPage(), // Items per page
+        'last_page' => $salesOrders->lastPage(), // Last page number
+        'total' => $salesOrders->total(), // Total items
+    ]);
+}
+
 
 
     public function getMonthlySales()

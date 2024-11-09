@@ -129,16 +129,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ showModal, closeMod
                   required
                 />
               </div>
-              <div className="mb-4">
-                <label className="block mb-1">Quantity</label>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="border rounded w-full p-2"
-                  required
-                />
-              </div>
               <div className="flex justify-end">
                 <button
                   type="button"

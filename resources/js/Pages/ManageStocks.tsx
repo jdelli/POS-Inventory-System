@@ -117,6 +117,9 @@ const ProductTable: React.FC = () => {
   };
 
   const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this product?')) {
+      return;
+    }
     try {
       await apiService.delete(`/delete-products/${id}`);
       fetchProducts(currentPage);
@@ -142,7 +145,7 @@ const ProductTable: React.FC = () => {
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
           />
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
             <button onClick={() => setIsAddModalOpen(true)} className="btn btn-blue">Add Product</button>
           </div>
         </div>

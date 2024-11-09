@@ -45,13 +45,15 @@ const InventoryManagement: React.FC = () => {
   const [date, setDate] = useState<string>('');
   const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // New state to manage button disable
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [filteredOrders, setFilteredOrders] = useState<SalesOrder[]>([]);
-  const [startDate, setStartDate] = useState<string>(''); // Start date filter
+  const [startDate, setStartDate] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  
   // Functions
   const openReceiptModal = () => setIsReceiptModalOpen(true);
 
@@ -92,7 +94,6 @@ const InventoryManagement: React.FC = () => {
     setSearchTerms([...searchTerms, '']);
   };
 
-
   const removeReceiptItem = (index: number): void => {
     setReceiptItems((prevItems) => prevItems.filter((_, i) => i !== index));
   };
@@ -127,7 +128,7 @@ const InventoryManagement: React.FC = () => {
         return;
       }
 
-      setIsSubmitting(true); // Disable button on submit
+      setIsSubmitting(true);
 
       const itemsPayload = receiptItems.map(item => ({
         product_name: item.name,
@@ -152,7 +153,6 @@ const InventoryManagement: React.FC = () => {
         }
         alert('Sales order submitted successfully!');
         closeReceiptModal();
-        fetchSalesOrders();
       } else {
         alert('Error submitting the sales order.');
       }
@@ -160,11 +160,14 @@ const InventoryManagement: React.FC = () => {
       console.error('Error submitting sales order:', error);
       alert('Error submitting the sales order.');
     } finally {
-      setIsSubmitting(false); // Enable button again
+      setIsSubmitting(false);
+      fetchSalesReceipts();
     }
   };
 
   useEffect(() => {
+    if (searchTerms.length === 0 || !searchTerms.some(term => term.trim().length > 0)) return;
+
     searchTerms.forEach((term, index) => {
       if (term.length > 0) {
         apiService
@@ -185,143 +188,117 @@ const InventoryManagement: React.FC = () => {
     });
   }, [searchTerms]);
 
-
-
-  // Fetch sales orders
-  const fetchSalesOrders = async (page: number = 1, limit: number = 20) => {
+  const fetchSalesReceipts = async () => {
+    setLoading(true);
     try {
-      const response = await apiService.get(`/fetch-sales-orders?page=${page}&per_page=${limit}`);
-      const salesOrderData = response.data.salesOrders || []; // Default to empty array
-      setSalesOrders(salesOrderData);
-      setFilteredOrders(salesOrderData); // Set initially to all orders
-      setCurrentPage(response.data.current_page);
-      setLastPage(response.data.last_page);
+      let url = `/fetch-sales-orders?sort_by=date&page=${currentPage}&limit=10`;
+      if (selectedMonth !== null) {
+        url += `&month=${selectedMonth}`;
+      }
+      const response = await apiService.get(url);
+      setFilteredOrders(response.data.salesOrders);
+      setTotalPages(response.data.last_page);
     } catch (error) {
-      console.error('Error fetching sales orders:', error);
+      console.error('Error fetching delivery receipts:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSalesOrders();
-  }, []);
+    fetchSalesReceipts();
+  }, [currentPage, selectedMonth]);
 
-  // Filter orders based on the exact date
-  const filterByDate = () => {
-    if (!startDate) {
-      setFilteredOrders(salesOrders); // Reset to all orders if no start date
-      return;
-    }
 
-    const filtered = salesOrders.filter(order => {
-      const orderDate = new Date(order.date).toISOString().split('T')[0]; // Convert order date to 'YYYY-MM-DD'
-      return orderDate === startDate; // Filter by exact match
-    });
 
-    setFilteredOrders(filtered);
-  };
-
-   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= lastPage) {
+  const handlePageChange = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
-      fetchSalesOrders(page);
+      fetchSalesReceipts();
     }
   };
 
   const formatDate = (dateString: string): string => {
-  const options: Intl.DateTimeFormatOptions = {  month: '2-digit',  day: '2-digit', year: 'numeric', };
-  return new Date(dateString).toLocaleDateString('en-US', options);
+    const options: Intl.DateTimeFormatOptions = { month: '2-digit', day: '2-digit', year: 'numeric' };
+    return new Date(dateString).toLocaleDateString('en-US', options);
   };
-
-
-  
-
-  
 
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Order</h2>}>
       <Head title="Inventory" />
       <div className="p-4">
-        <button onClick={openReceiptModal} className="bg-green-500 text-white p-2 mb-4 ml-2">
+        <button onClick={openReceiptModal} className= "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded p-2 mb-4 ml-2">
           New Sales Order
         </button>
 
-
         {/* Date Range Filters */}
-        <div className="mb-4 flex space-x-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Start Date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
-            />
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={filterByDate}
-              className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-            >
-              Apply Filter
-            </button>
-          </div>
-        </div>
-
-        <table className="min-w-full border">
-          <thead>
-            <tr>
-              <th className="border p-2 bg-gray-300">Client Name</th>
-              <th className="border p-2 bg-gray-300">Receipt Number</th>
-              <th className="border p-2 bg-gray-300">Date</th>
-              <th className="border p-2 bg-gray-300">Items</th>
-              <th className="border p-2 bg-gray-300">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-             {filteredOrders.map((order) => (
-              <tr key={order.id} className="border-b hover:bg-gray-200">
-                <td className="border p-2">{order.customer_name}</td>
-                <td className="border p-2">{order.receipt_number}</td>
-                <td className="border p-2">{formatDate(order.date)}</td>
-                <td className="border p-2">{order.items.length}</td>
-                <td className="border p-2">
-                  <button
-                    onClick={() => viewOrderDetails(order)}
-                    className="bg-blue-500 text-white p-1 rounded"
-                  >
-                    View Items
-                  </button>
-                </td>
-              </tr>
+      <div className="mb-4 flex space-x-4">
+        <div>
+          <label className="text-gray-700">Filtered by Month</label>
+          <select
+            value={selectedMonth ?? ''}
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
+            className="mt-2 p-2 border rounded"
+          >
+            <option value="">All</option> {/* Empty value for 'All' */}
+            {[...Array(12).keys()].map((month) => (
+              <option key={month} value={month + 1}>
+                {new Date(0, month).toLocaleString('default', { month: 'long' })}
+              </option>
             ))}
-          </tbody>
-        </table>
-
-        {/* Pagination Controls */}
-        <div className="flex justify-center mt-4">
-          <button
-            className="px-3 py-2 bg-gray-300 text-gray-700 rounded-md mr-2"
-            disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
-          >
-            Previous
-          </button>
-          <span>
-            Page {currentPage} of {lastPage}
-          </span>
-          <button
-            className="px-3 py-2 bg-gray-300 text-gray-700 rounded-md ml-2"
-            disabled={currentPage === lastPage}
-            onClick={() => handlePageChange(currentPage + 1)}
-          >
-            Next
-          </button>
+          </select>
         </div>
+      </div>
 
-        {/* Sales Order Modal */}
+        {/* Sales Order Table */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full table-auto">
+              <thead>
+                <tr>
+                  <th className="px-4 py-2 bg-gray-300">Date</th>
+                  <th className="px-4 py-2 bg-gray-300">Receipt Number</th>
+                  <th className="px-4 py-2 bg-gray-300">Customer</th>
+                  <th className="px-4 py-2 bg-gray-300">Total</th>
+                  <th className="px-4 py-2 bg-gray-300">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-700 text-sm">
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4">Loading...</td>
+                  </tr>
+                ) : filteredOrders.length > 0 ? (
+                  filteredOrders.map((entry) => (
+                    <tr key={entry.id} className='hover:bg-slate-300'>
+                      <td className="border p-2">{formatDate(entry.date)}</td>
+                      <td className="border p-2">{entry.receipt_number}</td>
+                      <td className="border p-2">{entry.customer_name}</td>
+                      <td className="border p-2">{entry.items.length}</td>
+                      <td className="border p-2">
+                        <button
+                          onClick={() => viewOrderDetails(entry)}
+                          className="bg-blue-500 text-white p-1 rounded"
+                        >
+                          View Items
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-4">No records found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
 
-       {isReceiptModalOpen && (
+
+
+
+
+
+{/* Recipt Modal */}
+          {isReceiptModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl h-full flex flex-col relative">
               <h2 className="text-lg font-bold mb-4">Sales Order</h2>
@@ -465,10 +442,28 @@ const InventoryManagement: React.FC = () => {
           </div>
         )}
 
-        {/* Order Detail Modal */}
-        {isOrderDetailModalOpen && selectedOrder && (
+
+        
+
+          {/* Pagination */}
+          <div className="mt-4 flex justify-between">
+            <button onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 1}>
+              Previous
+            </button>
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <button onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage === totalPages}>
+              Next
+            </button>
+          </div>
+        </div>
+
+         {/* Order Detail Modal */}
+         {isOrderDetailModalOpen && selectedOrder && (
           <Receipt isOpen={isOrderDetailModalOpen} onClose={closeOrderDetailModal} selectedOrder={selectedOrder} />
         )}
+
       </div>
     </AuthenticatedLayout>
   );

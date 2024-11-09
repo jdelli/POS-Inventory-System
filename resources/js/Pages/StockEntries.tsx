@@ -82,29 +82,30 @@ const StockEntriesTable: React.FC = () => {
         
       
 
-        {/* Month Filter */}
-        <div className="mb-1">
-          <label htmlFor="month" className="mr-2">Filter by Month:</label>
+       {/* Date Range Filters */}
+      <div className="mb-4 flex space-x-4">
+        <div>
+          <label className="text-gray-700">Filtered by Month</label>
           <select
-            id="month"
             value={selectedMonth ?? ''}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="border px-2 py-1 rounded"
+            onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
+            className="mt-2 p-2 border rounded"
           >
-            <option value="">All Months</option>
-            {[...Array(12)].map((_, i) => (
-              <option key={i} value={i + 1}>
-                {new Date(0, i).toLocaleString('default', { month: 'long' })}
+            <option value="">All</option> {/* Empty value for 'All' */}
+            {[...Array(12).keys()].map((month) => (
+              <option key={month} value={month + 1}>
+                {new Date(0, month).toLocaleString('default', { month: 'long' })}
               </option>
             ))}
           </select>
         </div>
+      </div>
 
         {/* Add Stocks Button */}
         <div className="mb-4 flex justify-end">
           <button 
             onClick={() => setIsAddStocksModalOpen(true)} 
-            className="btn btn-green"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
             Add Stocks
           </button>
