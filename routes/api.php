@@ -19,12 +19,11 @@ Route::put("/edit-products/{id}", [ProductsApiController::class, "updateProduct"
 Route::delete("/delete-products/{id}", [ProductsApiController::class, "deleteProduct"]);
 
 
+
 Route::post('/add-quantity', [ProductsApiController::class, 'AddQuantity']);
 Route::post('/deduct-quantity', [ProductsApiController::class, 'deductQuantity']);
 Route::get('/search-products', [ProductsApiController::class, 'search']);
 Route::get('/get-total-products', [ProductsApiController::class, 'getTotalProducts']);
-
-
 
 
 
@@ -33,9 +32,6 @@ Route::post('/add-sales-order', [SalesOrderApiController::class, 'addSalesOrder'
 Route::get('/fetch-sales-orders', [SalesOrderApiController::class, 'getSalesOrders']);
 Route::get('/get-monthly-sales', [SalesOrderApiController::class, 'getMonthlySales']);
 Route::get('/get-total-clients', [SalesOrderApiController::class, 'getTotalClients']);
-
-
-
 
 
 

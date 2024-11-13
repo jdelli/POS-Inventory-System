@@ -34,7 +34,6 @@ interface SalesOrder {
 }
 
 const InventoryManagement: React.FC = () => {
-  // State Management
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
   const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState<boolean>(false);
   const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0 }]);
@@ -43,13 +42,10 @@ const InventoryManagement: React.FC = () => {
   const [client, setClient] = useState<string>('');
   const [receiptNumber, setReceiptNumber] = useState<string>('');
   const [date, setDate] = useState<string>('');
-  const [salesOrders, setSalesOrders] = useState<SalesOrder[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [filteredOrders, setFilteredOrders] = useState<SalesOrder[]>([]);
-  const [startDate, setStartDate] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -291,9 +287,6 @@ const InventoryManagement: React.FC = () => {
                 )}
               </tbody>
             </table>
-
-
-
 
 
 

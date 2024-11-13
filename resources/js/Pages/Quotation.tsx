@@ -35,6 +35,7 @@ const SalesInvoice: React.FC = () => {
   const removeItem = (index: number) => {
     setProducts((prevItems) => prevItems.filter((_, i) => i !== index));
   };
+
   
  const handleExportPDF = () => {
     const doc = new jsPDF('p', 'pt', 'a4');
@@ -108,7 +109,7 @@ const SalesInvoice: React.FC = () => {
     doc.text("Contact Person: Darel", startX, footerY + 30);
 
     // Save PDF
-    doc.save('quotation.pdf');
+    doc.save((customerName) + ".pdf");
 };
 
   const isProductEmpty = products.length === 0;

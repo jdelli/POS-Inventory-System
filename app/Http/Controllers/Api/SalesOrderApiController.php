@@ -102,10 +102,9 @@ class SalesOrderApiController extends Controller
             'monthlySales' => $salesData
         ]);
 
-
-        
     }
 
+    
     public function getTotalClients()
     {
         try {
@@ -124,7 +123,6 @@ class SalesOrderApiController extends Controller
             ], 500);
         }
     }
-
 
 
 }
