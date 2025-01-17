@@ -58,6 +58,7 @@ class SalesOrderApiController extends Controller
 {
     $perPage = $request->input('per_page', 10); // Get items per page from the request, default to 10
     $month = $request->input('month');
+    $year = $request->input('year');
     
     // Start the query
     $query = SalesOrder::with('items');
@@ -66,6 +67,13 @@ class SalesOrderApiController extends Controller
     if ($month) {
         $query->whereMonth('date', $month);
     }
+
+
+    if ($year){
+        $query->whereYear('date', $year);
+    }
+
+
 
     // Get paginated sales orders
     $salesOrders = $query->paginate($perPage);
@@ -123,6 +131,39 @@ class SalesOrderApiController extends Controller
             ], 500);
         }
     }
+
+
+    public function getDailySales(Request $request)
+{
+    try {
+        // Get the date range from the request, default to today
+        $startDate = $request->input('start_date', Carbon::today()->toDateString());
+        $endDate = $request->input('end_date', Carbon::today()->toDateString());
+
+        // Fetch daily sales data
+        $dailySales = SalesOrder::selectRaw('DATE(date) as day, SUM(SalesOrderItems.total) as sales')
+            ->join('sales_order_items as SalesOrderItems', 'sales_orders.id', '=', 'SalesOrderItems.sales_order_id')
+            ->whereBetween('date', [$startDate, $endDate])
+            ->groupBy('day')
+            ->orderBy('day')
+            ->get()
+            ->map(function ($item) {
+                return (float) $item->sales;
+            });
+
+        return response()->json([
+            'success' => true,
+            'dailySales' => $dailySales,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch daily sales.',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+}
+
 
 
 }

@@ -20,6 +20,7 @@ const MonthlySalesDashboard: React.FC = () => {
     const [totalProducts, setTotalProducts] = useState<number>(0); // New state for total clients
     const monthlyTarget = salesTarget / 12;
     const COLORS = ['#1E90FF', '#FF6347'];
+    const [dailySales, setDailySales] = useState<number[]>([]);
 
     useEffect(() => {
         apiService.get<{ success: boolean; monthlySales: SalesData[] }>('/get-monthly-sales')
@@ -56,6 +57,17 @@ const MonthlySalesDashboard: React.FC = () => {
             .catch((error) => {
                 console.error("Error fetching total products data:", error);
             });
+
+
+        apiService.get<{ success: boolean; dailySales: number[] }>('/get-total-daily-sales')
+            .then((response) => {
+                if (response.data.success) {
+                    setDailySales(response.data.dailySales);
+                }
+            })
+            .catch((error) => {
+                console.error("Error fetching daily sales data:", error);
+            });
     }, []);
 
     const totalSalesData = [
@@ -85,6 +97,10 @@ const MonthlySalesDashboard: React.FC = () => {
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
                            <h3 className="text-lg font-bold text-gray-800 mb-2">Total Products:</h3> {/* Corrected title */}
                             <p className="text-3xl font-semibold text-blue-600">{totalProducts.toLocaleString()}</p>
+                        </div>
+                        <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
+                           <h3 className="text-lg font-bold text-gray-800 mb-2">Daily Sales:</h3> {/* Corrected title */}
+                            <p className="text-3xl font-semibold text-blue-600">{dailySales.toLocaleString()}</p>
                         </div>
                         {/* Add more cards here if needed */}
                     </div>

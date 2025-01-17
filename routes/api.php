@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ProductsApiController;
 use App\Http\Controllers\Api\SalesOrderApiController;
 use App\Http\Controllers\Api\DeliveryReceiptsApiController;
+use App\Http\Controllers\Api\CustomerOrderController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -32,6 +33,7 @@ Route::post('/add-sales-order', [SalesOrderApiController::class, 'addSalesOrder'
 Route::get('/fetch-sales-orders', [SalesOrderApiController::class, 'getSalesOrders']);
 Route::get('/get-monthly-sales', [SalesOrderApiController::class, 'getMonthlySales']);
 Route::get('/get-total-clients', [SalesOrderApiController::class, 'getTotalClients']);
+Route::get('/get-total-daily-sales', [SalesOrderApiController::class, 'getDailySales']);
 
 
 
@@ -40,5 +42,11 @@ Route::post('/add-delivery-receipt', [DeliveryReceiptsApiController::class, 'add
 Route::get('/fetch-delivery-receipts', [DeliveryReceiptsApiController::class, 'getDeliveryReceipts']);
 
 
+
+
+//Customer Order
+Route::post('/add-customer-order', [CustomerOrderController::class, 'addCustomerOrder']);
+Route::get('/orders', [CustomerOrderController::class, 'getAllCustomerOrders']);
+Route::put('/update-status/{id}', [CustomerOrderController::class, 'updateCustomerOrderStatus']);
 
 
