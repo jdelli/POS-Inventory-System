@@ -16,6 +16,7 @@ interface AddProductModalProps {
   showModal: boolean;
   closeModal: () => void;
   refreshProducts: () => void;
+  auth: { name: string };  // Add auth property with type
 }
 
 const categoryOptions = [
@@ -31,7 +32,7 @@ const categoryOptions = [
 
 
 
-const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal, refreshProducts }) => {
+const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal, refreshProducts, auth }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -42,6 +43,8 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
+
+
 
 
 
@@ -84,6 +87,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
     formData.append('quantity', quantity.toString());
     formData.append('category', category);
     formData.append('image', image);
+    formData.append('branch_id', auth.name);
 
     try {
       // Add new product

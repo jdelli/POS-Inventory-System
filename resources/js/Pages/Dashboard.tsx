@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import {
@@ -12,20 +13,34 @@ interface SalesData {
     sales: number;
 }
 
+interface DailySalesData {
+    date: string;
+    sales: number;
+}
+
+interface User {
+    name: string;
+}
+
 const MonthlySalesDashboard: React.FC = () => {
+    const { auth } = usePage().props as { auth: { user: User } };
     const [salesData, setSalesData] = useState<SalesData[]>([]);
     const [totalSales, setTotalSales] = useState<number>(0);
     const [salesTarget, setSalesTarget] = useState<number>(3000000);
-    const [totalSalesOrders, setTotalSalesOrders] = useState<number>(0); // New state for total clients
-    const [totalProducts, setTotalProducts] = useState<number>(0); // New state for total clients
+    const [totalSalesOrders, setTotalSalesOrders] = useState<number | null>(null);
+    const [totalSalesToday, setTotalSalesToday] = useState<number | null>(null);
+    const [dailySales, setDailySales] = useState<DailySalesData[]>([]);
     const monthlyTarget = salesTarget / 12;
     const COLORS = ['#1E90FF', '#FF6347'];
-    const [dailySales, setDailySales] = useState<number[]>([]);
 
     useEffect(() => {
-        apiService.get<{ success: boolean; monthlySales: SalesData[] }>('/get-monthly-sales')
+        // Fetch monthly sales data
+        apiService.get<{ success: boolean; data: SalesData[] }>('/get-monthly-sales', {
+            params: { user_name: auth.user.name }
+        })
             .then((response) => {
-                const data = response.data.monthlySales;
+                console.log("Monthly Sales Data:", response.data);
+                const data = response.data.data;
                 if (Array.isArray(data)) {
                     setSalesData(data);
                     setTotalSales(data.reduce((acc, item) => acc + item.sales, 0));
@@ -37,38 +52,48 @@ const MonthlySalesDashboard: React.FC = () => {
                 console.error("Error fetching monthly sales data:", error);
             });
 
-        // Fetch total clients and products
-        apiService.get<{ success: boolean; totalSalesOrders: number }>('/get-total-clients')
+        // Fetch total sales orders
+        apiService.get<{ success: boolean; data: number }>('/get-total-clients', {
+            params: { user_name: auth.user.name }
+        })
             .then((response) => {
+                console.log("Total Sales Orders Data:", response.data);
                 if (response.data.success) {
-                    setTotalSalesOrders(response.data.totalSalesOrders);
+                    setTotalSalesOrders(response.data.data);
                 }
             })
             .catch((error) => {
-                console.error("Error fetching total clients data:", error);
+                console.error("Error fetching total sales orders data:", error);
             });
 
-            apiService.get<{ success: boolean; totalProducts: number }>('/get-total-products')
+        // Fetch total orders for today
+        apiService.get<{ success: boolean; data: number }>('/get-total-daily-sales-orders', {
+            params: { user_name: auth.user.name }
+        })
             .then((response) => {
+                console.log("Total Products Data:", response.data);
                 if (response.data.success) {
-                    setTotalProducts(response.data.totalProducts);
+                    setTotalSalesToday(response.data.data);
                 }
             })
             .catch((error) => {
                 console.error("Error fetching total products data:", error);
             });
 
-
-        apiService.get<{ success: boolean; dailySales: number[] }>('/get-total-daily-sales')
+        // Fetch daily sales data
+        apiService.get<{ success: boolean; data: DailySalesData[] }>('/get-total-daily-sales', {
+            params: { user_name: auth.user.name }
+        })
             .then((response) => {
+                console.log("Daily Sales Data:", response.data);
                 if (response.data.success) {
-                    setDailySales(response.data.dailySales);
+                    setDailySales(response.data.data);
                 }
             })
             .catch((error) => {
                 console.error("Error fetching daily sales data:", error);
             });
-    }, []);
+    }, [auth.user.name]);
 
     const totalSalesData = [
         { name: 'Total Sales', value: totalSales },
@@ -88,26 +113,29 @@ const MonthlySalesDashboard: React.FC = () => {
 
             <div className="py-12 bg-gray-100 overflow-y-auto max-h-screen">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
-                    {/* Card for Total Clients */}
+                    {/* Card for Total Sales Orders */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
-                            <h3 className="text-lg font-bold text-gray-800 mb-2">Total Sales Order:</h3>
-                            <p className="text-3xl font-semibold text-blue-600">{totalSalesOrders.toLocaleString()}</p>
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">Total Sales Orders:</h3>
+                            <p className="text-3xl font-semibold text-blue-600">
+                                {totalSalesOrders !== null ? totalSalesOrders : 'Loading...'}
+                            </p>
                         </div>
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
-                           <h3 className="text-lg font-bold text-gray-800 mb-2">Total Products:</h3> {/* Corrected title */}
-                            <p className="text-3xl font-semibold text-blue-600">{totalProducts.toLocaleString()}</p>
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">Total Sales Today:</h3>
+                            <p className="text-3xl font-semibold text-blue-600">
+                                {totalSalesToday !== null ? totalSalesToday : 'Loading...'}
+                            </p>
                         </div>
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
-                           <h3 className="text-lg font-bold text-gray-800 mb-2">Daily Sales:</h3> {/* Corrected title */}
-                            <p className="text-3xl font-semibold text-blue-600">{dailySales.toLocaleString()}</p>
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">Daily Sales:</h3>
+                            <p className="text-3xl font-semibold text-blue-600">
+                                {dailySales.length > 0 ? dailySales.reduce((acc, sale) => acc + sale.sales, 0) : 'No sales today'}
+                            </p>
                         </div>
                         {/* Add more cards here if needed */}
                     </div>
 
-                    
-
-                    {/* Existing Dashboard Content */}
                     {/* Monthly Sales Target vs Actual Bar Chart */}
                     <div className="bg-white shadow-lg rounded-lg p-6 transition hover:bg-gray-50 hover:shadow-xl">
                         <h3 className="text-xl font-semibold text-gray-800 mb-4">Monthly Sales Target vs. Actual</h3>
@@ -116,7 +144,7 @@ const MonthlySalesDashboard: React.FC = () => {
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="month" />
                                 <YAxis />
-                                <Tooltip formatter={(value: number) => `₱${value.toLocaleString()}`} />
+                                <Tooltip formatter={(value: number) => `₱${value}`} />
                                 <Legend />
                                 <Bar dataKey="sales" fill="#1E90FF" name="Actual Sales" />
                                 <Bar dataKey="target" fill="#FF6347" name="Sales Target" />
@@ -134,7 +162,7 @@ const MonthlySalesDashboard: React.FC = () => {
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="month" />
                                     <YAxis />
-                                    <Tooltip formatter={(value: number) => `₱${value.toLocaleString()}`} />
+                                    <Tooltip formatter={(value: number) => `₱${value}`} />
                                     <Legend />
                                     <Line type="monotone" dataKey="sales" stroke="#1E90FF" name="Sales Performance" />
                                 </LineChart>
@@ -159,16 +187,16 @@ const MonthlySalesDashboard: React.FC = () => {
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                         ))}
                                     </Pie>
-                                    <Tooltip formatter={(value: number) => `₱${value.toLocaleString()}`} />
+                                    <Tooltip formatter={(value: number) => `₱${value}`} />
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="text-center mt-4 text-lg font-semibold">
-                                Yearly Total Sales: ₱{totalSales.toLocaleString()}
+                                Yearly Total Sales: ₱{totalSales}
                             </div>
                             <div className={`text-center mt-4 ${totalSales >= salesTarget ? 'text-green-600' : 'text-red-600'} font-semibold`}>
                                 {totalSales >= salesTarget
                                     ? 'Fantastic! You have met or exceeded the sales target!'
-                                    : `You need ₱${(salesTarget - totalSales).toLocaleString()} more to meet your sales target.`}
+                                    : `You need ₱${salesTarget - totalSales} more to meet your sales target.`}
                             </div>
                         </div>
                     </div>

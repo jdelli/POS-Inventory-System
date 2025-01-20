@@ -1,10 +1,15 @@
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import React, { useState, useEffect } from 'react';
-import { Head } from '@inertiajs/react';
+import { usePage, Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import EditProductModal from './Props/Edit';
 import AddProductModal from './Props/Add';
 
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
 
 interface Product {
   id: number;
@@ -25,7 +30,6 @@ const categoryOptions = [
   'Biometrics',
 ];
 
-// Search and Filter Component
 const SearchFilter: React.FC<{
   searchTerm: string;
   setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
@@ -82,22 +86,28 @@ const PaginationControls: React.FC<{
 );
 
 const ProductTable: React.FC = () => {
+  const { auth } = usePage().props as { auth: { user: User } }; // Cast auth prop with the updated User type
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>([]); // Initialize as an empty array
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const fetchProducts = async (page: number = 1, limit: number = 20) => {
+  const fetchProducts = async (userName: string, page: number = 1, limit: number = 20) => {
     setLoading(true);
     try {
-      const response = await apiService.get(`/fetch-products?page=${page}&per_page=${limit}`);
-      setProducts(response.data.data);
+      const response = await apiService.get(`/fetch-products-by-branch`, {
+        params: {
+          user_name: userName,
+          page,
+          limit,
+        },
+      });
+      setProducts(response.data.data || []); // Ensure products are set as an array
       setCurrentPage(response.data.current_page);
       setLastPage(response.data.last_page);
     } catch (err) {
@@ -108,8 +118,8 @@ const ProductTable: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchProducts(auth.user.name);
+  }, [auth.user.name]);
 
   const handleEdit = (product: Product) => {
     setEditProduct(product);
@@ -122,7 +132,7 @@ const ProductTable: React.FC = () => {
     }
     try {
       await apiService.delete(`/delete-products/${id}`);
-      fetchProducts(currentPage);
+      fetchProducts(auth.user.name, currentPage);
     } catch (err) {
       console.error(err);
     }
@@ -145,9 +155,9 @@ const ProductTable: React.FC = () => {
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
           />
-          <div className="flex space-x-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-            <button onClick={() => setIsAddModalOpen(true)} className="btn btn-blue">Add Product</button>
-          </div>
+          <button onClick={() => setIsAddModalOpen(true)} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            Add Product
+          </button>
         </div>
 
         {loading ? (
@@ -191,22 +201,21 @@ const ProductTable: React.FC = () => {
         <PaginationControls
           currentPage={currentPage}
           lastPage={lastPage}
-          onPageChange={(page) => fetchProducts(page)}
+          onPageChange={(page) => fetchProducts(auth.user.name, page)}
         />
 
-        {/* Modals */}
         <EditProductModal
           showModal={isEditModalOpen}
           closeModal={() => setIsEditModalOpen(false)}
           editProduct={editProduct}
-          onUpdate={() => fetchProducts(currentPage)}
+          onUpdate={() => fetchProducts(auth.user.name, currentPage)}
         />
         <AddProductModal
           showModal={isAddModalOpen}
           closeModal={() => setIsAddModalOpen(false)}
-          refreshProducts={() => fetchProducts(currentPage)}
+          refreshProducts={() => fetchProducts(auth.user.name, currentPage)}
+          auth={auth.user}
         />
-        
       </div>
     </AuthenticatedLayout>
   );

@@ -10,11 +10,17 @@ class SalesOrder extends Model
     use HasFactory;
 
 
-    protected $fillable = ['receipt_number', 'customer_name', 'date'];
+    protected $fillable = ['branch_id', 'receipt_number', 'customer_name', 'date'];
 
     // Relationship with SalesOrderItem
     public function items()
     {
         return $this->hasMany(SalesOrderItems::class);
+    }
+
+
+    public function user()
+    {
+        return $this->belongsTo(Users::class);
     }
 }
