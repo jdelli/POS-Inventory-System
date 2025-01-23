@@ -33,8 +33,9 @@ Route::post('/add-sales-order', [SalesOrderApiController::class, 'addSalesOrder'
 Route::get('/fetch-sales-orders', [SalesOrderApiController::class, 'getSalesOrders']);
 Route::get('/get-monthly-sales', [SalesOrderApiController::class, 'getMonthlySales']);
 Route::get('/get-total-clients', [SalesOrderApiController::class, 'getTotalClients']);
-Route::get('/get-total-daily-sales', [SalesOrderApiController::class, 'getDailySales']);
 Route::get('/get-total-daily-sales-orders', [SalesOrderApiController::class, 'getSalesOrderItemsToday']);
+Route::get('/get-total-daily-sales', [SalesOrderApiController::class, 'getDailySales']);
+
 
 
 
@@ -49,5 +50,7 @@ Route::get('/fetch-delivery-receipts', [DeliveryReceiptsApiController::class, 'g
 Route::post('/add-customer-order', [CustomerOrderController::class, 'addCustomerOrder']);
 Route::get('/orders', [CustomerOrderController::class, 'getAllCustomerOrders']);
 Route::put('/update-status/{id}', [CustomerOrderController::class, 'updateCustomerOrderStatus']);
+Route::put('/update-branch/{id}', [CustomerOrderController::class, 'forwardOrder']);
+
 
 

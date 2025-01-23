@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import apiService from '../Services/ApiService';
 
 interface InventoryItem {
@@ -21,11 +21,15 @@ interface AddStockModalProps {
   onSuccess: () => void;
 }
 
+interface User {
+    name: string;
+}
+
 const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSuccess }) => {
+  const { auth } = usePage().props as { auth: { user: User } };
   const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0 }]);
   const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
-
   const [deliveryNumber, setDeliveryNumber] = useState('');
   const [deliveredBy, setDeliveredBy] = useState('');
   const [date, setDate] = useState('');
@@ -69,6 +73,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
       delivered_by: deliveredBy,
       date,
       items: itemsPayload,
+      branch_id: auth.user.name, // Ensure this matches the backend expectations
     };
 
     try {
@@ -81,10 +86,10 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
             quantity: item.quantity,
           });
         }
-        alert('Sales order submitted successfully!');
+        alert('Stocks added successfully!');
         closeAddStocksModal();
       } else {
-        alert('Error submitting the sales order.');
+        alert('Error submitting the stocks.');
       }
     } catch (error) {
       console.error('Error submitting stocks:', error);
@@ -97,7 +102,12 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
     searchTerms.forEach((term, index) => {
       if (term.length > 0) {
         apiService
-          .get(`/search-products?q=${term}`)
+          .get('/search-products', {
+            params: {
+              q: term, // Search query
+              user_name: auth.user.name, // Pass the username to the backend
+            },
+          })
           .then((response) => {
             const updatedSuggestions = [...productSuggestions];
             updatedSuggestions[index] = response.data;
@@ -112,7 +122,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
         setProductSuggestions(updatedSuggestions);
       }
     });
-  }, [searchTerms]);
+  }, [searchTerms, auth]);
 
   const handleSearchTermChange = (index: number, value: string) => {
     const updatedSearchTerms = [...searchTerms];
@@ -231,21 +241,32 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
                   </button>
                 </div>
               ))}
-              <button onClick={addReceiptItem} className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              <button
+                onClick={addReceiptItem}
+                className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
+              >
                 Add Item
               </button>
             </div>
 
-            <div className="flex justify-between items-center mt-1">
-              <h2 className="text-lg font-bold">Total: ₱{calculateTotal()}</h2>
-              <div className="flex space-x-2">
-                <button onClick={closeAddStocksModal} className="bg-gray-500 text-white p-2 rounded">
-                  Cancel
-                </button>
-                <button onClick={submitAddStocks} className="bg-green-500 text-white p-2 rounded">
-                  Submit
-                </button>
-              </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Total Amount:</label>
+              <p className="text-lg font-semibold">{calculateTotal().toFixed(2)}</p>
+            </div>
+
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={submitAddStocks}
+                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
+              >
+                Submit
+              </button>
+              <button
+                onClick={closeAddStocksModal}
+                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

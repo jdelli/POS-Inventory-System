@@ -12,6 +12,7 @@ class DeliveryReceipt extends Model
 
 
     protected $fillable = [
+        'branch_id',
         'delivery_number',
         'delivered_by',
         'date',

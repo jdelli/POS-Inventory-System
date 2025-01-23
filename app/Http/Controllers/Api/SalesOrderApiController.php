@@ -156,43 +156,8 @@ public function getTotalClients(Request $request)
     }
 }
 
-public function getDailySales(Request $request)
-{
-    try {
-        $userName = $request->query('user_name');
-        $startDate = $request->input('start_date', Carbon::today()->startOfWeek()->toDateString());
-        $endDate = $request->input('end_date', Carbon::today()->toDateString());
 
-        $dailySales = SalesOrder::selectRaw('DATE(date) as day, SUM(SalesOrderItems.total) as sales')
-            ->join('sales_order_items as SalesOrderItems', 'sales_orders.id', '=', 'SalesOrderItems.sales_order_id')
-            ->where('branch_id', $userName)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->groupBy('day')
-            ->orderBy('day')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'date' => Carbon::parse($item->day)->format('Y-m-d'),
-                    'sales' => round((float) $item->sales, 2)
-                ];
-            });
-
-        return response()->json([
-            'success' => true,
-            'data' => $dailySales
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch daily sales.',
-            'error' => $e->getMessage()
-        ], 500);
-    }
-}
-
-
-
-    public function getSalesOrderItemsToday(Request $request)
+public function getSalesOrderItemsToday(Request $request)
 {
         $userName = $request->query('user_name');
         $today = Carbon::today();
@@ -206,5 +171,30 @@ public function getDailySales(Request $request)
             'data' => $salesOrders
         ]);
     }
+
+
+    
+
+public function getDailySales(Request $request)
+{
+    $userName = $request->query('user_name');
+    $today = Carbon::today();
+
+    $totalSales = SalesOrder::where('branch_id', $userName)
+        ->whereDate('date', $today)
+        ->with('items')
+        ->get()
+        ->flatMap(fn($order) => $order->items)
+        ->sum(fn($item) => $item->total); // Replace 'total' with the actual column name if different.
+
+    return response()->json([
+        'success' => true,
+        'data' => $totalSales,
+    ]);
+}
+
+
+
+    
 
 }

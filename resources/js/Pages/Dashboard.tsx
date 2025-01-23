@@ -29,7 +29,7 @@ const MonthlySalesDashboard: React.FC = () => {
     const [salesTarget, setSalesTarget] = useState<number>(3000000);
     const [totalSalesOrders, setTotalSalesOrders] = useState<number | null>(null);
     const [totalSalesToday, setTotalSalesToday] = useState<number | null>(null);
-    const [dailySales, setDailySales] = useState<DailySalesData[]>([]);
+    const [dailySales, setDailySales] = useState<number | DailySalesData[]>(0);
     const monthlyTarget = salesTarget / 12;
     const COLORS = ['#1E90FF', '#FF6347'];
 
@@ -81,29 +81,29 @@ const MonthlySalesDashboard: React.FC = () => {
             });
 
         // Fetch daily sales data
-        apiService.get<{ success: boolean; data: DailySalesData[] }>('/get-total-daily-sales', {
-            params: { user_name: auth.user.name }
+        apiService.get<{ success: boolean; data: number }>('/get-total-daily-sales', {
+            params: { user_name: auth.user.name },
         })
             .then((response) => {
                 console.log("Daily Sales Data:", response.data);
                 if (response.data.success) {
-                    setDailySales(response.data.data);
+                    setDailySales(response.data.data); // `data` is now a single number
                 }
             })
             .catch((error) => {
                 console.error("Error fetching daily sales data:", error);
             });
-    }, [auth.user.name]);
+            }, [auth.user.name]);
 
-    const totalSalesData = [
-        { name: 'Total Sales', value: totalSales },
-        { name: 'Remaining', value: Math.max(0, salesTarget - totalSales) },
-    ];
+            const totalSalesData = [
+                { name: 'Total Sales', value: totalSales },
+                { name: 'Remaining', value: Math.max(0, salesTarget - totalSales) },
+            ];
 
-    const monthlySalesWithTarget = salesData.map((data) => ({
-        ...data,
-        target: monthlyTarget,
-    }));
+            const monthlySalesWithTarget = salesData.map((data) => ({
+                ...data,
+                target: monthlyTarget,
+            }));
 
     return (
         <AuthenticatedLayout
@@ -130,7 +130,11 @@ const MonthlySalesDashboard: React.FC = () => {
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
                             <h3 className="text-lg font-bold text-gray-800 mb-2">Daily Sales:</h3>
                             <p className="text-3xl font-semibold text-blue-600">
-                                {dailySales.length > 0 ? dailySales.reduce((acc, sale) => acc + sale.sales, 0) : 'No sales today'}
+                                {typeof dailySales === 'number'
+                                    ? `₱${dailySales}`
+                                    : dailySales.length > 0
+                                    ? dailySales.map((item) => `₱${item.sales}`).join(', ')
+                                    : 'No sales today'}
                             </p>
                         </div>
                         {/* Add more cards here if needed */}

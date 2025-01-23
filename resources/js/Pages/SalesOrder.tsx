@@ -131,72 +131,97 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   };
 
   const submitSalesOrder = async () => {
-    try {
-      if (!client || !receiptNumber || !date || receiptItems.some(item => !item.name || item.quantity <= 0 || item.price <= 0)) {
-        alert('Please fill in all fields correctly.');
+  try {
+    if (
+      !client || 
+      !receiptNumber || 
+      !date || 
+      receiptItems.some(item => !item.name || item.quantity <= 0 || item.price <= 0)
+    ) {
+      alert('Please fill in all fields correctly.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    const itemsPayload = receiptItems.map(item => ({
+      product_name: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      total: item.price * item.quantity,
+    }));
+
+    for (const item of itemsPayload) {
+      try {
+        await apiService.post('/deduct-quantity', {
+          name: item.product_name,
+          quantity: item.quantity,
+        });
+      } catch (error: unknown) {
+        if (error instanceof Error && 'response' in error && (error as any).response?.status === 400) {
+          const response = (error as any).response;
+          alert(response.data.message);
+        } else {
+          alert('An error occurred while validating stock.');
+        }
+        setIsSubmitting(false);
         return;
       }
-
-      setIsSubmitting(true);
-
-      const itemsPayload = receiptItems.map(item => ({
-        product_name: item.name,
-        price: item.price,
-        quantity: item.quantity,
-        total: item.price * item.quantity,
-      }));
-
-      const response = await apiService.post('/add-sales-order', {
-        customer_name: client,
-        receipt_number: receiptNumber,
-        date,
-        items: itemsPayload,
-        branch_id: auth.user.name, // Ensure this matches the backend expectations
-      });
-
-      if (response.data.success) {
-        for (const item of itemsPayload) {
-          await apiService.post('/deduct-quantity', {
-            name: item.product_name,
-            quantity: item.quantity,
-          });
-        }
-        alert('Sales order submitted successfully!');
-        closeReceiptModal();
-      } else {
-        alert('Error submitting the sales order.');
-      }
-    } catch (error) {
-      console.error('Error submitting sales order:', error);
-      alert('Error submitting the sales order.');
-    } finally {
-      setIsSubmitting(false);
-      fetchSalesReceipts();
     }
-  };
+
+    const response = await apiService.post('/add-sales-order', {
+      customer_name: client,
+      receipt_number: receiptNumber,
+      date,
+      items: itemsPayload,
+      branch_id: auth.user.name,
+    });
+
+    if (response.data.success) {
+      alert('Sales order submitted successfully!');
+      closeReceiptModal();
+    } else {
+      alert('Error submitting the sales order.');
+    }
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Error submitting sales order:', error.message);
+    }
+    alert('Error submitting the sales order.');
+  } finally {
+    setIsSubmitting(false);
+    fetchSalesReceipts();
+  }
+};
+
+
 
   useEffect(() => {
-    if (searchTerms.length === 0 || !searchTerms.some(term => term.trim().length > 0)) return;
+  searchTerms.forEach((term, index) => {
+    if (term.length > 0) {
+      apiService
+        .get('/search-products', {
+          params: {
+            q: term, // Search query
+            user_name: auth.user.name, // Pass the username to the backend
+          },
+        })
+        .then((response) => {
+          const updatedSuggestions = [...productSuggestions];
+          updatedSuggestions[index] = response.data;
+          setProductSuggestions(updatedSuggestions);
+        })
+        .catch((error) => {
+          console.error('Error fetching product suggestions:', error);
+        });
+    } else {
+      const updatedSuggestions = [...productSuggestions];
+      updatedSuggestions[index] = [];
+      setProductSuggestions(updatedSuggestions);
+    }
+  });
+}, [searchTerms]);
 
-    searchTerms.forEach((term, index) => {
-      if (term.length > 0) {
-        apiService
-          .get(`/search-products?q=${term}`)
-          .then((response) => {
-            const updatedSuggestions = [...productSuggestions];
-            updatedSuggestions[index] = response.data;
-            setProductSuggestions(updatedSuggestions);
-          })
-          .catch((error) => {
-            console.error('Error fetching product suggestions:', error);
-          });
-      } else {
-        const updatedSuggestions = [...productSuggestions];
-        updatedSuggestions[index] = [];
-        setProductSuggestions(updatedSuggestions);
-      }
-    });
-  }, [searchTerms]);
 
   const fetchSalesReceipts = async () => {
   setLoading(true);

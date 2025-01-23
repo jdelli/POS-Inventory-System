@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 
+
 class ProductsApiController extends Controller
 {
     public function addProduct(Request $request)
@@ -50,20 +51,6 @@ class ProductsApiController extends Controller
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
  public function fetchProducts(Request $request)
     {
         // Validate that category is a string if it's provided
@@ -99,29 +86,6 @@ class ProductsApiController extends Controller
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 public function fetchProductsByBranch(Request $request)
 {
     // Get the user name from the request
@@ -136,8 +100,6 @@ public function fetchProductsByBranch(Request $request)
     // Return the products as a JSON response
     return response()->json($products);
 }
-
-
 
 
 
@@ -181,24 +143,35 @@ public function fetchProductsByBranch(Request $request)
 
 
     public function deductQuantity(Request $request)
-    {
-        $validatedData = $request->validate([
-            'name' => 'required|string',
-            'quantity' => 'required|integer|min:1',
-        ]);
+{
+    $validatedData = $request->validate([
+        'name' => 'required|string',
+        'quantity' => 'required|integer|min:1',
+    ]);
 
-        $product = Products::where('name', $validatedData['name'])->first();
+    $product = Products::where('name', $validatedData['name'])->first();
 
-        if ($product) {
-            // Deduct the quantity
-            $product->quantity -= $validatedData['quantity'];
-            $product->save();
-
-            return response()->json(['message' => 'Quantity deducted successfully', 'product' => $product], 200);
+    if ($product) {
+        if ($validatedData['quantity'] > $product->quantity) {
+            return response()->json([
+                'message' => 'Error: Inputted quantity exceeds current stock',
+                'current_stock' => $product->quantity
+            ], 400);
         }
 
-        return response()->json(['message' => 'Product not found'], 404);
+        // Deduct the quantity
+        $product->quantity -= $validatedData['quantity'];
+        $product->save();
+
+        return response()->json([
+            'message' => 'Quantity deducted successfully',
+            'product' => $product
+        ], 200);
     }
+
+    return response()->json(['message' => 'Product not found'], 404);
+}
+
 
 
     public function AddQuantity(Request $request)
@@ -223,14 +196,23 @@ public function fetchProductsByBranch(Request $request)
 
 
     public function search(Request $request)
-    {
-        $searchTerm = $request->query('q');
+{
+    $searchTerm = $request->query('q');
+    $userName = $request->query('user_name');
 
-        // Query the database for products that match the search term
-        $products = Products::where('name', 'like', '%' . $searchTerm . '%')->get();
-
-        return response()->json($products);
+    // Validate required parameters
+    if (!$searchTerm || !$userName) {
+        return response()->json(['error' => 'Missing required parameters.'], 400);
     }
+
+  
+    $products = Products::where('branch_id', $userName)
+        ->where('name', 'like', '%' . $searchTerm . '%')
+        ->get();
+    
+    return response()->json($products);
+}
+
 
 
     public function getTotalProducts()

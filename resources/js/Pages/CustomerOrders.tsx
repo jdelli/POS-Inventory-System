@@ -22,18 +22,33 @@ interface Customer {
   orders: Order[];
 }
 
-const CustomerOrders: React.FC = () => {
+interface Auth {
+  user: {
+    name: string;
+  };
+}
+
+interface InventoryManagementProps {
+  auth: Auth;
+}
+
+const branches = ['Cainta', 'Makati', 'Quezon City', 'Taguig', 'Pasig', 'Manila', 'San Mateo'];
+
+const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [doneCustomers, setDoneCustomers] = useState<number[]>([]);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
 
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const response = await apiService.get(`/orders`);
+      const response = await apiService.get('/orders', {
+        params: { username: auth.user.name },
+      });
       if (response.data.success) {
         setCustomers(response.data.customers);
       } else {
@@ -66,8 +81,24 @@ const CustomerOrders: React.FC = () => {
     fetchCustomers();
   };
 
+  const updateBranch = async (customerId: number, branch: string) => {
+    try {
+      const response = await apiService.put(`/update-branch/${customerId}`, { branch });
+      if (response.data.success) {
+        alert('Branch updated successfully!');
+        fetchCustomers();
+      } else {
+        throw new Error(response.data.message || 'Failed to update branch.');
+      }
+    } catch (error) {
+      console.error('Error updating branch:', error);
+      alert('An error occurred while updating the branch.');
+    }
+  };
+
   const openModal = (customer: Customer) => {
     setSelectedCustomer(customer);
+    setSelectedBranch(customer.branch);
     setIsModalOpen(true);
   };
 
@@ -117,7 +148,6 @@ const CustomerOrders: React.FC = () => {
                 <h3 className="text-lg font-bold">{customer.name}</h3>
                 <p><strong>Phone:</strong> {customer.phone}</p>
                 <p><strong>Address:</strong> {customer.address}</p>
-                <p><strong>Branch:</strong> {customer.branch}</p>
               </div>
               <button
                 onClick={() => openModal(customer)}
@@ -173,6 +203,34 @@ const CustomerOrders: React.FC = () => {
                     .reduce((sum, order) => sum + (Number(order.total) || 0), 0)
                     .toFixed(2)}
                 </span>
+              </div>
+              <div className="mb-4">
+                <label className="block font-bold mb-2">Forward to:</label>
+                <select
+                  value={selectedBranch || ''}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="">Select a branch</option>
+                  {branches.map((branch) => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    if (selectedBranch) {
+                      updateBranch(selectedCustomer.id, selectedBranch);
+                      setIsModalOpen(false); // Correct way to close the modal
+                    } else {
+                      alert('Please select a valid branch before updating.');
+                    }
+                  }}
+                  className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                >
+                  Update Branch
+                </button>
               </div>
               <div className="flex justify-end gap-4">
                 <button

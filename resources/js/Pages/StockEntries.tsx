@@ -20,7 +20,19 @@ interface StockEntry {
   items: DeliveryItem[];
 }
 
-const StockEntriesTable: React.FC = () => {
+// Define the Auth interface
+interface Auth {
+  user: {
+    name: string;
+  };
+}
+
+// Define the InventoryManagementProps interface
+interface InventoryManagementProps {
+  auth: Auth;
+}
+
+const StockEntriesTable: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [page, setPage] = useState<number>(1);
@@ -35,10 +47,11 @@ const StockEntriesTable: React.FC = () => {
   const fetchDeliveryReceipts = async () => {
     setLoading(true);
     try {
-      let url = `/fetch-delivery-receipts?sort_by=date&page=${page}&limit=${limit}`;
-      if (selectedMonth !== null) {
-        url += `&month=${selectedMonth}`;
-      }
+     let url = `/fetch-delivery-receipts?sort_by=date&page=${page}&limit=${limit}&user_name=${auth.user.name}`;
+if (selectedMonth !== null) {
+  url += `&month=${selectedMonth}`;
+}
+
       const response = await apiService.get(url);
       setStockEntries(response.data.deliveryReceipts);
       setTotalPages(response.data.last_page);
