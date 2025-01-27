@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import apiService from "./Services/ApiService";
 import { Link } from "@inertiajs/react"; // Assuming you're using Inertia.js for routing
+import { usePage } from "@inertiajs/react";
 
 interface Product {
   id: number;
@@ -18,6 +19,9 @@ interface CartItem {
 }
 
 
+
+
+
 const POSSystem: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -25,6 +29,7 @@ const POSSystem: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('Analog/IP Cameras');
+  const { auth } = usePage().props; // Get the `auth` object from the page props
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -36,10 +41,7 @@ const POSSystem: React.FC = () => {
   const [address, setAddress] = useState<string>("");
   const [selectedBranch, setSelectedBranch] = useState<string>("");
 
-
-
   const branchOptions = ["San Mateo", "Cainta", "Zabarte", "Quezon City", "Makati"];
-
 
   const categoryOptions = [
     'Analog/IP Cameras',
@@ -116,97 +118,117 @@ const POSSystem: React.FC = () => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
- const handleCheckout = async () => {
-  // Check if the required fields are filled
-  if (!customerName || !contactNumber || !address) {
-    alert('Please fill in all required fields.');
-    return;
-  }
+  const handleCheckout = async () => {
+    // Check if the required fields are filled
+    if (!customerName || !contactNumber || !address) {
+      alert('Please fill in all required fields.');
+      return;
+    }
 
-  // Prepare the payload to be sent to the API
-  const payload = {
-    name: customerName,
-    phone: contactNumber,
-    address,
-    branch: selectedBranch,
-    orders: cart.map((item) => ({
-      product_name: item.name,
-      quantity: item.quantity,
-      price: item.price,
-      total: item.price * item.quantity,  // Calculate total for each item
-    })),
+    // Prepare the payload to be sent to the API
+    const payload = {
+      name: customerName,
+      phone: contactNumber,
+      address,
+      branch: selectedBranch,
+      orders: cart.map((item) => ({
+        product_name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+        total: item.price * item.quantity,  // Calculate total for each item
+      })),
+    };
+
+    try {
+      // Send the POST request to create the customer order
+      const response = await apiService.post('/add-customer-order', payload);
+
+      // If the request is successful, reset the cart and input fields
+      setCart([]);
+      setCustomerName("");
+      setContactNumber("");
+      setAddress("");
+      setSelectedBranch("");
+
+      alert('Your Order is Submitted, Our Sales Representative will call you');
+    } catch (error) {
+      // Log any errors during the API request
+      console.error(error);
+      alert('Error submitting the customer order. Please try again.');
+    }
   };
-
-  try {
-    // Send the POST request to create the customer order
-    const response = await apiService.post('/add-customer-order', payload);
-
-    // If the request is successful, reset the cart and input fields
-    setCart([]);
-    setCustomerName("");
-    setContactNumber("");
-    setAddress("");
-    setSelectedBranch("");
-
-    alert('Your Order is Submitted, Our Sales Represensetative will call you');
-  } catch (error) {
-    // Log any errors during the API request
-    console.error(error);
-    alert('Error submitting the customer order. Please try again.');
-  }
-};
-
-
 
   return (
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
       <div className="absolute top-0 right-0 p-4 z-10">
-  <div className="flex gap-4">
-    <Link
-      href={route('login')}
-      className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-    >
-      Log in
-    </Link>
-    <Link
-      href={route('register')}
-      className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-    >
-      Register
-    </Link>
-  </div>
-</div>
+        <nav className="-mx-3 flex flex-1 justify-end">
+          {auth?.user ? (
+              <>
+                {auth.user.usertype === 'admin' ? (
+                  // Render the Admin Dashboard link
+                  <Link
+                    href={route('admin-dashboard')}
+                    className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                  >
+                    Admin Dashboard
+                  </Link>
+                ) : (
+                  // Render the User Dashboard link
+                  <Link
+                    href={route('user-dashboard')}
+                    className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                  >
+                    User Dashboard
+                  </Link>
+                )}
+              </>
+            ) : (
+              <>
+                <Link
+                  href={route('login')}
+                  className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                >
+                  Log in
+                </Link>
+                <Link
+                  href={route('register')}
+                  className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                >
+                  Register
+                </Link>
+              </>
+            )}
+        </nav>
+      </div>
 
-<header className="bg-blue-700 text-white py-4 px-6 flex justify-between items-center shadow-md sticky top-0 z-0">
-  <h1 className="text-2xl font-bold">CCTV PRODUCTS</h1>
+      <header className="bg-blue-700 text-white py-4 px-6 flex justify-between items-center shadow-md sticky top-0 z-0">
+        <h1 className="text-2xl font-bold">CCTV PRODUCTS</h1>
+        <div className="flex items-center gap-4">
+          <div className="flex gap-2">
+            {categoryOptions.map((option) => (
+              <button
+                key={option}
+                onClick={() => setActiveTab(option)}
+                className={`px-4 py-2 rounded-md transition-all text-sm font-medium ${
+                  activeTab === option
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-blue-100 hover:text-blue-500'
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="p-3 border rounded-lg focus:ring focus:border-blue-500 w-80 placeholder-gray-400 text-gray-800"
+          />
+        </div>
+      </header>
 
-  <div className="flex items-center gap-4">
-    <div className="flex gap-2">
-      {categoryOptions.map((option) => (
-        <button
-          key={option}
-          onClick={() => setActiveTab(option)}
-          className={`px-4 py-2 rounded-md transition-all text-sm font-medium ${
-            activeTab === option
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 hover:bg-blue-100 hover:text-blue-500'
-          }`}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-    <input
-      type="text"
-      placeholder="Search products..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      className="p-3 border rounded-lg focus:ring focus:border-blue-500 w-80 placeholder-gray-400 text-gray-800"
-    />
-  </div>
-</header>
-
-      
       <main className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Product List */}
         <section className="bg-white p-6 rounded shadow-lg col-span-2">
@@ -279,7 +301,7 @@ const POSSystem: React.FC = () => {
           ) : (
             <p className="text-gray-500">Your cart is empty.</p>
           )}
-          
+
           {/* Customer Details Form */}
           <div className="mt-6">
             <h3 className="text-lg font-bold mb-2">Customer Details</h3>
@@ -321,12 +343,11 @@ const POSSystem: React.FC = () => {
 
           {/* Checkout Button */}
           <div className="flex justify-between items-center mt-4">
-            <p className="text-lg font-bold">Total: ₱{calculateTotal().toFixed(2)}</p>
             <button
-              className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700"
+              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 w-full"
               onClick={handleCheckout}
             >
-              Checkout
+              Checkout (₱{calculateTotal().toFixed(2)})
             </button>
           </div>
         </section>

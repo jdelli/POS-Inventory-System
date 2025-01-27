@@ -14,59 +14,51 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Admin Routes
+Route::middleware(['checkrole:user'])->group(function () {
+    Route::get('/user-dashboard', function () {
+        return Inertia::render('Dashboard');
+    })->name('user-dashboard');
+
+    Route::get('/user-sales', function () {
+        return Inertia::render('SalesOrder');
+    })->name('user-sales');
+
+
+    Route::get('/user-manage-stocks', function () {
+        return Inertia::render('ManageStocks');
+    })->name('user-stocks');
+
+    Route::get('/user-stocksentries', function () {
+        return Inertia::render('StockEntries');
+    })->name('user-stocksentries');
+
+    Route::get('/user-quotation', function () {
+        return Inertia::render('Quotation');
+    })->name('user-quotation');
 
 
 
-Route::get('/sales', function () {
-    return Inertia::render('SalesOrder');
-})->middleware(['auth', 'verified'])->name('sales');
-
-
-
-Route::get('/products', function () {
-    return Inertia::render('Products');
-})->middleware(['auth', 'verified'])->name('products');
-
-
-
-
-Route::get('/manage-stocks', function () {
-    return Inertia::render('ManageStocks');
-})->middleware(['auth', 'verified'])->name('stocks');
-
-
-
-
-
-Route::get('/stocksentries', function () {
-    return Inertia::render('StockEntries');
-})->name('stocksentries');
+    Route::get('/user-customers', function () {
+        return Inertia::render('CustomerOrders');
+    })->name('user-customers');
 
 
 
 
-Route::get('/quotation', function () {
-    return Inertia::render('Quotation');
-})->name('quotation');
+});
 
 
 
 
 
-Route::get('/customers', function () {
-    return Inertia::render('CustomerOrders');
-})->name('customers');
+// User Routes
+Route::middleware(['checkrole:admin'])->group(function () {
+    Route::get('/admin-dashboard', function () {
+        return Inertia::render('AdminRoutePage/Dashboard');
+    })->name('admin-dashboard');
 
-
-
-Route::get('/scanner', function () {
-    return Inertia::render('Scanner');
-})->name('scanner');
-
-
+});
 
 
 

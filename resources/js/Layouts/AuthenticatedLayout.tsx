@@ -20,26 +20,20 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                     </div>
                     <nav className="mt-6 flex flex-col space-y-2">
                         <NavLink
-                            href={route('dashboard')}
-                            active={route().current('dashboard')}
+                            href={route('user-dashboard')}
+                            active={route().current('user-dashboard')}
                             className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
                         >
                             Dashboard
                         </NavLink>
                         <NavLink
-                            href={route('sales')}
-                            active={route().current('sales')}
+                            href={route('user-sales')}
+                            active={route().current('user-sales')}
                             className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
                         >
                             Sales Order
                         </NavLink>
-                        <NavLink
-                            href={route('products')}
-                            active={route().current('products')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Products
-                        </NavLink>
+                    
                         
                         {/* Manage Stocks with Dropdown */}
                         <div className="relative">
@@ -52,15 +46,15 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                             {showingNavigationDropdown && (
                                 <div className="ml-4 mt-1 bg-gray-700 rounded-md shadow-lg">
                                     <NavLink
-                                        href={route('stocks')}
-                                        active={route().current('stocks')}
+                                        href={route('user-stocks')}
+                                        active={route().current('user-stocks')}
                                         className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
                                     >
                                         Stock Overview
                                     </NavLink>
                                     <NavLink
-                                        href={route('stocksentries')}
-                                        active={route().current('stocksentries')}
+                                        href={route('user-stocksentries')}
+                                        active={route().current('user-stocksentries')}
                                         className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
                                     >
                                         Stock Entries
@@ -69,15 +63,15 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                             )}
                                 </div>
                                 <NavLink
-                                    href={route('quotation')}
-                                    active={route().current('quotation')}
+                                    href={route('user-quotation')}
+                                    active={route().current('user-quotation')}
                                     className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
                                 >
                                     Quotations
                                 </NavLink>
                                 <NavLink
-                                        href={route('customers')}
-                                        active={route().current('customers')}
+                                        href={route('user-customers')}
+                                        active={route().current('user-customers')}
                                         className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
                                     >
                                         Customer Orders

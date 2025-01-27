@@ -204,34 +204,42 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
                     .toFixed(2)}
                 </span>
               </div>
-              <div className="mb-4">
-                <label className="block font-bold mb-2">Forward to:</label>
-                <select
-                  value={selectedBranch || ''}
-                  onChange={(e) => setSelectedBranch(e.target.value)}
-                  className="w-full p-2 border rounded"
-                >
-                  <option value="">Select a branch</option>
-                  {branches.map((branch) => (
-                    <option key={branch} value={branch}>
-                      {branch}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => {
-                    if (selectedBranch) {
-                      updateBranch(selectedCustomer.id, selectedBranch);
-                      setIsModalOpen(false); // Correct way to close the modal
-                    } else {
-                      alert('Please select a valid branch before updating.');
-                    }
-                  }}
-                  className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                >
-                  Update Branch
-                </button>
-              </div>
+              <div className=" mt-5">
+  <label className="block text-sm font-medium text-gray-700 mb-1">
+    Forward to:
+  </label>
+  <select
+    value={selectedBranch || ''}
+    onChange={(e) => setSelectedBranch(e.target.value)}
+    className="w-auto px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+  >
+    <option value="">Select a branch</option>
+    {branches.map((branch) => (
+      <option key={branch} value={branch}>
+        {branch}
+      </option>
+    ))}
+  </select>
+  <div className="mt-4">
+    <button
+      onClick={() => {
+        if (selectedBranch) {
+          updateBranch(selectedCustomer.id, selectedBranch);
+          setIsModalOpen(false); // Correct way to close the modal
+        } else {
+          alert('Please select a valid branch before updating.');
+        }
+      }}
+      className="w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+    >
+      Update Branch
+    </button>
+  </div>
+</div>
+
+
+
+
               <div className="flex justify-end gap-4">
                 <button
                   onClick={() => markAsDone(selectedCustomer.id)}
