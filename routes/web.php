@@ -58,6 +58,10 @@ Route::middleware(['checkrole:admin'])->group(function () {
         return Inertia::render('AdminRoutePage/Dashboard');
     })->name('admin-dashboard');
 
+    Route::get('/admin-stocks', function () {
+        return Inertia::render('AdminRoutePage/BranchStocks');
+    })->name('admin-stocks');
+
 });
 
 

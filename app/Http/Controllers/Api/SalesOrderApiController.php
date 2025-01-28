@@ -93,11 +93,11 @@ class SalesOrderApiController extends Controller
     try {
         $userName = $request->query('user_name');
         $currentYear = Carbon::now()->year;
-        
+
         // Fetch monthly sales data for the current year
         $salesData = SalesOrder::selectRaw('MONTH(date) as month, SUM(SalesOrderItems.total) as sales')
             ->join('sales_order_items as SalesOrderItems', 'sales_orders.id', '=', 'SalesOrderItems.sales_order_id')
-            ->whereYear('date', $currentYear)
+            ->whereYear('date', $currentYear) // Ensures only sales from the current year are fetched
             ->where('branch_id', $userName)
             ->groupBy('month')
             ->orderBy('month')
@@ -109,8 +109,6 @@ class SalesOrderApiController extends Controller
                 ];
             });
 
-
-
         // Fill in missing months with zero sales
         $allMonths = collect(range(1, 12))->map(function ($month) {
             return [
@@ -119,6 +117,7 @@ class SalesOrderApiController extends Controller
             ];
         });
 
+        // Merge sales data with all months, ensuring no missing months
         $mergedData = $allMonths->map(function ($monthData) use ($salesData) {
             $matchingMonth = $salesData->firstWhere('month', $monthData['month']);
             return $matchingMonth ?? $monthData;
@@ -136,6 +135,7 @@ class SalesOrderApiController extends Controller
         ], 500);
     }
 }
+
 
 public function getTotalClients(Request $request)
 {

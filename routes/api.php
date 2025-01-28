@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DeliveryReceiptsApiController;
 use App\Http\Controllers\Api\CustomerOrderController;
 use App\Http\Controllers\Api\AdminController;
 
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -61,4 +62,5 @@ Route::put('/update-branch/{id}', [CustomerOrderController::class, 'forwardOrder
 //Admin
 Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);
 Route::get('/daily-sales-by-branch', [AdminController::class, 'getDailySales']);
-
+Route::get('/admin-fetch-products-by-branch', [AdminController::class, 'AdminfetchProductsByBranch']);
+Route::get('/get-branches', [AdminController::class, 'getAllBranches']);
