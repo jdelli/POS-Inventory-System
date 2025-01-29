@@ -38,7 +38,7 @@ const categoryOptions = [
 const ProductTable: React.FC = () => {
   const { auth } = usePage().props as { auth: { user: User } };
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [selectedBranchName, setSelectedBranchName] = useState<string | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
@@ -49,7 +49,6 @@ const ProductTable: React.FC = () => {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch branches
   useEffect(() => {
     const fetchBranches = async () => {
       try {
@@ -63,8 +62,8 @@ const ProductTable: React.FC = () => {
     fetchBranches();
   }, []);
 
-  const fetchProductsByBranch = async (branchId, page = 1, limit = 20) => {
-    if (!branchId) {
+  const fetchProductsByBranch = async (branchName: string, page = 1, limit = 20) => {
+    if (!branchName) {
       setProducts([]);
       setCurrentPage(1);
       setLastPage(1);
@@ -73,12 +72,10 @@ const ProductTable: React.FC = () => {
 
     setLoading(true);
     try {
-      console.log("Fetching products with branch_id:", branchId); // Debugging branch_id
       const response = await apiService.get('/admin-fetch-products-by-branch', {
-        params: { branch_id: branchId, page, limit },
+        params: { branch_name: branchName, page, limit },
       });
 
-      console.log("Fetched products response:", response.data); // Debugging response
       setProducts(response.data.data || []);
       setCurrentPage(response.data.current_page);
       setLastPage(response.data.last_page);
@@ -89,12 +86,11 @@ const ProductTable: React.FC = () => {
     }
   };
 
-  // Fetch products when selectedBranchId or currentPage changes
   useEffect(() => {
-    if (selectedBranchId !== null) {
-      fetchProductsByBranch(selectedBranchId, currentPage);
+    if (selectedBranchName) {
+      fetchProductsByBranch(selectedBranchName, currentPage);
     }
-  }, [selectedBranchId, currentPage]);
+  }, [selectedBranchName, currentPage]);
 
   const handleEdit = (product: Product) => {
     setEditProduct(product);
@@ -105,7 +101,9 @@ const ProductTable: React.FC = () => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     try {
       await apiService.delete(`/delete-products/${id}`);
-      fetchProductsByBranch(selectedBranchId as number, currentPage);
+      if (selectedBranchName) {
+        fetchProductsByBranch(selectedBranchName, currentPage);
+      }
     } catch (error) {
       console.error('Error deleting product:', error);
     }
@@ -122,20 +120,21 @@ const ProductTable: React.FC = () => {
       <Head title="Manage Stocks" />
       <div className="container mx-auto p-6 space-y-4">
         {/* Branch Selector */}
-        <div className="flex space-x-2">
+        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
           <select
-            value={selectedBranchId || ''}
-            onChange={(e) => { 
-              setSelectedBranchId(Number(e.target.value));
+            value={selectedBranchName || ''}
+            onChange={(e) => {
+              setSelectedBranchName(e.target.value);
               setCurrentPage(1); // Reset to first page when branch changes
             }}
-            className="border rounded-md py-2 px-3 w-full sm:w-auto"
+            className="border rounded-md py-2 px-3 w-full md:w-auto"
+            aria-label="Select Branch"
           >
             <option value="" disabled>
               Select Branch
             </option>
             {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
+              <option key={branch.id} value={branch.name}>
                 {branch.name}
               </option>
             ))}
@@ -145,12 +144,14 @@ const ProductTable: React.FC = () => {
             placeholder="Search by name"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded-md py-2 px-3 w-full sm:w-auto"
+            className="border rounded-md py-2 px-3 w-full md:w-auto"
+            aria-label="Search Products by Name"
           />
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="border rounded-md py-2 px-3 w-full sm:w-auto"
+            className="border rounded-md py-2 px-3 w-full md:w-auto"
+            aria-label="Filter by Category"
           >
             <option value="">All Categories</option>
             {categoryOptions.map((option) => (
@@ -169,7 +170,10 @@ const ProductTable: React.FC = () => {
 
         {/* Product Table */}
         {loading ? (
-          <p className="text-center py-4">Loading products...</p>
+          <div className="flex justify-center items-center py-4">
+            <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-blue-500" role="status"></div>
+            <span className="ml-2">Loading products...</span>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white shadow-md rounded-lg">
@@ -191,10 +195,10 @@ const ProductTable: React.FC = () => {
                       <td className="py-2 px-4">₱{product.price.toLocaleString()}</td>
                       <td className="py-2 px-4">{product.quantity}</td>
                       <td className="py-2 px-4 flex space-x-2">
-                        <button className="btn btn-green" onClick={() => handleEdit(product)}>
+                        <button className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" onClick={() => handleEdit(product)}>
                           Edit
                         </button>
-                        <button className="btn btn-red" onClick={() => handleDelete(product.id)}>
+                        <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" onClick={() => handleDelete(product.id)}>
                           Delete
                         </button>
                       </td>
@@ -240,12 +244,12 @@ const ProductTable: React.FC = () => {
           showModal={isEditModalOpen}
           closeModal={() => setIsEditModalOpen(false)}
           editProduct={editProduct}
-          onUpdate={() => fetchProductsByBranch(selectedBranchId as number, currentPage)}
+          onUpdate={() => fetchProductsByBranch(selectedBranchName as string, currentPage)}
         />
         <AddProductModal
           showModal={isAddModalOpen}
           closeModal={() => setIsAddModalOpen(false)}
-          refreshProducts={() => fetchProductsByBranch(selectedBranchId as number, currentPage)}
+          refreshProducts={() => fetchProductsByBranch(selectedBranchName as string, currentPage)}
           auth={auth.user}
         />
       </div>

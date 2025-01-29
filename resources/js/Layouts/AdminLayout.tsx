@@ -11,9 +11,9 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
     return (
         <div className="flex min-h-screen bg-gray-200">
             {/* Sidebar */}
-            <aside className="w-64 bg-gray-800 text-white shadow-lg flex flex-col justify-between sticky top-0 h-screen">
+            <aside className="w-56 bg-gray-600 text-white shadow-md flex flex-col justify-between sticky top-0 h-screen">
                 <div>
-                    <div className="flex items-center justify-center h-16 bg-gray-900">
+                    <div className="flex items-center justify-center h-16">
                         <Link href="/">
                             <ApplicationLogo className="h-9 w-auto" />
                         </Link>

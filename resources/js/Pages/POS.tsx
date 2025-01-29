@@ -19,6 +19,10 @@ interface CartItem {
 }
 
 
+interface Branch {
+  id: number;
+  name: string;
+}
 
 
 
@@ -30,6 +34,7 @@ const POSSystem: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('Analog/IP Cameras');
   const { auth } = usePage().props; // Get the `auth` object from the page props
+  const [branches, setBranches] = useState<Branch[]>([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -53,6 +58,22 @@ const POSSystem: React.FC = () => {
     'Radios',
     'Biometrics',
   ];
+
+
+
+  // Fetch branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const response = await apiService.get('/get-branches');
+        setBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
+
+    fetchBranches();
+  }, []);
 
   const fetchProductsByCategory = async (category: string, page: number = 1, limit: number = 20) => {
     setLoading(true);
@@ -329,14 +350,19 @@ const POSSystem: React.FC = () => {
           </div>
 
           <select
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="mb-3 w-full p-2 border border-gray-300 rounded-md bg-white"
+            value={selectedBranch|| ''}
+            onChange={(e) => {
+              setSelectedBranch(e.target.value);
+              setCurrentPage(1); // Reset to first page when branch changes
+            }}
+            className="border rounded-md py-2 px-3 w-full sm:w-auto"
           >
-            <option value="" disabled>Select a Branch near you</option>
-            {branchOptions.map((branch) => (
-              <option key={branch} value={branch}>
-                {branch}
+            <option value="" disabled>
+              Select Branch Near You
+            </option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.name}>
+                {branch.name}
               </option>
             ))}
           </select>

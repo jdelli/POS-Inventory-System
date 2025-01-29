@@ -28,6 +28,13 @@ interface Auth {
   };
 }
 
+interface Branch {
+  id: number;
+  name: string;
+}
+
+
+
 interface InventoryManagementProps {
   auth: Auth;
 }
@@ -41,7 +48,22 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [doneCustomers, setDoneCustomers] = useState<number[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null); // Fix duplicated state
+  const [branches, setBranches] = useState<Branch[]>([]);
+
+  // Fetch branches
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const response = await apiService.get('/get-branches');
+        setBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
+
+    fetchBranches();
+  }, []);
 
   const fetchCustomers = async () => {
     try {
@@ -204,41 +226,40 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
                     .toFixed(2)}
                 </span>
               </div>
-              <div className=" mt-5">
-  <label className="block text-sm font-medium text-gray-700 mb-1">
-    Forward to:
-  </label>
-  <select
-    value={selectedBranch || ''}
-    onChange={(e) => setSelectedBranch(e.target.value)}
-    className="w-auto px-2 py-1 border rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-  >
-    <option value="">Select a branch</option>
-    {branches.map((branch) => (
-      <option key={branch} value={branch}>
-        {branch}
-      </option>
-    ))}
-  </select>
-  <div className="mt-4">
-    <button
-      onClick={() => {
-        if (selectedBranch) {
-          updateBranch(selectedCustomer.id, selectedBranch);
-          setIsModalOpen(false); // Correct way to close the modal
-        } else {
-          alert('Please select a valid branch before updating.');
-        }
-      }}
-      className="w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
-    >
-      Update Branch
-    </button>
-  </div>
-</div>
-
-
-
+              <div className="mt-5">
+              <select
+            value={selectedBranch|| ''}
+            onChange={(e) => {
+              setSelectedBranch(e.target.value);
+             
+            }}
+            className="border rounded-md py-2 px-3 w-full sm:w-auto"
+          >
+            <option value="" disabled>
+              Forward to
+            </option>
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.name}>
+                {branch.name}
+              </option>
+            ))}
+          </select>
+                <div className="mt-4">
+                  <button
+                    onClick={() => {
+                      if (selectedBranch) {
+                        updateBranch(selectedCustomer.id, selectedBranch);
+                        setIsModalOpen(false);
+                      } else {
+                        alert('Please select a valid branch before updating.');
+                      }
+                    }}
+                    className="w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
+                  >
+                    Update Branch
+                  </button>
+                </div>
+              </div>
 
               <div className="flex justify-end gap-4">
                 <button
