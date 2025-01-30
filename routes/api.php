@@ -64,4 +64,4 @@ Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);
 Route::get('/daily-sales-by-branch', [AdminController::class, 'getDailySales']);
 Route::get('/admin-fetch-products-by-branch', [AdminController::class, 'AdminfetchProductsByBranch']);
 Route::get('/get-branches', [AdminController::class, 'getAllBranches']);
-
+Route::get('/stock-history/{id}', [AdminController::class, 'getStockHistory']);

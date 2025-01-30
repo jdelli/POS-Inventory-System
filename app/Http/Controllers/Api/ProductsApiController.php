@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\StockHistory;
 
 
 
@@ -159,9 +160,16 @@ public function fetchProductsByBranch(Request $request)
             ], 400);
         }
 
-        // Deduct the quantity
         $product->quantity -= $validatedData['quantity'];
         $product->save();
+
+        // Log to history
+        StockHistory::create([
+            'product_id' => $product->id,
+            'quantity_changed' => $validatedData['quantity'],
+            'remaining_stock' => $product->quantity,
+            'action' => 'deducted',
+        ]);
 
         return response()->json([
             'message' => 'Quantity deducted successfully',
@@ -172,28 +180,32 @@ public function fetchProductsByBranch(Request $request)
     return response()->json(['message' => 'Product not found'], 404);
 }
 
+public function addQuantity(Request $request)
+{
+    $validatedData = $request->validate([
+        'name' => 'required|string',
+        'quantity' => 'required|integer|min:1',
+    ]);
 
+    $product = Products::where('name', $validatedData['name'])->first();
 
-    public function AddQuantity(Request $request)
-    {
-        $validatedData = $request->validate([
-            'name' => 'required|string',
-            'quantity' => 'required|integer|min:1',
+    if ($product) {
+        $product->quantity += $validatedData['quantity'];
+        $product->save();
+
+        // Log to history
+        StockHistory::create([
+            'product_id' => $product->id,
+            'quantity_changed' => $validatedData['quantity'],
+            'remaining_stock' => $product->quantity,
+            'action' => 'added',
         ]);
 
-        $product = Products::where('name', $validatedData['name'])->first();
-
-        if ($product) {
-            // Deduct the quantity
-            $product->quantity += $validatedData['quantity'];
-            $product->save();
-
-            return response()->json(['message' => 'Stocks Added successfully', 'product' => $product], 200);
-        }
-
-        return response()->json(['message' => 'Product not found'], 404);
+        return response()->json(['message' => 'Stocks Added successfully', 'product' => $product], 200);
     }
 
+    return response()->json(['message' => 'Product not found'], 404);
+}
 
     public function search(Request $request)
 {

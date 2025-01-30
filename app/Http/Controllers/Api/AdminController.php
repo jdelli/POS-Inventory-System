@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Products;
+use App\Models\StockHistory;
 
 class AdminController extends Controller
 {
@@ -98,6 +99,18 @@ public function getAllBranches()
         ]);
     }
     
+
+
+    public function getStockHistory($productId)
+{
+    $history = StockHistory::where('product_id', $productId)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+    return response()->json($history);
+}
+
+
 }
 
 

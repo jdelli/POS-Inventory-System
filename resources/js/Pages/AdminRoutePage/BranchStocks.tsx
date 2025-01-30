@@ -4,6 +4,7 @@ import apiService from '../Services/ApiService';
 import AdminLayout from '@/Layouts/AdminLayout';
 import EditProductModal from '../Props/Edit';
 import AddProductModal from '../Props/Add';
+import StockHistoryModal from '../Props/StockHistoryModal';
 
 interface User {
   id: number;
@@ -48,6 +49,20 @@ const ProductTable: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [stockHistory, setStockHistory] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+
+  const fetchStockHistory = async (productId: number) => {
+    try {
+      const response = await apiService.get(`/stock-history/${productId}`);
+      setStockHistory(response.data);
+      setIsHistoryModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching stock history:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -201,6 +216,14 @@ const ProductTable: React.FC = () => {
                         <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" onClick={() => handleDelete(product.id)}>
                           Delete
                         </button>
+                        <button 
+                          className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
+                          onClick={() => {
+                            setSelectedProduct(product); // Set the selected product
+                            fetchStockHistory(product.id); // Fetch stock history for the selected product
+                          }}>
+                          View History
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -251,6 +274,12 @@ const ProductTable: React.FC = () => {
           closeModal={() => setIsAddModalOpen(false)}
           refreshProducts={() => fetchProductsByBranch(selectedBranchName as string, currentPage)}
           auth={auth.user}
+        />
+        <StockHistoryModal 
+          showModal={isHistoryModalOpen} 
+          closeModal={() => setIsHistoryModalOpen(false)} 
+          history={stockHistory} 
+          productName={selectedProduct?.name || ''} 
         />
       </div>
     </AdminLayout>
