@@ -146,48 +146,45 @@ public function fetchProductsByBranch(Request $request)
     public function deductQuantity(Request $request)
 {
     $validatedData = $request->validate([
-        'name' => 'required|string',
+        'id' => 'required|integer|exists:products,id',
         'quantity' => 'required|integer|min:1',
     ]);
 
-    $product = Products::where('name', $validatedData['name'])->first();
+    $product = Products::find($validatedData['id']);
 
-    if ($product) {
-        if ($validatedData['quantity'] > $product->quantity) {
-            return response()->json([
-                'message' => 'Error: Inputted quantity exceeds current stock',
-                'current_stock' => $product->quantity
-            ], 400);
-        }
-
-        $product->quantity -= $validatedData['quantity'];
-        $product->save();
-
-        // Log to history
-        StockHistory::create([
-            'product_id' => $product->id,
-            'quantity_changed' => $validatedData['quantity'],
-            'remaining_stock' => $product->quantity,
-            'action' => 'deducted',
-        ]);
-
+    if ($validatedData['quantity'] > $product->quantity) {
         return response()->json([
-            'message' => 'Quantity deducted successfully',
-            'product' => $product
-        ], 200);
+            'message' => 'Error: Inputted quantity exceeds current stock',
+            'current_stock' => $product->quantity
+        ], 400);
     }
 
-    return response()->json(['message' => 'Product not found'], 404);
+    $product->quantity -= $validatedData['quantity'];
+    $product->save();
+
+    // Log to history
+    StockHistory::create([
+        'product_id' => $product->id,
+        'quantity_changed' => -$validatedData['quantity'], // Use negative for deduction
+        'remaining_stock' => $product->quantity,
+        'action' => 'deducted',
+    ]);
+
+    return response()->json([
+        'message' => 'Quantity deducted successfully',
+        'product' => $product
+    ], 200);
 }
+
 
 public function addQuantity(Request $request)
 {
     $validatedData = $request->validate([
-        'name' => 'required|string',
+        'id' => 'required|integer|exists:products,id',
         'quantity' => 'required|integer|min:1',
     ]);
 
-    $product = Products::where('name', $validatedData['name'])->first();
+    $product = Products::find($validatedData['id']);
 
     if ($product) {
         $product->quantity += $validatedData['quantity'];
@@ -206,6 +203,9 @@ public function addQuantity(Request $request)
 
     return response()->json(['message' => 'Product not found'], 404);
 }
+
+
+
 
     public function search(Request $request)
 {

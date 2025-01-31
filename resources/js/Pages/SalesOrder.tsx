@@ -16,6 +16,7 @@ interface Item {
   name: string;
   price: number;
   quantity: number;
+  id: number;
 }
 
 interface SalesOrderItem {
@@ -48,7 +49,7 @@ interface InventoryManagementProps {
 const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
   const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState<boolean>(false);
-  const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0 }]);
+  const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0, id: 0 }]);
   const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
   const [client, setClient] = useState<string>('');
@@ -77,7 +78,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   };
 
   const resetReceiptForm = () => {
-    setReceiptItems([{ name: '', price: 0, quantity: 0 }]);
+    setReceiptItems([{ name: '', price: 0, quantity: 0, id: 0 }]);
     setProductSuggestions([]);
     setSearchTerms(['']);
     setClient('');
@@ -98,7 +99,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   };
 
   const addReceiptItem = () => {
-    setReceiptItems([...receiptItems, { name: '', price: 0, quantity: 0 }]);
+    setReceiptItems([...receiptItems, { name: '', price: 0, quantity: 0, id: 0 }]);
     setProductSuggestions([...productSuggestions, []]);
     setSearchTerms([...searchTerms, '']);
   };
@@ -119,16 +120,24 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
     updatedSearchTerms[index] = value;
     setSearchTerms(updatedSearchTerms);
     handleItemChange(index, 'name', value);
+    
   };
 
-  const handleSuggestionClick = (index: number, product: InventoryItem) => {
-    const updatedItems = receiptItems.map((item, i) =>
-      i === index ? { ...item, name: product.name, price: product.price } : item
-    );
+  const handleSuggestionClick = (index: number, product: any) => {
+  const updatedItems = [...receiptItems];
+  updatedItems[index] = {
+    ...updatedItems[index],
+    id: product.id, 
+    name: product.name,
+    price: product.price,
+  };
+  
+  // Clear suggestions for the selected index
     setReceiptItems(updatedItems);
     setSearchTerms((prev) => prev.map((term, i) => (i === index ? '' : term)));
     setProductSuggestions((prev) => prev.map((suggestions, i) => (i === index ? [] : suggestions)));
-  };
+};
+
 
   const submitSalesOrder = async () => {
   try {
@@ -145,29 +154,31 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
     setIsSubmitting(true);
 
     const itemsPayload = receiptItems.map(item => ({
-      product_name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      total: item.price * item.quantity,
-    }));
+  id: item.id, // Include product ID
+  product_name: item.name,
+  price: item.price,
+  quantity: item.quantity,
+  total: item.price * item.quantity,
+}));
 
-    for (const item of itemsPayload) {
-      try {
-        await apiService.post('/deduct-quantity', {
-          name: item.product_name,
-          quantity: item.quantity,
-        });
-      } catch (error: unknown) {
-        if (error instanceof Error && 'response' in error && (error as any).response?.status === 400) {
-          const response = (error as any).response;
-          alert(response.data.message);
-        } else {
-          alert('An error occurred while validating stock.');
-        }
-        setIsSubmitting(false);
-        return;
-      }
+  for (const item of itemsPayload) {
+  try {
+    await apiService.post('/deduct-quantity', {
+      id: item.id, // Send product ID
+      name: item.product_name,
+      quantity: item.quantity,
+    });
+  } catch (error: unknown) {
+    if (error instanceof Error && 'response' in error && (error as any).response?.status === 400) {
+      const response = (error as any).response;
+      alert(response.data.message);
+    } else {
+      alert('An error occurred while validating stock.');
     }
+    setIsSubmitting(false);
+    return;
+  }
+}
 
     const response = await apiService.post('/add-sales-order', {
       customer_name: client,
