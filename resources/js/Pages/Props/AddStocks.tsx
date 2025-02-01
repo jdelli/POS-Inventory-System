@@ -87,6 +87,9 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
           await apiService.post('/add-quantity', {
             id: item.id, // Send product_id
             quantity: item.quantity,
+            name: deliveredBy,
+            receipt_number: deliveryNumber,
+            date: date,       
           });
         }
         alert('Stocks added successfully!');

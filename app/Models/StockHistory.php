@@ -9,7 +9,7 @@ class StockHistory extends Model
 {
     use HasFactory;
 
-     protected $fillable = ['product_id', 'quantity_changed', 'remaining_stock', 'action'];
+     protected $fillable = ['product_id', 'quantity_changed', 'remaining_stock', 'action', 'date', 'name', 'receipt_number'];
 
 
 

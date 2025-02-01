@@ -154,45 +154,58 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
     setIsSubmitting(true);
 
     const itemsPayload = receiptItems.map(item => ({
-  id: item.id, // Include product ID
-  product_name: item.name,
-  price: item.price,
-  quantity: item.quantity,
-  total: item.price * item.quantity,
-}));
-
-  for (const item of itemsPayload) {
-  try {
-    await apiService.post('/deduct-quantity', {
-      id: item.id, // Send product ID
-      name: item.product_name,
+      id: item.id, // Include product ID
+      product_name: item.name,
+      price: item.price,
       quantity: item.quantity,
-    });
-  } catch (error: unknown) {
-    if (error instanceof Error && 'response' in error && (error as any).response?.status === 400) {
-      const response = (error as any).response;
-      alert(response.data.message);
-    } else {
-      alert('An error occurred while validating stock.');
+      total: item.price * item.quantity,
+    }));
+
+    // Validate stock for each item
+    for (const item of itemsPayload) {
+      try {
+        await apiService.post('/deduct-quantity', {
+          id: item.id, // Send product ID
+          quantity: item.quantity,
+          name: client,
+          receipt_number: receiptNumber,
+          date: date,
+        });
+      } catch (error: unknown) {
+        if (error instanceof Error && 'response' in error && (error as any).response?.status === 400) {
+          const response = (error as any).response;
+          alert(response.data.message);
+        } else {
+          alert('An error occurred while validating stock.');
+        }
+        setIsSubmitting(false);
+        return; // Stop the process if there's an error
+      }
     }
-    setIsSubmitting(false);
-    return;
-  }
-}
 
-    const response = await apiService.post('/add-sales-order', {
-      customer_name: client,
-      receipt_number: receiptNumber,
-      date,
-      items: itemsPayload,
-      branch_id: auth.user.name,
-    });
+    // Submit the sales order
+    try {
+      const response = await apiService.post('/add-sales-order', {
+        customer_name: client,
+        receipt_number: receiptNumber,
+        date,
+        items: itemsPayload,
+        branch_id: auth.user.name,
+      });
 
-    if (response.data.success) {
-      alert('Sales order submitted successfully!');
-      closeReceiptModal();
-    } else {
+      if (response.data.success) {
+        alert('Sales order submitted successfully!');
+        closeReceiptModal();
+      } else {
+        alert('Error submitting the sales order.');
+      }
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error('Error submitting sales order:', error.message);
+      }
       alert('Error submitting the sales order.');
+      setIsSubmitting(false);
+      return; // Stop the process if there's an error
     }
   } catch (error: unknown) {
     if (error instanceof Error) {

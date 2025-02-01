@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
-import apiService from './Services/ApiService';
+import apiService from '../Services/ApiService';
 
 interface Product {
   id: number;

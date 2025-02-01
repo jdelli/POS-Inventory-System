@@ -143,11 +143,14 @@ public function fetchProductsByBranch(Request $request)
 
 
 
-    public function deductQuantity(Request $request)
+   public function deductQuantity(Request $request)
 {
     $validatedData = $request->validate([
         'id' => 'required|integer|exists:products,id',
         'quantity' => 'required|integer|min:1',
+        'name' => 'required|string|max:255',
+        'receipt_number' => 'required|string|max:255',
+        'date' => 'required|date',
     ]);
 
     $product = Products::find($validatedData['id']);
@@ -165,6 +168,9 @@ public function fetchProductsByBranch(Request $request)
     // Log to history
     StockHistory::create([
         'product_id' => $product->id,
+        'name' => $validatedData['name'],
+        'receipt_number' => $validatedData['receipt_number'], 
+        'date' => $validatedData['date'],
         'quantity_changed' => -$validatedData['quantity'], // Use negative for deduction
         'remaining_stock' => $product->quantity,
         'action' => 'deducted',
@@ -177,11 +183,15 @@ public function fetchProductsByBranch(Request $request)
 }
 
 
+
 public function addQuantity(Request $request)
 {
     $validatedData = $request->validate([
         'id' => 'required|integer|exists:products,id',
         'quantity' => 'required|integer|min:1',
+        'name' => 'required|string|max:255',
+        'receipt_number' => 'required|string|max:255',
+        'date' => 'required|date',
     ]);
 
     $product = Products::find($validatedData['id']);
@@ -193,6 +203,9 @@ public function addQuantity(Request $request)
         // Log to history
         StockHistory::create([
             'product_id' => $product->id,
+            'name' => $validatedData['name'],
+            'receipt_number' => $validatedData['receipt_number'],
+            'date' => $validatedData['date'],
             'quantity_changed' => $validatedData['quantity'],
             'remaining_stock' => $product->quantity,
             'action' => 'added',
