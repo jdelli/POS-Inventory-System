@@ -33,6 +33,13 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                         >
                             Manage Stocks Branch
                         </NavLink>
+                        <NavLink
+                            href={route('admin-entries')}
+                            active={route().current('admin-entries')}
+                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
+                        >
+                            Manage Stocks Entries
+                        </NavLink>
                     </nav>
                 </div>
             </aside>

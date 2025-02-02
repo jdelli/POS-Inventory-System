@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Products;
 use App\Models\StockHistory;
+use App\Models\DeliveryReceipt;
 
 class AdminController extends Controller
 {
@@ -98,6 +99,35 @@ public function getAllBranches()
             'last_page' => $products->lastPage(),
         ]);
     }
+
+
+
+    public function AdminfetchDeliveryReceiptsByBranch(Request $request)
+{
+    $branchName = $request->query('branch_name');
+    $page = $request->query('page', 1);
+    $limit = $request->query('limit', 20);
+
+    // Start the query with necessary eager loading
+    $query = DeliveryReceipt::with('items');
+
+    // Apply the branch filter if branchName is provided
+    if ($branchName) {
+        $query->where('branch_id', $branchName);
+    }
+
+    // Paginate the results
+    $deliveryReceipts = $query->paginate($limit, ['*'], 'page', $page);
+
+    // Return the paginated results as JSON
+    return response()->json([
+        'data' => $deliveryReceipts->items(),
+        'current_page' => $deliveryReceipts->currentPage(),
+        'per_page' => $deliveryReceipts->perPage(),
+        'total' => $deliveryReceipts->total(),
+        'last_page' => $deliveryReceipts->lastPage(),
+    ]);
+}
     
 
 

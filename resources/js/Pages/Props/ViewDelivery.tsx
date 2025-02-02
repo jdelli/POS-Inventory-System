@@ -12,13 +12,14 @@ interface ViewItemsModalProps {
   items: DeliveryItem[];
 }
 
-const ViewItemsModal: React.FC<ViewItemsModalProps> = ({ isOpen, onClose, items }) => {
+const ViewItemsModal: React.FC<ViewItemsModalProps> = ({ isOpen, onClose, items = [] }) => {
   useEffect(() => {
     if (isOpen) {
       const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key === 'Escape') onClose();
       };
       document.addEventListener('keydown', handleKeyDown);
+      // Cleanup event listener on component unmount or when isOpen changes
       return () => document.removeEventListener('keydown', handleKeyDown);
     }
   }, [isOpen, onClose]);
@@ -39,12 +40,12 @@ const ViewItemsModal: React.FC<ViewItemsModalProps> = ({ isOpen, onClose, items 
         </h2>
 
         <div className="max-h-60 overflow-y-auto">
-          {items.length > 0 ? (
+          {Array.isArray(items) && items.length > 0 ? (
             <ul className="space-y-2">
               {items.map((item) => (
                 <li key={item.id} className="flex justify-between border-b py-2">
                   <span className="font-medium">{item.product_name}</span>
-                  <span className="text-gray-600">Qty: +{item.quantity}</span>
+                  <span className="text-gray-600">Qty: {item.quantity}</span>
                 </li>
               ))}
             </ul>
