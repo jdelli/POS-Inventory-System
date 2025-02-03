@@ -65,6 +65,7 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
           branch_name: selectedBranchName,
           page,
           limit,
+          month: selectedMonth,
         },
       });
       setStockEntries(response.data.data);
@@ -78,58 +79,68 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
 
   useEffect(() => {
     fetchDeliveryReceipts();
-  }, [page, selectedBranchName, limit]);
+  }, [page, selectedBranchName, limit, selectedMonth]);
 
-  const deleteStockEntry = async (id: number) => {
-    try {
-      await apiService.delete(`/delete-stock-entry/${id}`);
-      fetchDeliveryReceipts();
-    } catch (error) {
-      console.error('Error deleting stock entry:', error);
-    }
+
+
+  const handleAddStocksSuccess = () => {
+    fetchDeliveryReceipts();
   };
 
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stock Entries (Admin)</h2>}>
       <Head title="Stock Entries (Admin)" />
       <div className="p-4">
-        {/* Branch Selector */}
-        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
-          <select
-            value={selectedBranchName || ''}
-            onChange={(e) => {
-              setSelectedBranchName(e.target.value);
-              setPage(1); // Reset to first page when branch changes
-            }}
-            className="border rounded-md py-2 px-3 w-full md:w-auto"
-            aria-label="Select Branch"
-          >
-            <option value="" disabled>
-              Select Branch
-            </option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.name}>
-                {branch.name}
+        {/* Controls */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-2 md:space-y-0">
+          <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+            {/* Branch Selector */}
+            <select
+              value={selectedBranchName || ''}
+              onChange={(e) => {
+                setSelectedBranchName(e.target.value);
+                setPage(1); // Reset to first page when branch changes
+              }}
+              className="border rounded-md py-2 px-3 w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Select Branch"
+            >
+              <option value="" disabled>
+                Select Branch
               </option>
-            ))}
-          </select>
-        </div>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.name}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
 
-        {/* Month Filter */}
-        <div className="mb-4">
-          <label className="text-gray-700">Filter by Month</label>
-          <select
-            value={selectedMonth ?? ''}
-            onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-            className="mt-2 p-2 border rounded"
+            {/* Month Filter */}
+            <div className="flex flex-col">
+              <label className="text-gray-700">Filter by Month</label>
+              <select
+                value={selectedMonth ?? ''}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
+                className="mt-2 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-label="Filter by Month"
+              >
+                <option value="">All</option>
+                {[...Array(12).keys()].map((month) => (
+                  <option key={month} value={month + 1}>
+                    {new Date(0, month).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Add Stocks Button */}
+          <button 
+            onClick={() => setIsAddStocksModalOpen(true)} 
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            aria-label="Add Stocks"
           >
-            <option value="">All</option>
-            {[...Array(12).keys()].map((month) => (
-              <option key={month} value={month + 1}>
-                {new Date(0, month).toLocaleString('default', { month: 'long' })}
-              </option>
-            ))}
-          </select>
+            Add Stocks
+          </button>
         </div>
 
         {/* Stock Entries Table */}
@@ -146,7 +157,9 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
             <tbody className="text-gray-700 text-sm">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="text-center py-4">Loading...</td>
+                  <td colSpan={4} className="text-center py-4">
+                    <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto"></div>
+                  </td>
                 </tr>
               ) : stockEntries.length > 0 ? (
                 stockEntries.map((entry) => (
@@ -156,26 +169,16 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
                     <td className="py-3 px-6">{new Date(entry.date).toLocaleDateString()}</td>
                     <td className="py-3 px-6 space-x-2">
                       <button
-                        className="bg-blue-500 text-white px-2 py-1 rounded"
+                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         onClick={() => {
                           setSelectedItems(entry.items || []); // Ensure items is an array
                           setModalOpen(true);
                         }}
+                        aria-label="View Items"
                       >
                         View Items
                       </button>
-                      <button
-                        className="bg-green-500 text-white px-2 py-1 rounded"
-                        onClick={() => alert('Edit functionality here')}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="bg-red-500 text-white px-2 py-1 rounded"
-                        onClick={() => deleteStockEntry(entry.id)}
-                      >
-                        Delete
-                      </button>
+
                     </td>
                   </tr>
                 ))
@@ -193,7 +196,8 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
           <button
             onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
             disabled={page === 1}
-            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50"
+            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            aria-label="Previous Page"
           >
             Previous
           </button>
@@ -203,7 +207,8 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
           <button
             onClick={() => setPage((prev) => (prev < totalPages ? prev + 1 : prev))}
             disabled={page === totalPages}
-            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50"
+            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            aria-label="Next Page"
           >
             Next
           </button>
@@ -212,7 +217,13 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
 
       {/* Modals */}
       <ViewItemsModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} items={selectedItems} />
-      <AddStocks showModal={isAddStocksModalOpen} closeModal={() => setIsAddStocksModalOpen(false)} onSuccess={fetchDeliveryReceipts} />
+      
+      {/* Modal for Adding Stocks */}
+      <AddStocks
+        showModal={isAddStocksModalOpen}
+        closeModal={() => setIsAddStocksModalOpen(false)}
+        onSuccess={handleAddStocksSuccess}
+      />
     </AdminLayout>
   );
 };

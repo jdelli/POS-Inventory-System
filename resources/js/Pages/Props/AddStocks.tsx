@@ -23,26 +23,42 @@ interface AddStockModalProps {
 }
 
 interface User {
-    name: string;
+  name: string;
 }
 
 const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSuccess }) => {
   const { auth } = usePage().props as { auth: { user: User } };
-  const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0, id: 0 }]);
+  const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0 }]);
   const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
+  const [selectedBranchName, setSelectedBranchName] = useState<string>('');
   const [deliveryNumber, setDeliveryNumber] = useState('');
   const [deliveredBy, setDeliveredBy] = useState('');
   const [date, setDate] = useState('');
+  const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const response = await apiService.get('/get-branches');
+        setBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
+
+    fetchBranches();
+  }, []);
 
   const closeAddStocksModal = () => {
     closeModal();
-    setReceiptItems([{ name: '', price: 0, quantity: 0, id: 0 }]);
+    setReceiptItems([{ name: '', price: 0, quantity: 0 }]);
     setProductSuggestions([]);
     setSearchTerms(['']);
     setDeliveryNumber('');
     setDeliveredBy('');
     setDate('');
+    setSelectedBranchName('');
   };
 
   const handleItemChange = (index: number, field: string, value: string | number) => {
@@ -53,7 +69,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   };
 
   const addReceiptItem = () => {
-    setReceiptItems([...receiptItems, { name: '', price: 0, quantity: 0, id: 0 }]);
+    setReceiptItems([...receiptItems, { name: '', price: 0, quantity: 0 }]);
     setProductSuggestions([...productSuggestions, []]);
     setSearchTerms([...searchTerms, '']);
   };
@@ -63,20 +79,19 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   };
 
   const submitAddStocks = async () => {
-   const itemsPayload = receiptItems.map((item) => ({
-    id: item.id, // Use product_id
-    product_name: item.name, // Add this line
-    price: item.price,
-    quantity: item.quantity,
-  }));
-
+    const itemsPayload = receiptItems.map((item) => ({
+      id: item.id, // Use product_id
+      product_name: item.name, // Add this line
+      price: item.price,
+      quantity: item.quantity,
+    }));
 
     const payload = {
       delivery_number: deliveryNumber,
       delivered_by: deliveredBy,
       date,
       items: itemsPayload,
-      branch_id: auth.user.name, // Ensure this matches the backend expectations
+      branch_id: selectedBranchName, // Ensure this matches the backend expectations
     };
 
     try {
@@ -111,7 +126,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
           .get('/search-products', {
             params: {
               q: term, // Search query
-              user_name: auth.user.name, // Pass the username to the backend
+              user_name: selectedBranchName, // Pass the username to the backend
             },
           })
           .then((response) => {
@@ -163,6 +178,23 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl h-full flex flex-col">
             <h2 className="text-lg font-bold mb-4">Add Stocks</h2>
+
+            {/* Branch Selector */}
+            <select
+              value={selectedBranchName || ''}
+              onChange={(e) => setSelectedBranchName(e.target.value)}
+              className="border rounded-md py-2 px-3 w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400"
+              aria-label="Select Branch"
+            >
+              <option value="" disabled>
+                Select Branch
+              </option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.name}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
 
             <div className="mb-4">
               <label className="block text-sm font-medium mb-1">Delivery Number:</label>
@@ -229,9 +261,9 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
                   <div className="flex-1">
                     <label className="block text-sm font-medium mb-1">Quantity</label>
                     <input
-                      type="text"
+                      type="number"
                       value={item.quantity}
-                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value.replace(/[^0-9]/g, ''))}
+                      onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                       className="border border-gray-300 p-2 w-full rounded"
                       placeholder="Quantity"
                     />

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import apiService from '../Services/ApiService';
-
 
 interface Product {
   id: number;
@@ -8,15 +7,13 @@ interface Product {
   category: string;
   price: number;
   quantity: number;
-
 }
-
 
 interface AddProductModalProps {
   showModal: boolean;
   closeModal: () => void;
   refreshProducts: () => void;
-  auth: { name: string };  // Add auth property with type
+  auth: { name: string };  // Ensure this matches your auth structure
 }
 
 const categoryOptions = [
@@ -30,8 +27,6 @@ const categoryOptions = [
   'Biometrics',
 ];
 
-
-
 const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal, refreshProducts, auth }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -42,11 +37,21 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
+  const [selectedBranchName, setSelectedBranchName] = useState<string>('');
 
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const response = await apiService.get('/get-branches');
+        setBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
 
-
-
+    fetchBranches();
+  }, []);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -61,7 +66,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
       setImagePreview(null);
     }
   };
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,21 +91,20 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
     formData.append('quantity', quantity.toString());
     formData.append('category', category);
     formData.append('image', image);
-    formData.append('branch_id', auth.name);
+    formData.append('branch_id', selectedBranchName);  // Ensure this matches the backend expectations
 
     try {
       // Add new product
       const response = await apiService.post('/add-products', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      setProducts((prev) => [...prev, response.data.data]);
       resetForm();
       closeModal();
+      refreshProducts();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Unexpected error occurred.');
     } finally {
       setLoading(false);
-      refreshProducts();
     }
   };
 
@@ -115,7 +118,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
     setImagePreview(null);
   };
 
-
   return (
     showModal ? (
       <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
@@ -123,6 +125,24 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
           <h2 className="text-xl font-bold mb-4">Add Product</h2>
           <form onSubmit={handleSubmit}>
             {error && <p className="text-red-500">{error}</p>}
+            <div className="mb-4">
+              <label className="block mb-1">Branch</label>
+              <select
+                value={selectedBranchName || ''}
+                onChange={(e) => setSelectedBranchName(e.target.value)}
+                className="border rounded-md py-2 px-3 w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400"
+                aria-label="Select Branch"
+              >
+                <option value="" disabled>
+                  Select Branch
+                </option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.name}>
+                    {branch.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="mb-4">
               <label className="block mb-1">Name</label>
               <input

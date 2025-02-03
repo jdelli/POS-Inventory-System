@@ -114,7 +114,7 @@ if (selectedMonth !== null) {
         </div>
       </div>
 
-        {/* Add Stocks Button */}
+        {/* Add Stocks Button
         <div className="mb-4 flex justify-end">
           <button 
             onClick={() => setIsAddStocksModalOpen(true)} 
@@ -122,7 +122,7 @@ if (selectedMonth !== null) {
           >
             Add Stocks
           </button>
-        </div>
+        </div> */}
 
         {/* Stock Entries Table */}
         <div className="overflow-x-auto bg-white shadow-md rounded-lg">

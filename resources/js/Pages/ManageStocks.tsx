@@ -93,7 +93,6 @@ const ProductTable: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -121,22 +120,7 @@ const ProductTable: React.FC = () => {
     fetchProducts(auth.user.name);
   }, [auth.user.name]);
 
-  const handleEdit = (product: Product) => {
-    setEditProduct(product);
-    setIsEditModalOpen(true);
-  };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) {
-      return;
-    }
-    try {
-      await apiService.delete(`/delete-products/${id}`);
-      fetchProducts(auth.user.name, currentPage);
-    } catch (err) {
-      console.error(err);
-    }
-  };
 
   const filteredProducts = products.filter(
     (product) =>
@@ -155,9 +139,9 @@ const ProductTable: React.FC = () => {
             filterCategory={filterCategory}
             setFilterCategory={setFilterCategory}
           />
-          <button onClick={() => setIsAddModalOpen(true)} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          {/* <button onClick={() => setIsAddModalOpen(true)} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
             Add Product
-          </button>
+          </button> */}
         </div>
 
         {loading ? (
@@ -171,7 +155,6 @@ const ProductTable: React.FC = () => {
                   <th className="py-2 px-4 bg-gray-300 font-medium text-left">Category</th>
                   <th className="py-2 px-4 bg-gray-300 font-medium text-left">Price</th>
                   <th className="py-2 px-4 bg-gray-300 font-medium text-left">Quantity</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -182,10 +165,6 @@ const ProductTable: React.FC = () => {
                       <td className="py-2 px-4">{product.category}</td>
                       <td className="py-2 px-4">₱{product.price.toLocaleString()}</td>
                       <td className="py-2 px-4 text-red-500">{product.quantity}</td>
-                      <td className="py-2 px-4 flex space-x-2">
-                        <button className="btn btn-green" onClick={() => handleEdit(product)}>Edit</button>
-                        <button className="btn btn-red" onClick={() => handleDelete(product.id)}>Delete</button>
-                      </td>
                     </tr>
                   ))
                 ) : (
@@ -203,13 +182,7 @@ const ProductTable: React.FC = () => {
           lastPage={lastPage}
           onPageChange={(page) => fetchProducts(auth.user.name, page)}
         />
-
-        <EditProductModal
-          showModal={isEditModalOpen}
-          closeModal={() => setIsEditModalOpen(false)}
-          editProduct={editProduct}
-          onUpdate={() => fetchProducts(auth.user.name, currentPage)}
-        />
+        
         <AddProductModal
           showModal={isAddModalOpen}
           closeModal={() => setIsAddModalOpen(false)}
