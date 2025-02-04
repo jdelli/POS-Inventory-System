@@ -41,7 +41,7 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                                 onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
                                 className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white w-full"
                             >
-                                Manage Stocks
+                                 Stocks
                             </button>
                             {showingNavigationDropdown && (
                                 <div className="ml-4 mt-1 bg-gray-700 rounded-md shadow-lg">

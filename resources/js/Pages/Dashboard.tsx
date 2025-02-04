@@ -122,7 +122,7 @@ const MonthlySalesDashboard: React.FC = () => {
                             </p>
                         </div>
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
-                            <h3 className="text-lg font-bold text-gray-800 mb-2">Total Sales Today:</h3>
+                            <h3 className="text-lg font-bold text-gray-800 mb-2"> Sales Orders Today:</h3>
                             <p className="text-3xl font-semibold text-blue-600">
                                 {totalSalesToday !== null ? totalSalesToday : 'Loading...'}
                             </p>

@@ -7,9 +7,9 @@ interface SalesOrderItem {
 }
 
 interface ReceiptProps {
-  isOpen: boolean;
-  onClose: () => void;
-  selectedOrder: {
+    isOpen: boolean;
+    onClose: () => void;
+    selectedOrder: {
     customer_name: string;
     receipt_number: string;
     date: string;

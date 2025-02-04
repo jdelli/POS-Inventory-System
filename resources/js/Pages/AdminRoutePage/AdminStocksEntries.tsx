@@ -33,7 +33,7 @@ interface InventoryManagementProps {
 
 const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(false); // Initially set loading to false
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
@@ -43,6 +43,7 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
   const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
   const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
   const [selectedBranchName, setSelectedBranchName] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -58,6 +59,8 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
   }, []);
 
   const fetchDeliveryReceipts = async () => {
+    if (!selectedBranchName) return; // Do not fetch if no branch is selected
+    
     setLoading(true);
     try {
       const response = await apiService.get('/admin-fetch-delivery-receipts-by-branch', {
@@ -70,6 +73,7 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
       });
       setStockEntries(response.data.data);
       setTotalPages(response.data.last_page);
+      setCurrentPage(response.data.current_page);
     } catch (error) {
       console.error('Error fetching stock entries:', error);
     } finally {
@@ -81,8 +85,6 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
     fetchDeliveryReceipts();
   }, [page, selectedBranchName, limit, selectedMonth]);
 
-
-
   const handleAddStocksSuccess = () => {
     fetchDeliveryReceipts();
   };
@@ -92,16 +94,17 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
       <Head title="Stock Entries (Admin)" />
       <div className="p-4">
         {/* Controls */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-2 md:space-y-0">
-          <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-2 md:space-y-0 md:space-x-4">
+          {/* Branch Selector and Month Filter */}
+          <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
             {/* Branch Selector */}
             <select
               value={selectedBranchName || ''}
               onChange={(e) => {
                 setSelectedBranchName(e.target.value);
-                setPage(1); // Reset to first page when branch changes
+                setCurrentPage(1); // Reset to first page when branch changes
               }}
-              className="border rounded-md py-2 px-3 w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="border rounded-md py-2 px-3 w-full md:w-auto"
               aria-label="Select Branch"
             >
               <option value="" disabled>
@@ -115,12 +118,12 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
             </select>
 
             {/* Month Filter */}
-            <div className="flex flex-col">
-              <label className="text-gray-700">Filter by Month</label>
+            <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
+              <label className="text-gray-700 md:mr-2">Filter by Month</label>
               <select
                 value={selectedMonth ?? ''}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-                className="mt-2 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="border rounded-md py-2 px-3 w-full md:w-auto"
                 aria-label="Filter by Month"
               >
                 <option value="">All</option>

@@ -66,3 +66,4 @@ Route::get('/admin-fetch-products-by-branch', [AdminController::class, 'Adminfet
 Route::get('/get-branches', [AdminController::class, 'getAllBranches']);
 Route::get('/stock-history/{id}', [AdminController::class, 'getStockHistory']);
 Route::get('/admin-fetch-delivery-receipts-by-branch', [AdminController::class, 'AdminfetchDeliveryReceiptsByBranch']);
+Route::get('/admin-get-sales-orders', [AdminController::class, 'adminGetSalesOrders']);

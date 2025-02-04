@@ -128,6 +128,41 @@ public function getAllBranches()
         'last_page' => $deliveryReceipts->lastPage(),
     ]);
 }
+
+
+
+    public function adminGetSalesOrders(Request $request)
+{
+    $branchName = $request->query('branch_name');
+    $page = $request->query('page', 1);
+    $limit = $request->query('limit', 20);
+    $month = $request->query('month');
+    $year = $request->query('year');
+
+    $query = SalesOrder::with('items');
+
+    if ($branchName) {
+        $query->where('branch_id', $branchName);
+    }
+
+    if ($month && $year) {
+        $query->whereMonth('date', $month)->whereYear('date', $year);
+    } elseif ($month) {
+        $query->whereMonth('date', $month);
+    } elseif ($year) {
+        $query->whereYear('date', $year);
+    }
+
+    $salesOrders = $query->paginate($limit, ['*'], 'page', $page);
+
+    return response()->json([
+        'data' => $salesOrders->items(),
+        'current_page' => $salesOrders->currentPage(),
+        'per_page' => $salesOrders->perPage(),
+        'total' => $salesOrders->total(),
+        'last_page' => $salesOrders->lastPage(),
+    ]);
+}
     
 
 

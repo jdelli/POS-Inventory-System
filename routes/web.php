@@ -66,6 +66,10 @@ Route::middleware(['checkrole:admin'])->group(function () {
         return Inertia::render('AdminRoutePage/AdminStocksEntries');
     })->name('admin-entries');
 
+    Route::get('/admin-sales', function () {
+        return Inertia::render('AdminRoutePage/BranchSalesOrders');
+    })->name('admin-sales');
+
 });
 
 

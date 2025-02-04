@@ -159,13 +159,13 @@ const ProductTable: React.FC = () => {
             placeholder="Search by name"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded-md py-2 px-3 w-full md:w-auto"
+            className="border rounded-md py-2 px-3 w-full md:w-auto bg-white text-gray-700"
             aria-label="Search Products by Name"
           />
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="border rounded-md py-2 px-3 w-full md:w-auto"
+            className="border rounded-md py-2 px-3 w-full md:w-auto bg-white text-gray-700"
             aria-label="Filter by Category"
           >
             <option value="">All Categories</option>
@@ -177,7 +177,7 @@ const ProductTable: React.FC = () => {
           </select>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
           >
             Add Product
           </button>
@@ -194,34 +194,41 @@ const ProductTable: React.FC = () => {
             <table className="min-w-full bg-white shadow-md rounded-lg">
               <thead>
                 <tr>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Product Name</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Category</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Price</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Quantity</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Actions</th>
+                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Product Name</th>
+                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Category</th>
+                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Price</th>
+                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Quantity</th>
+                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b hover:bg-gray-200">
+                    <tr key={product.id} className="border-b hover:bg-gray-100">
                       <td className="py-2 px-4">{product.name}</td>
                       <td className="py-2 px-4">{product.category}</td>
                       <td className="py-2 px-4">₱{product.price.toLocaleString()}</td>
                       <td className="py-2 px-4">{product.quantity}</td>
                       <td className="py-2 px-4 flex space-x-2">
-                        <button className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600" onClick={() => handleEdit(product)}>
+                        <button
+                          className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors"
+                          onClick={() => handleEdit(product)}
+                        >
                           Edit
                         </button>
-                        <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600" onClick={() => handleDelete(product.id)}>
+                        <button
+                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors"
+                          onClick={() => handleDelete(product.id)}
+                        >
                           Delete
                         </button>
-                        <button 
-                          className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600"
+                        <button
+                          className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 transition-colors"
                           onClick={() => {
                             setSelectedProduct(product); // Set the selected product
                             fetchStockHistory(product.id); // Fetch stock history for the selected product
-                          }}>
+                          }}
+                        >
                           View History
                         </button>
                       </td>
@@ -243,7 +250,9 @@ const ProductTable: React.FC = () => {
         {products.length > 0 && (
           <div className="flex justify-center mt-4 space-x-2">
             <button
-              className={`px-3 py-2 rounded-md ${currentPage === 1 ? 'bg-gray-200' : 'bg-gray-300 hover:bg-gray-400'}`}
+              className={`px-3 py-2 rounded-md ${
+                currentPage === 1 ? 'bg-gray-200' : 'bg-gray-300 hover:bg-gray-400 transition-colors'
+              }`}
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(currentPage - 1)}
             >
@@ -253,7 +262,9 @@ const ProductTable: React.FC = () => {
               Page {currentPage} of {lastPage}
             </span>
             <button
-              className={`px-3 py-2 rounded-md ${currentPage === lastPage ? 'bg-gray-200' : 'bg-gray-300 hover:bg-gray-400'}`}
+              className={`px-3 py-2 rounded-md ${
+                currentPage === lastPage ? 'bg-gray-200' : 'bg-gray-300 hover:bg-gray-400 transition-colors'
+              }`}
               disabled={currentPage === lastPage}
               onClick={() => setCurrentPage(currentPage + 1)}
             >
@@ -275,11 +286,11 @@ const ProductTable: React.FC = () => {
           refreshProducts={() => fetchProductsByBranch(selectedBranchName as string, currentPage)}
           auth={auth.user}
         />
-        <StockHistoryModal 
-          showModal={isHistoryModalOpen} 
-          closeModal={() => setIsHistoryModalOpen(false)} 
-          history={stockHistory} 
-          productName={selectedProduct?.name || ''} 
+        <StockHistoryModal
+          showModal={isHistoryModalOpen}
+          closeModal={() => setIsHistoryModalOpen(false)}
+          history={stockHistory}
+          productName={selectedProduct?.name || ''}
         />
       </div>
     </AdminLayout>
