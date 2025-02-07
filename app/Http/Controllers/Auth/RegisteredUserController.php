@@ -36,6 +36,15 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
+        $user = Auth::user();
+        $token = $request->user()->createToken('token-name')->plainTextToken;
+        
+        $authUser=[
+            'user' => $user,
+            'token' => $token
+        ];
+
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,

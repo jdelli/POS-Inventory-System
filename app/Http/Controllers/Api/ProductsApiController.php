@@ -10,6 +10,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use App\Models\StockHistory;
+use App\Models\DeliveryReceipt;
+use App\Models\SalesOrder;
 
 
 
@@ -258,6 +260,56 @@ public function addQuantity(Request $request)
             ], 500);
         }
     }
+
+
+    public function undoStockChange(Request $request)
+    {
+        $validatedData = $request->validate([
+            'product_id' => 'required|integer|exists:products,id'
+        ]);
+
+        // Retrieve the latest stock history for the given product
+        $latestHistory = StockHistory::where('product_id', $validatedData['product_id'])
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        if (!$latestHistory) {
+            return response()->json(['message' => 'No stock change history found for this product'], 404);
+        }
+
+        $product = Products::find($validatedData['product_id']);
+
+        if (!$product) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+
+        if ($latestHistory->action === 'added') {
+            // If stock was added, decrease quantity
+            $product->quantity -= $latestHistory->quantity_changed;
+
+            // Delete the related delivery receipt
+            DeliveryReceipt::where('delivery_number', $latestHistory->receipt_number)->delete();
+        } elseif ($latestHistory->action === 'deducted') {
+            // If stock was deducted, increase quantity
+            $product->quantity += abs($latestHistory->quantity_changed);
+
+            // Delete the related sales order
+            SalesOrder::where('receipt_number', $latestHistory->receipt_number)->delete();
+        }
+
+        // Save the updated product quantity
+        $product->save();
+
+        // Delete the stock history entry after undoing
+        $latestHistory->delete();
+
+        return response()->json([
+            'message' => 'Stock change undone successfully',
+            'product' => $product
+        ], 200);
+    }
+
+
 
 
         

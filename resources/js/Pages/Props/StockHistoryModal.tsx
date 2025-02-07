@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import apiService from '../Services/ApiService';
 
 interface StockHistoryProps {
   showModal: boolean;
@@ -10,17 +11,28 @@ interface StockHistoryProps {
 }
 
 const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal, history, productName }) => {
-  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [startDate, setStartDate] = useState<Date | null>(null); // Allow null
+  const [endDate, setEndDate] = useState<Date | null>(null); // Allow null
 
   if (!showModal) return null;
 
+  // Date Filtering Logic
   const filteredHistory = history.filter((entry) => {
     const entryDate = new Date(entry.date);
     if (startDate && entryDate < startDate) return false;
     if (endDate && entryDate > endDate) return false;
     return true;
   });
+
+  // `undoStockChange` (Now Using `entry.product_id`)
+  const undoStockChange = async (productId: number) => {
+    try {
+      const response = await apiService.post('/undo-stock-change', { product_id: productId });
+      alert(response.data.message);
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'An error occurred');
+    }
+  };
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out z-50">
@@ -35,13 +47,14 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
           </svg>
         </button>
         <h2 className="text-3xl font-bold mb-6 text-gray-800">{productName} - Stock History</h2>
-        
+
+        {/* Date Selection Inputs */}
         <div className="flex space-x-4 mb-6">
           <div>
             <label className="block text-gray-700">Start Date</label>
             <DatePicker
               selected={startDate}
-              onChange={(date) => setStartDate(date || undefined)}
+              onChange={(date: Date | null) => setStartDate(date)} // Handle null
               selectsStart
               startDate={startDate}
               endDate={endDate}
@@ -52,11 +65,11 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
             <label className="block text-gray-700">End Date</label>
             <DatePicker
               selected={endDate}
-              onChange={(date) => setEndDate(date || undefined)}
+              onChange={(date: Date | null) => setEndDate(date)} // Handle null
               selectsEnd
               startDate={startDate}
               endDate={endDate}
-              minDate={startDate}
+              minDate={startDate || undefined} // Ensure minDate is Date or undefined
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
             />
           </div>
@@ -80,6 +93,14 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
                 </div>
                 <div className="text-sm text-gray-600">Date: {entry.date}</div>
                 <div className="text-sm text-gray-600">Name: {entry.name}</div>
+
+                {/* `onClick` to Pass Correct `product_id` */}
+                <button
+                  onClick={() => undoStockChange(entry.product_id)}
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                >
+                  Undo
+                </button>
               </li>
             ))}
           </ul>

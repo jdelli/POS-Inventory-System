@@ -31,6 +31,14 @@ class AuthenticatedSessionController extends Controller
     {
         $request->authenticate();
 
+        $user = Auth::user();
+        $token = $request->user()->createToken('token-name')->plainTextToken;
+        
+        $authUser=[
+            'user' => $user,
+            'token' => $token
+        ];
+
         $request->session()->regenerate();
 
         if ($request->user()->usertype === 'admin') {
@@ -43,14 +51,22 @@ class AuthenticatedSessionController extends Controller
     /**
      * Destroy an authenticated session.
      */
-    public function destroy(Request $request): RedirectResponse
-    {
-        Auth::guard('web')->logout();
 
-        $request->session()->invalidate();
 
-        $request->session()->regenerateToken();
+public function destroy(Request $request): RedirectResponse
+{
+    $user = Auth::guard('sanctum')->user();
 
-        return redirect('/');
+    if ($user) {
+        $user->tokens()->delete(); // Delete all tokens
     }
+
+    Auth::guard('web')->logout();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/');
+}
+
 }
