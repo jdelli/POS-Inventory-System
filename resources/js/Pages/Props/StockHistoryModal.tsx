@@ -24,15 +24,7 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
     return true;
   });
 
-  // `undoStockChange` (Now Using `entry.product_id`)
-  const undoStockChange = async (productId: number) => {
-    try {
-      const response = await apiService.post('/undo-stock-change', { product_id: productId });
-      alert(response.data.message);
-    } catch (error: any) {
-      alert(error.response?.data?.message || 'An error occurred');
-    }
-  };
+
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out z-50">
@@ -95,12 +87,6 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
                 <div className="text-sm text-gray-600">Name: {entry.name}</div>
 
                 {/* `onClick` to Pass Correct `product_id` */}
-                <button
-                  onClick={() => undoStockChange(entry.product_id)}
-                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                >
-                  Undo
-                </button>
               </li>
             ))}
           </ul>

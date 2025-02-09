@@ -46,7 +46,6 @@ interface InventoryManagementProps {
 
 const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
-  const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState<boolean>(false);
   const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0, id: 0 }]);
   const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
@@ -78,29 +77,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
     fetchBranches();
   }, []);
 
-  const closeOrderDetailModal = () => {
-    setIsOrderDetailModalOpen(false);
-    setSelectedOrder(null);
-  };
-
-  // Reset receipt form
-  const resetReceiptForm = () => {
-    setReceiptItems([{ name: '', price: 0, quantity: 0, id: 0 }]);
-    setProductSuggestions([]);
-    setSearchTerms(['']);
-    setClient('');
-    setReceiptNumber('');
-    setDate('');
-  };
-
-  // View order details
-  const viewOrderDetails = (order: SalesOrder) => {
-    setSelectedOrder(order);
-    setIsOrderDetailModalOpen(true);
-  };
-
-  // Fetch products by branch and date range
-  const fetchProductsByBranch = async (branchName: string, page = 1, limit = 20) => {
+  const fetchSalesOrders = async (branchName: string, page = 1, limit = 20) => {
     if (!branchName) {
       setLoading(false);
       return;
@@ -114,7 +91,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
 
       setFilteredOrders(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching products:', error);
+      console.error('Error fetching sales orders:', error);
     } finally {
       setLoading(false);
     }
@@ -122,9 +99,29 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
 
   useEffect(() => {
     if (selectedBranchName) {
-      fetchProductsByBranch(selectedBranchName, currentPage);
+      fetchSalesOrders(selectedBranchName, currentPage);
     }
   }, [selectedBranchName, currentPage, selectedMonth, selectedYear]);
+
+  const closeReceiptModal = () => {
+    setIsReceiptModalOpen(false);
+    setSelectedOrder(null);
+  };
+
+  const viewOrderReceipt = (order: SalesOrder) => {
+    setSelectedOrder(order);
+    setIsReceiptModalOpen(true);
+  };
+
+  const handleDeleteReceipt = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this sales order?')) return;
+    try {
+      await apiService.delete(`/delete-sales-order/${id}`);
+      fetchSalesOrders(selectedBranchName || '', currentPage);
+    } catch (error) {
+      console.error('Error deleting sales order:', error);
+    }
+  };
 
   // Date formatting
   const formatDate = (dateString: string): string => {
@@ -209,7 +206,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                 <th className="py-2 px-4 text-left border">Receipt Number</th>
                 <th className="py-2 px-4 text-left border">Customer</th>
                 <th className="py-2 px-4 text-left border">Date</th>
-                <th className="py-2 px-4 text-left border">Details</th>
+                <th className="py-2 px-4 text-left border">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -218,9 +215,18 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                   <td className="py-2 px-4 border">{order.receipt_number}</td>
                   <td className="py-2 px-4 border">{order.customer_name}</td>
                   <td className="py-2 px-4 border">{formatDate(order.date)}</td>
-                  <td className="py-2 px-4 border">
-                    <button onClick={() => viewOrderDetails(order)} className="text-blue-500 hover:underline">
-                      View Details
+                  <td className="py-2 px-4 border flex space-x-2">
+                    <button 
+                      onClick={() => viewOrderReceipt(order)} 
+                      className="text-blue-500 hover:underline"
+                    >
+                      View Receipt
+                    </button>
+                    <button 
+                      onClick={() => handleDeleteReceipt(order.id)} 
+                      className="text-red-500 hover:underline"
+                    >
+                      Delete
                     </button>
                   </td>
                 </tr>
@@ -229,30 +235,13 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
           </table>
         </div>
 
-        {/* Order Detail Modal */}
-        {selectedOrder && isOrderDetailModalOpen && (
-          <div className="fixed inset-0 flex justify-center items-center bg-gray-500 bg-opacity-50 z-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-2xl">
-              <h2 className="text-2xl font-semibold mb-4">Order Details</h2>
-              <ul className="space-y-2">
-                {selectedOrder.items.map((item, index) => (
-                  <li key={index} className="flex justify-between items-center">
-                    <span className="font-medium">{item.product_name}</span>
-                    <span>{item.price} x {item.quantity}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 font-semibold">
-                Total: ${selectedOrder.items.reduce((sum, item) => sum + item.price * item.quantity, 0).toFixed(2)}
-              </div>
-              <button 
-                onClick={closeOrderDetailModal} 
-                className="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-              >
-                Close
-              </button>
-            </div>
-          </div>
+        {/* Receipt Modal */}
+        {selectedOrder && (
+          <Receipt 
+            isOpen={isReceiptModalOpen} 
+            onClose={closeReceiptModal} 
+            selectedOrder={selectedOrder} 
+          />
         )}
       </div>
     </AdminLayout>

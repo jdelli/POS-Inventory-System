@@ -89,6 +89,38 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
     fetchDeliveryReceipts();
   };
 
+  const handleDeleteItem = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      await apiService.delete(`/delete-delivery-receipt-item/${id}`);
+      fetchDeliveryReceipts();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
+  };
+
+  const handleDeleteAllItems = async () => {
+    if (!confirm('Are you sure you want to delete all items?')) return;
+    try {
+      const deletePromises = selectedItems.map(item => apiService.delete(`/delete-delivery-receipt-item/${item.id}`));
+      await Promise.all(deletePromises);
+      fetchDeliveryReceipts();
+      setModalOpen(false);
+    } catch (error) {
+      console.error('Error deleting all items:', error);
+    }
+  };
+
+  const handleDeleteReceipt = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this delivery receipt?')) return;
+    try {
+      await apiService.delete(`/delete-delivery-receipt/${id}`);
+      fetchDeliveryReceipts();
+    } catch (error) {
+      console.error('Error deleting delivery receipt:', error);
+    }
+  };
+
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stock Entries (Admin)</h2>}>
       <Head title="Stock Entries (Admin)" />
@@ -170,7 +202,7 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
                     <td className="py-3 px-6">{entry.delivery_number}</td>
                     <td className="py-3 px-6">{entry.delivered_by}</td>
                     <td className="py-3 px-6">{new Date(entry.date).toLocaleDateString()}</td>
-                    <td className="py-3 px-6 space-x-2">
+                    <td className="py-3 px-6 space-x-2 flex">
                       <button
                         className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         onClick={() => {
@@ -181,7 +213,13 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
                       >
                         View Items
                       </button>
-
+                      <button
+                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
+                        onClick={() => handleDeleteReceipt(entry.id)}
+                        aria-label="Delete Receipt"
+                      >
+                        Delete Receipt
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -219,7 +257,7 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
       </div>
 
       {/* Modals */}
-      <ViewItemsModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} items={selectedItems} />
+      <ViewItemsModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} items={selectedItems} onDelete={handleDeleteItem} onDeleteAll={handleDeleteAllItems} />
       
       {/* Modal for Adding Stocks */}
       <AddStocks

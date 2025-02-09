@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DeliveryReceipt;
 use App\Models\DeliveryItems;
+use Illuminate\Support\Facades\DB;
+use App\Models\Products;
+use App\Models\StockHistory;
 
 class DeliveryReceiptsApiController extends Controller
 {
@@ -81,10 +84,69 @@ class DeliveryReceiptsApiController extends Controller
             'total' => $deliveryReceipts->total(),
         ]);
     }
-    
-    
-    
-    
+
+    public function deleteDeliveryReceipt($id)
+{
+    DB::beginTransaction();
+
+    try {
+        // Fetch the delivery receipt
+        $deliveryReceipt = DeliveryReceipt::with('items')->findOrFail($id);
+
+        // Revert the quantity of each product
+        foreach ($deliveryReceipt->items as $item) {
+            $product = Products::where('name', $item->product_name)->first();
+
+            // Ensure product exists
+            if (!$product) {
+                throw new \Exception("Product not found: " . $item->product_name);
+            }
+
+            // Retrieve the stock history for this product in reverse order (latest first)
+            $stockHistories = StockHistory::where('product_id', $product->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            // Revert the stock based on the stock history
+            foreach ($stockHistories as $latestHistory) {
+                if ($latestHistory->action === 'added') {
+                    // If stock was added, we should delete the stock history entry for this addition
+                    $latestHistory->delete();
+                    // Decrease the quantity of the product
+                    $product->quantity -= $latestHistory->quantity_changed;
+                } 
+                // If it's deducted, we should leave the history intact
+            }
+
+            // Save the updated product quantity
+            $product->save();
+        }
+
+        // Delete the delivery receipt
+        $deliveryReceipt->delete();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Delivery receipt deleted successfully'
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to delete delivery receipt',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
 
 }
+    
+    
+    
+    
+
+
+

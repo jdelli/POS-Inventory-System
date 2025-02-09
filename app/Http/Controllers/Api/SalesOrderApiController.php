@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItems;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Models\Products;
+use App\Models\StockHistory;
 
 
 class SalesOrderApiController extends Controller
@@ -194,7 +199,76 @@ public function getDailySales(Request $request)
 }
 
 
+public function deleteSalesOrder($orderId)
+{
+    DB::beginTransaction();
+
+    try {
+        // Fetch the sales order
+        $salesOrder = SalesOrder::with('items')->findOrFail($orderId);
+
+        // Revert the quantity of each product
+        foreach ($salesOrder->items as $item) {
+            $product = Products::where('name', $item->product_name)->first();
+
+            // Ensure product exists
+            if (!$product) {
+                throw new \Exception("Product not found: " . $item->product_name);
+            }
+
+            // Retrieve the stock history for this product in reverse order (latest first)
+            $stockHistories = StockHistory::where('product_id', $product->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            foreach ($stockHistories as $latestHistory) {
+                // Revert stock deducted during the sales order
+                if ($latestHistory->action === 'deducted') {
+                    // If stock was deducted, we need to add it back (increase quantity)
+                    // Ensure you're adding a positive value to the product's quantity
+                    $product->quantity += abs($latestHistory->quantity_changed); // Use abs() to ensure positivity
+                    // Delete the stock history entry after undoing the action
+                    $latestHistory->delete();
+                } 
+                // If stock was added, do nothing to the stock history
+            }
+
+            // Save the updated product quantity
+            $product->save();
+        }
+
+        // Delete the sales order items
+        SalesOrderItems::where('sales_order_id', $orderId)->delete();
+
+        // Delete the sales order
+        $salesOrder->delete();
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sales order deleted successfully',
+        ]);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to delete sales order',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
+
+}
+
+
+
+
+
 
     
 
-}
+

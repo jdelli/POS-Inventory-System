@@ -31,6 +31,16 @@ const StockEntriesTable: React.FC = () => {
     fetchStockEntries();
   }, []);
 
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this stock entry?')) return;
+    try {
+      await apiService.delete(`/delete-delivery-receipt/${id}`);
+      fetchStockEntries();
+    } catch (error) {
+      console.error('Error deleting stock entry:', error);
+    }
+  }
+
   return (
     <AuthenticatedLayout>
       <div className="p-4">

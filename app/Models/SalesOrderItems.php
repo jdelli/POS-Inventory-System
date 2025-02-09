@@ -16,4 +16,10 @@ class SalesOrderItems extends Model
     {
         return $this->belongsTo(SalesOrder::class);
     }
+
+    // Define the relationship with Product
+    public function product()
+    {
+        return $this->belongsTo(Products::class);
+    }
 }

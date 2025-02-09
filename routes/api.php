@@ -59,6 +59,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stock-history/{id}', [AdminController::class, 'getStockHistory']);
     Route::get('/admin-fetch-delivery-receipts-by-branch', [AdminController::class, 'AdminfetchDeliveryReceiptsByBranch']);
     Route::get('/admin-get-sales-orders', [AdminController::class, 'adminGetSalesOrders']);
+    Route::delete('/delete-sales-order/{id}', [SalesOrderApiController::class, 'deleteSalesOrder']);
+    Route::delete('/delete-delivery-receipt/{id}', [DeliveryReceiptsApiController::class, 'deleteDeliveryReceipt']);
 });
 
 
@@ -66,4 +68,6 @@ Route::middleware('auth:sanctum')->group(function () {
 // Public Routes
 Route::get('/get-branches', [AdminController::class, 'getAllBranches']);
 Route::get("/fetch-products", [ProductsApiController::class, "fetchProducts"]);
+
+
 
