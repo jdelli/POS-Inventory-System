@@ -261,11 +261,33 @@ public function deleteSalesOrder($orderId)
 
 
 
+ public function mostSoldProducts(Request $request)
+{
+    $branch_id = $request->branch_id;
 
+    // Fetch sales orders with items for the specified branch
+    $sales = SalesOrder::where('branch_id', $branch_id)
+        ->with('items') // Eager load items to avoid N+1 issue
+        ->get()
+        ->flatMap(fn($order) => $order->items)
+        ->groupBy('product_name')
+        ->map(fn($items, $productName) => [
+            'product_name' => $productName,
+            'total_quantity' => $items->sum('quantity'), // ✅ Changed key name
+        ])
+        ->sortByDesc('total_quantity')
+        ->take(5)
+        ->values(); // Reset the keys
+
+    return response()->json([
+        'success' => true,
+        'data' => $sales
+    ]);
 }
 
 
 
+}
 
 
 

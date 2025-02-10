@@ -9,20 +9,37 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    PieChart,
+    Pie,
+    Cell,
+    Legend,
 } from 'recharts';
 import apiService from '../Services/ApiService';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { StringDecoder } from 'node:string_decoder';
 
 interface SalesData {
     branch_id: number;
     total_sales: number;
 }
 
-interface ApiResponse {
-    success: boolean;
-    data: SalesData[];
+interface ProductSalesData {
+    product_name: string;
+    total_quantity: number;
 }
+
+interface Branch {
+    id: number;
+    name: string;
+}
+
+interface ApiResponse<T> {
+    success: boolean;
+    data: T[];
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export default function Dashboard() {
     const [yearlySalesData, setYearlySalesData] = useState<SalesData[]>([]);
@@ -30,12 +47,16 @@ export default function Dashboard() {
     const [dailySales, setDailySales] = useState<SalesData[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     const [selectYear, setSelectYear] = useState<number>(new Date().getFullYear());
+    const [productSalesData, setProductSalesData] = useState<ProductSalesData[]>([]);
+    const [branches, setBranches] = useState<Branch[]>([]);
+    const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+    
 
     // Fetch yearly sales data by branch
     useEffect(() => {
         const fetchYearlySalesByBranch = async () => {
             try {
-                const response = await apiService.get<ApiResponse>('/sales-by-branch', {
+                const response = await apiService.get<ApiResponse<SalesData>>('/sales-by-branch', {
                     params: { year: selectYear },
                 });
 
@@ -59,7 +80,7 @@ export default function Dashboard() {
             if (!selectedDate) return;
 
             try {
-                const response = await apiService.get<ApiResponse>('/daily-sales-by-branch', {
+                const response = await apiService.get<ApiResponse<SalesData>>('/daily-sales-by-branch', {
                     params: { date: selectedDate?.toISOString().split('T')[0] },
                 });
                 if (response.data.success) {
@@ -71,6 +92,48 @@ export default function Dashboard() {
         };
         fetchDataDailySales();
     }, [selectedDate]);
+
+    useEffect(() => {
+    const fetchProductSalesData = async () => {
+        if (!selectedBranch) return;
+
+        try {
+            const response = await apiService.get('/most-sold-product', {
+                params: { branch_id: selectedBranch },
+            });
+
+            if (response.data.success && response.data.data.length > 0) {
+                setProductSalesData(response.data.data);
+            } else {
+                setProductSalesData([]); // Ensure empty state is handled
+            }
+        } catch (error) {
+            console.error('Error fetching product sales data:', error);
+        }
+    };
+
+    fetchProductSalesData();
+}, [selectedBranch]);
+
+
+   useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const response = await apiService.get('/get-branches');
+        setBranches(response.data);
+      } catch (error) {
+        console.error('Error fetching branches:', error);
+      }
+    };
+
+    fetchBranches();
+  }, []);
+
+    useEffect(() => {
+        if (branches.length > 0) {
+            setSelectedBranch;
+        }
+    }, [branches]);
 
     return (
         <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800">Dashboard</h2>}>
@@ -152,6 +215,52 @@ export default function Dashboard() {
                                 </linearGradient>
                             </defs>
                         </BarChart>
+                    </ResponsiveContainer>
+                </div>
+
+                {/* Product Sales Pie Chart Section */}
+                <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl mt-6 border-2 border-white">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-4">Mostly Sold Products</h3>
+                    <div className="mb-6">
+                        <label className="text-gray-700 font-semibold mb-2 block">Select Branch:</label>
+                        <select
+                        value={selectedBranch || ''}
+                        onChange={(e) => {
+                        setSelectedBranch(e.target.value);
+                        
+                        }}
+                        className="border rounded-md py-2 px-3 w-full md:w-auto"
+                        aria-label="Select Branch"
+                    >
+                        <option value="" disabled>
+                        Select Branch
+                        </option>
+                        {branches.map((branch) => (
+                        <option key={branch.id} value={branch.name}>
+                            {branch.name}
+                        </option>
+                        ))}
+                    </select>
+                    </div>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                            <Pie
+                                data={productSalesData}
+                                dataKey="total_quantity"
+                                nameKey="product_name"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={100}
+                                fill="#8884d8"
+                                label
+                            >
+                                {productSalesData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                            </Pie>
+                            <Tooltip />
+                            <Legend />
+                        </PieChart>
                     </ResponsiveContainer>
                 </div>
             </div>

@@ -70,4 +70,4 @@ Route::get('/get-branches', [AdminController::class, 'getAllBranches']);
 Route::get("/fetch-products", [ProductsApiController::class, "fetchProducts"]);
 
 
-
+Route::get('/most-sold-product', [SalesOrderApiController::class, 'mostSoldProducts']);
