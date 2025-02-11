@@ -18,13 +18,22 @@ class SalesOrderApiController extends Controller
 {
     public function addSalesOrder(Request $request)
 {
-    // Validate the request input
+    // Validate the request input with custom rule for product_name existence
     $request->validate([
         'receipt_number' => 'required|string|max:255',
         'customer_name' => 'required|string|max:255',
         'date' => 'required|date',
         'items' => 'required|array',
-        'items.*.product_name' => 'required|string|max:255',
+        'items.*.product_name' => [
+            'required',
+            'string',
+            'max:255',
+            function ($attribute, $value, $fail) {
+                if (!\App\Models\Products::where('name', $value)->exists()) {
+                    $fail("The product '$value' does not exist in the database.");
+                }
+            }
+        ],
         'items.*.quantity' => 'required|integer|min:1',
         'items.*.price' => 'required|numeric|min:0',
         'items.*.total' => 'required|numeric|min:0',
@@ -56,6 +65,7 @@ class SalesOrderApiController extends Controller
         'salesOrder' => $salesOrder
     ]);
 }
+
 
 
 

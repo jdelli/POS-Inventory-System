@@ -13,13 +13,22 @@ use App\Models\StockHistory;
 class DeliveryReceiptsApiController extends Controller
 {
     public function addDeliveryReceipt(Request $request) {
-        request()->validate([
+        $request->validate([
             'branch_id' => 'required|string|max:255',
             'delivery_number' => 'required|string|max:255',
             'delivered_by' => 'required|string|max:255',
             'date' => 'required|date',
             'items' => 'required|array',
-            'items.*.product_name' => 'required|string|max:255',
+            'items.*.product_name' => [
+            'required',
+            'string',
+            'max:255',
+            function ($attribute, $value, $fail) {
+                if (!\App\Models\Products::where('name', $value)->exists()) {
+                    $fail("The product '$value' does not exist in the database.");
+                }
+            }
+        ],
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 

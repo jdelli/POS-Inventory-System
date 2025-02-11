@@ -7,7 +7,6 @@ interface Product {
   description?: string;
   category: string;
   price: number;
-  quantity: number;
 }
 
 interface EditProductModalProps {
@@ -43,7 +42,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ showModal, closeMod
       setDescription(editProduct.description || '');
       setCategory(editProduct.category);
       setPrice(editProduct.price);
-      setQuantity(editProduct.quantity);
     }
   }, [editProduct]);
 
@@ -52,7 +50,7 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ showModal, closeMod
     setLoading(true);
     setError(null);
 
-    if (Number(price) <= 0 || Number(quantity) <= 0) {
+    if (Number(price) <= 0) {
       setError('Price and quantity must be greater than 0.');
       setLoading(false);
       return;
@@ -64,7 +62,6 @@ const EditProductModal: React.FC<EditProductModalProps> = ({ showModal, closeMod
       description,
       category,
       price: Number(price),
-      quantity: Number(quantity),
     };
 
     try {

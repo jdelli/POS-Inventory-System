@@ -79,45 +79,63 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   };
 
   const submitAddStocks = async () => {
-    const itemsPayload = receiptItems.map((item) => ({
-      id: item.id, // Use product_id
-      product_name: item.name, // Add this line
-      price: item.price,
-      quantity: item.quantity,
-    }));
+  const itemsPayload = receiptItems.map((item) => ({
+    id: item.id, // Use product_id
+    product_name: item.name, // Add this line
+    price: item.price,
+    quantity: item.quantity,
+  }));
 
-    const payload = {
-      delivery_number: deliveryNumber,
-      delivered_by: deliveredBy,
-      date,
-      items: itemsPayload,
-      branch_id: selectedBranchName, // Ensure this matches the backend expectations
-    };
-
-    try {
-      const response = await apiService.post('/add-delivery-receipt', payload);
-
-      if (response.data.success) {
-        for (const item of itemsPayload) {
-          await apiService.post('/add-quantity', {
-            id: item.id, // Send product_id
-            quantity: item.quantity,
-            name: deliveredBy,
-            receipt_number: deliveryNumber,
-            date: date,       
-          });
-        }
-        alert('Stocks added successfully!');
-        closeAddStocksModal();
-      } else {
-        alert('Error submitting the stocks.');
-      }
-    } catch (error) {
-      console.error('Error submitting stocks:', error);
-      alert('An error occurred while submitting the stocks.');
-    }
-    onSuccess();
+  const payload = {
+    delivery_number: deliveryNumber,
+    delivered_by: deliveredBy,
+    date,
+    items: itemsPayload,
+    branch_id: selectedBranchName, // Ensure this matches the backend expectations
   };
+
+  try {
+    // First API request to add quantity for each item
+    for (const item of itemsPayload) {
+      const quantityResponse = await apiService.post('/add-quantity', {
+        id: item.id, // Send product_id
+        quantity: item.quantity,
+        name: deliveredBy,
+        receipt_number: deliveryNumber,
+        date: date,
+      });
+
+      // Check if any item API call fails
+      if (!quantityResponse.data.success) {
+        throw new Error('Error adding quantity for product: ' + item.product_name);
+      }
+    }
+
+    // Second API request to add delivery receipt only if quantity API succeeds
+    const response = await apiService.post('/add-delivery-receipt', payload);
+
+    if (!response.data.success) {
+      throw new Error('Error adding delivery receipt.');
+    }
+
+    // If both API calls are successful
+    alert('Stocks added successfully!');
+    closeAddStocksModal();
+  } catch (error: unknown) {  // Explicitly type the error as 'unknown'
+    if (error instanceof Error) {
+      console.error('Error submitting stocks:', error.message); // Access message property
+      alert('An error occurred while submitting the stocks: ' + error.message);
+    } else {
+      console.error('An unknown error occurred.');
+      alert('An unknown error occurred.');
+    }
+  }
+
+  // Ensure this is called after everything is successful
+  onSuccess();
+};
+
+
 
   useEffect(() => {
     searchTerms.forEach((term, index) => {
