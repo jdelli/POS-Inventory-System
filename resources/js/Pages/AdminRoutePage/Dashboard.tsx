@@ -246,7 +246,7 @@ export default function Dashboard() {
                         <PieChart>
                             <Pie
                                 data={productSalesData}
-                                dataKey="total_quantity"
+                                dataKey="total_amount"
                                 nameKey="product_name"
                                 cx="50%"
                                 cy="50%"

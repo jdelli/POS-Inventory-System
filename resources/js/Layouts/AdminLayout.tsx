@@ -26,27 +26,35 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                         >
                             Dashboard
                         </NavLink>
-                        <NavLink
-                            href={route('admin-stocks')}
-                            active={route().current('admin-stocks')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Branch Stocks
-                        </NavLink>
-                        <NavLink
-                            href={route('admin-entries')}
-                            active={route().current('admin-entries')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Branch Stocks Entries
-                        </NavLink>
-                        <NavLink
-                            href={route('admin-sales')}
-                            active={route().current('admin-sales')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Branch Sales Orders
-                        </NavLink>
+
+                        {/* Dropdown for Branch Stocks, Branch Stocks Entries, Branch Sales Orders */}
+                        <Dropdown>
+                            <Dropdown.Trigger>
+                                <button className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white w-full text-left">
+                                    Branch Management
+                                </button>
+                            </Dropdown.Trigger>
+                            <Dropdown.Content>
+                                <Dropdown.Link
+                                    href={route('admin-stocks')}
+                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
+                                >
+                                    Stocks
+                                </Dropdown.Link>
+                                <Dropdown.Link
+                                    href={route('admin-entries')}
+                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
+                                >
+                                     Stocks Entries
+                                </Dropdown.Link>
+                                <Dropdown.Link
+                                    href={route('admin-sales')}
+                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
+                                >
+                                     Sales Orders
+                                </Dropdown.Link>
+                            </Dropdown.Content>
+                        </Dropdown>
                     </nav>
                 </div>
             </aside>

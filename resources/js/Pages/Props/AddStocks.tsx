@@ -81,7 +81,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   const submitAddStocks = async () => {
   const itemsPayload = receiptItems.map((item) => ({
     id: item.id, // Use product_id
-    product_name: item.name, // Add this line
+    product_name: item.name,
     price: item.price,
     quantity: item.quantity,
   }));
@@ -95,45 +95,46 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   };
 
   try {
-    // First API request to add quantity for each item
-    for (const item of itemsPayload) {
-      const quantityResponse = await apiService.post('/add-quantity', {
-        id: item.id, // Send product_id
-        quantity: item.quantity,
-        name: deliveredBy,
-        receipt_number: deliveryNumber,
-        date: date,
-      });
+    // First API request: Add quantity for each item in parallel
+    const quantityResponses = await Promise.all(
+      itemsPayload.map((item) =>
+        apiService.post('/add-quantity', {
+          id: item.id,
+          quantity: item.quantity,
+          name: deliveredBy,
+          receipt_number: deliveryNumber,
+          date: date,
+        })
+      )
+    );
 
-      // Check if any item API call fails
-      if (!quantityResponse.data.success) {
-        throw new Error('Error adding quantity for product: ' + item.product_name);
-      }
+    // Check if any of the quantity responses failed
+    if (quantityResponses.some((res) => !res.data.success)) {
+      throw new Error('Error adding quantity for some products.');
     }
 
-    // Second API request to add delivery receipt only if quantity API succeeds
+    // Second API request: Add delivery receipt only if quantity update succeeds
     const response = await apiService.post('/add-delivery-receipt', payload);
 
     if (!response.data.success) {
       throw new Error('Error adding delivery receipt.');
     }
 
-    // If both API calls are successful
+    // If everything succeeds
     alert('Stocks added successfully!');
     closeAddStocksModal();
-  } catch (error: unknown) {  // Explicitly type the error as 'unknown'
+    onSuccess(); // Ensure this is called after everything is successful
+  } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error('Error submitting stocks:', error.message); // Access message property
+      console.error('Error submitting stocks:', error.message);
       alert('An error occurred while submitting the stocks: ' + error.message);
     } else {
       console.error('An unknown error occurred.');
       alert('An unknown error occurred.');
     }
   }
-
-  // Ensure this is called after everything is successful
-  onSuccess();
 };
+
 
 
 

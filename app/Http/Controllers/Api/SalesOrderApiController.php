@@ -284,6 +284,7 @@ public function deleteSalesOrder($orderId)
         ->map(fn($items, $productName) => [
             'product_name' => $productName,
             'total_quantity' => $items->sum('quantity'), // ✅ Changed key name
+            'total_amount' => $items->sum(fn($item) => $item->quantity * $item->price), // Calculate total amount
         ])
         ->sortByDesc('total_quantity')
         ->take(5)
