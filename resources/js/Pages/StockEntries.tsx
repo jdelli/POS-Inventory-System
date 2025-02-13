@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import ViewItemsModal from './Props/ViewDelivery';
 import AddStocks from './Props/AddStocks';
+import RequestStocks from './Props/RequestStocks';
 
 interface DeliveryItem {
   id: number;
@@ -32,6 +33,7 @@ interface InventoryManagementProps {
   auth: Auth;
 }
 
+
 const StockEntriesTable: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -42,6 +44,8 @@ const StockEntriesTable: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState<boolean>(false);
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
+  const [isRequestStockModalOpen, setIsRequestStockModalOpen] = useState<boolean>(false);
+
 
   // Fetch stock entries data with pagination and sorting by date
   const fetchDeliveryReceipts = async () => {
@@ -123,6 +127,16 @@ if (selectedMonth !== null) {
             Add Stocks
           </button>
         </div> */}
+        {/* Request Stock Button */}
+<div className="mb-4 flex justify-end">
+  <button 
+    onClick={() => setIsRequestStockModalOpen(true)} 
+    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+  >
+    Request Stock
+  </button>
+</div>
+
 
         {/* Stock Entries Table */}
         <div className="overflow-x-auto bg-white shadow-md rounded-lg">
@@ -200,6 +214,12 @@ if (selectedMonth !== null) {
         closeModal={() => setIsAddStocksModalOpen(false)}
         onSuccess={handleAddStocksSuccess}
       />
+      {/* Modal for Requesting Stock */}
+<RequestStocks
+  isOpen={isRequestStockModalOpen}
+  onClose={() => setIsRequestStockModalOpen(false)}
+  auth={auth}
+/>
     </AuthenticatedLayout>
   );
 };

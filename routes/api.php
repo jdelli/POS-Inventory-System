@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\DeliveryReceiptsApiController;
 use App\Http\Controllers\Api\CustomerOrderController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Api\RequestStocksController;
 
 
 Route::get('/user', function (Request $request) {
@@ -50,6 +51,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/orders', [CustomerOrderController::class, 'getAllCustomerOrders']);
     Route::put('/update-status/{id}', [CustomerOrderController::class, 'updateCustomerOrderStatus']);
     Route::put('/update-branch/{id}', [CustomerOrderController::class, 'forwardOrder']);
+
+    // Stock Request
+    Route::post('/add-stock-request', [RequestStocksController::class, 'addStockRequest']);
+    Route::get('/fetch-stock-requests', [RequestStocksController::class, 'getStockRequests']);
 
     // Admin
     Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);

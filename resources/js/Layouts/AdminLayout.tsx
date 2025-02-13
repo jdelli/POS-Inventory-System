@@ -53,6 +53,12 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                                 >
                                      Sales Orders
                                 </Dropdown.Link>
+                                <Dropdown.Link
+                                    href={route('admin-stocks-request')}
+                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
+                                >
+                                     Stock Requests
+                                </Dropdown.Link>
                             </Dropdown.Content>
                         </Dropdown>
                     </nav>

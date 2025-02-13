@@ -70,6 +70,9 @@ Route::middleware(['checkrole:admin'])->group(function () {
         return Inertia::render('AdminRoutePage/BranchSalesOrders');
     })->name('admin-sales');
 
+    Route::get('/admin-stocks-request', function () {
+        return Inertia::render('AdminRoutePage/StockRequest');
+    })->name('admin-stocks-request');
 });
 
 
