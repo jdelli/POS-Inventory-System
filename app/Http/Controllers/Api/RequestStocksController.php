@@ -54,4 +54,23 @@ class RequestStocksController extends Controller
         $stockRequests = RequestStocks::with('items')->get();
         return response()->json($stockRequests);
     }
+
+
+    public function deleteStockRequest($id)
+{
+    $stockRequest = RequestStocks::with('items')->find($id);
+
+    if (!$stockRequest) {
+        return response()->json(['message' => 'Stock request not found'], 404);
+    }
+
+    // Delete all related stock request items
+    $stockRequest->items()->delete();
+
+    // Now delete the stock request itself
+    $stockRequest->delete();
+
+    return response()->json(['message' => 'Stock request deleted successfully'], 200);
+}
+
 }

@@ -57,36 +57,43 @@ class ProductsApiController extends Controller
 
 
  public function fetchProducts(Request $request)
-    {
-        // Validate that category is a string if it's provided
-        $request->validate([
-            'category' => 'nullable|string|max:255'
-        ]);
-        $category = $request->query('category', null);
-        $perPage = $request->query('per_page', 20); // Default to 20 items per page
+{
+    // Validate category input
+    $request->validate([
+        'category' => 'nullable|string|max:255'
+    ]);
 
-        try {
-            if ($category) {
-                $products = Products::where('category', $category)->paginate($perPage);
-            } else {
-                $products = Products::paginate($perPage);
-            }
+    $category = $request->query('category', null);
+    $perPage = $request->query('per_page', 20); // Default: 20 items per page
 
-            return response()->json([
-                'success' => true,
-                'data' => $products->items(), // Paginated items
-                'count' => $products->total(), // Total number of products
-                'current_page' => $products->currentPage(), // Current page
-                'last_page' => $products->lastPage(), // Last page
-                'per_page' => $products->perPage(), // Items per page
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching products: ' . $e->getMessage()
-            ], 500);
+    try {
+        // Subquery to get the latest product ID per name
+        $subQuery = Products::selectRaw('MIN(id) as id')
+            ->groupBy('name');
+
+        if ($category) {
+            $subQuery->where('category', $category);
         }
+
+        // Fetch only unique products by joining with the subquery
+        $products = Products::whereIn('id', $subQuery)
+            ->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $products->items(), // Paginated items
+            'count' => $products->total(), // Total number of products
+            'current_page' => $products->currentPage(), // Current page
+            'last_page' => $products->lastPage(), // Last page
+            'per_page' => $products->perPage(), // Items per page
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching products: ' . $e->getMessage()
+        ], 500);
     }
+}
 
 
 

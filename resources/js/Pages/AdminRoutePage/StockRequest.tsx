@@ -20,6 +20,7 @@ const StockRequest: React.FC = () => {
   const [requestStocks, setRequestStocks] = useState<RequestStock[]>([]);
   const [selectedItems, setSelectedItems] = useState<RequestStockItem[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchRequestStocks();
@@ -27,28 +28,42 @@ const StockRequest: React.FC = () => {
 
   const fetchRequestStocks = async () => {
     try {
-      const response = await apiService.get<RequestStock[]>('/fetch-stock-requests'); // Ensure the response type is correct
+      const response = await apiService.get<RequestStock[]>('/fetch-stock-requests');
       setRequestStocks(response.data);
     } catch (error) {
       console.error('Error fetching request stocks:', error);
     }
   };
 
-  const handleViewItems = (items: RequestStockItem[]) => {
+  const handleViewItems = (id: number, items: RequestStockItem[]) => {
     setSelectedItems(items);
+    setSelectedRequestId(id); // Store the selected request ID
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedItems([]);
+    setSelectedRequestId(null); // Clear the selected request ID
+  };
+
+  const handleDone = async () => {
+    if (selectedRequestId !== null) {
+      try {
+        await apiService.delete(`/delete-stock-request/${selectedRequestId}`);
+        fetchRequestStocks();
+        handleCloseModal(); // Close the modal after deletion
+      } catch (error) {
+        console.error('Error deleting stock request:', error);
+      }
+    }
   };
 
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Request Stocks</h2>}>
       <div className="container mx-auto p-4">
         <table className="min-w-full table-auto border border-gray-200">
-            <thead className="bg-gray-300 text-gray-600 uppercase text-sm leading-normal">
+          <thead className="bg-gray-300 text-gray-600 uppercase text-sm leading-normal">
             <tr>
               <th className="py-2 px-4 border-b">Branch</th>
               <th className="py-2 px-4 border-b">Date</th>
@@ -60,10 +75,10 @@ const StockRequest: React.FC = () => {
               <tr key={requestStock.id} className="border-b hover:bg-gray-200">
                 <td className="py-2 px-4 border-b">{requestStock.branch_id}</td>
                 <td className="py-2 px-4 border-b">{requestStock.date}</td>
-                <td className="py-2 px-4 border-b">
+                <td className="py-2 px-4 border-b flex space-x-2">
                   <button
                     className="bg-blue-500 text-white py-1 px-3 rounded"
-                    onClick={() => handleViewItems(requestStock.items)}
+                    onClick={() => handleViewItems(requestStock.id, requestStock.items)}
                   >
                     View Items
                   </button>
@@ -98,8 +113,12 @@ const StockRequest: React.FC = () => {
                   ))}
                 </tbody>
               </table>
-              <div className="flex justify-end mt-4">
-                <button className="bg-gray-500 text-white py-1 px-3 rounded" onClick={handleCloseModal}>
+              <div className="flex justify-between mt-4">
+               
+                <button className="bg-red-500 text-white py-1 px-3 rounded" onClick={handleDone}>
+                   Done
+                </button>
+                 <button className="bg-gray-500 text-white py-1 px-3 rounded" onClick={handleCloseModal}>
                   Close
                 </button>
               </div>

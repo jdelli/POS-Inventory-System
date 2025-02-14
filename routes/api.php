@@ -55,6 +55,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Stock Request
     Route::post('/add-stock-request', [RequestStocksController::class, 'addStockRequest']);
     Route::get('/fetch-stock-requests', [RequestStocksController::class, 'getStockRequests']);
+    Route::delete('/delete-stock-request/{id}', [RequestStocksController::class, 'deleteStockRequest']);
 
     // Admin
     Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);
