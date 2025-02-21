@@ -9,7 +9,14 @@ class SalesOrderItems extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['sales_order_id', 'product_name', 'quantity', 'price', 'total'];
+    protected $fillable = [
+    'product_code',
+    'sales_order_id', 
+    'product_name', 
+    'quantity', 
+    'price', 
+    'total'
+];
 
     // Relationship with SalesOrder
     public function salesOrder()

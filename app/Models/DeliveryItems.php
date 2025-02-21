@@ -10,6 +10,7 @@ class DeliveryItems extends Model
     use HasFactory;
 
     protected $fillable = [
+        'product_code',
         'delivery_receipts_id',
         'product_name',
         'quantity',

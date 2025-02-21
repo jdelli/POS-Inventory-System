@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('request_stocks_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('request_stocks_id')->constrained()->cascadeOnDelete();
+            $table->integer('product_code');
             $table->string('product_name');
             $table->integer('quantity');
             $table->timestamps();

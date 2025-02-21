@@ -23,6 +23,7 @@ class ProductsApiController extends Controller
 {
     // Validate the request input
     $request->validate([
+        'product_code' => 'required|integer|unique:products,product_code',
         'branch_id' => 'required|string|max:255', // Ensure branch_id is provided
         'name' => 'required|string|max:255',
         'description' => 'required|string|max:1000',

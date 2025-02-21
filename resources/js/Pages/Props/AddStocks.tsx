@@ -108,10 +108,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
       )
     );
 
-    // Check if any of the quantity responses failed
-    if (quantityResponses.some((res) => !res.data.success)) {
-      throw new Error('Error adding quantity for some products.');
-    }
+    
 
     // Second API request: Add delivery receipt only if quantity update succeeds
     const response = await apiService.post('/add-delivery-receipt', payload);
