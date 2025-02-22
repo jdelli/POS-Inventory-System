@@ -23,7 +23,7 @@ class ProductsApiController extends Controller
 {
     // Validate the request input
     $request->validate([
-        'product_code' => 'required|integer|unique:products,product_code',
+        'product_code' => 'required|string|unique:products,product_code',
         'branch_id' => 'required|string|max:255', // Ensure branch_id is provided
         'name' => 'required|string|max:255',
         'description' => 'required|string|max:1000',
@@ -36,6 +36,7 @@ class ProductsApiController extends Controller
     // Create a new Product instance
     $product = new Products();
     $product->branch_id = $request->branch_id; // Assign branch_id from the request
+    $product->product_code = $request->product_code; // Assign product_code from the request
     $product->name = $request->name;
     $product->description = $request->description;
     $product->price = $request->price;
@@ -180,6 +181,7 @@ public function fetchProductsByBranch(Request $request)
     // Log to history
     StockHistory::create([
         'product_id' => $product->id,
+        'product_code' => $product->product_code,
         'name' => $validatedData['name'],
         'receipt_number' => $validatedData['receipt_number'], 
         'date' => $validatedData['date'],
@@ -270,65 +272,6 @@ public function addQuantity(Request $request)
             ], 500);
         }
     }
-
-
-    public function undoStockChange(Request $request)
-    {
-        $validatedData = $request->validate([
-            'product_id' => 'required|integer|exists:products,id'
-        ]);
-
-        DB::beginTransaction();
-
-        try {
-            // Retrieve the latest stock history for the given product
-            $latestHistory = StockHistory::where('product_id', $validatedData['product_id'])
-                ->orderBy('created_at', 'desc')
-                ->first();
-
-            if (!$latestHistory) {
-                return response()->json(['message' => 'No stock change history found for this product'], 404);
-            }
-
-            $product = Products::find($validatedData['product_id']);
-
-            if (!$product) {
-                return response()->json(['message' => 'Product not found'], 404);
-            }
-
-            if ($latestHistory->action === 'added') {
-                // If stock was added, decrease quantity
-                $product->quantity -= $latestHistory->quantity_changed;
-
-                // Delete the related delivery receipt
-                DeliveryReceipt::where('delivery_number', $latestHistory->receipt_number)->delete();
-            } elseif ($latestHistory->action === 'deducted') {
-                // If stock was deducted, increase quantity
-                $product->quantity += abs($latestHistory->quantity_changed);
-
-                // Delete the related sales order
-                SalesOrder::where('receipt_number', $latestHistory->receipt_number)->delete();
-            }
-
-            // Save the updated product quantity
-            $product->save();
-
-            // Delete the stock history entry after undoing
-            $latestHistory->delete();
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Stock change undone successfully',
-                'product' => $product
-            ], 200);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => 'Failed to undo stock change', 'message' => $e->getMessage()], 500);
-        }
-    }
-
-
 
 
         

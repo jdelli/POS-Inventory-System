@@ -16,7 +16,7 @@ use App\Models\StockHistory;
 
 class SalesOrderApiController extends Controller
 {
-    public function addSalesOrder(Request $request)
+   public function addSalesOrder(Request $request)
 {
     // Validate the request input with custom rule for product_name existence
     $request->validate([
@@ -24,16 +24,8 @@ class SalesOrderApiController extends Controller
         'customer_name' => 'required|string|max:255',
         'date' => 'required|date',
         'items' => 'required|array',
-        'items.*.product_name' => [
-            'required',
-            'string',
-            'max:255',
-            function ($attribute, $value, $fail) {
-                if (!\App\Models\Products::where('name', $value)->exists()) {
-                    $fail("The product '$value' does not exist in the database.");
-                }
-            }
-        ],
+        'items.*.product_code' => 'required|string|max:255', // Updated to string
+        'items.*.product_name' => 'required|string|max:255',
         'items.*.quantity' => 'required|integer|min:1',
         'items.*.price' => 'required|numeric|min:0',
         'items.*.total' => 'required|numeric|min:0',
@@ -51,6 +43,7 @@ class SalesOrderApiController extends Controller
     foreach ($request->items as $item) {
         $salesOrderItem = new SalesOrderItems();
         $salesOrderItem->sales_order_id = $salesOrder->id; // FK to SalesOrder
+        $salesOrderItem->product_code = $item['product_code'];
         $salesOrderItem->product_name = $item['product_name'];
         $salesOrderItem->quantity = $item['quantity'];
         $salesOrderItem->price = $item['price'];
@@ -219,11 +212,11 @@ public function deleteSalesOrder($orderId)
 
         // Revert the quantity of each product
         foreach ($salesOrder->items as $item) {
-            $product = Products::where('name', $item->product_name)->first();
+            $product = Products::where('product_code', $item->product_code)->first();
 
             // Ensure product exists
             if (!$product) {
-                throw new \Exception("Product not found: " . $item->product_name);
+                throw new \Exception("Product not found: " . $item->product_code);
             }
 
             // Retrieve the stock history for this product in reverse order (latest first)

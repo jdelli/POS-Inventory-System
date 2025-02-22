@@ -13,51 +13,38 @@ use App\Models\StockHistory;
 class DeliveryReceiptsApiController extends Controller
 {
     public function addDeliveryReceipt(Request $request) {
-        $request->validate([
-            'branch_id' => 'required|string|max:255',
-            'delivery_number' => 'required|string|max:255',
-            'delivered_by' => 'required|string|max:255',
-            'date' => 'required|date',
-            'items' => 'required|array',
-            'items.*.product_name' => [
-            'required',
-            'string',
-            'max:255',
-            function ($attribute, $value, $fail) {
-                if (!\App\Models\Products::where('name', $value)->exists()) {
-                    $fail("The product '$value' does not exist in the database.");
-                }
-            }
-        ],
-            'items.*.quantity' => 'required|integer|min:1',
-        ]);
+    $request->validate([
+        'branch_id' => 'required|string|max:255',
+        'delivery_number' => 'required|string|max:255',
+        'delivered_by' => 'required|string|max:255',
+        'date' => 'required|date',
+        'items' => 'required|array',
+        'items.*.product_name' => 'required|string|max:255',
+        'items.*.product_code' => 'required|string|max:255', // Updated to string
+        'items.*.quantity' => 'required|integer|min:1',
+    ]);
 
+    $deliveryReceipt = new DeliveryReceipt();
+    $deliveryReceipt->delivery_number = $request->delivery_number;
+    $deliveryReceipt->delivered_by = $request->delivered_by;
+    $deliveryReceipt->date = $request->date;
+    $deliveryReceipt->branch_id = $request->branch_id;
+    $deliveryReceipt->save();
 
-        $deliveryReceipt = new DeliveryReceipt();
-        $deliveryReceipt->delivery_number = $request->delivery_number;
-        $deliveryReceipt->delivered_by = $request->delivered_by;
-        $deliveryReceipt->date = $request->date;
-        $deliveryReceipt->branch_id = $request->branch_id;
-        $deliveryReceipt->save();
-
-
-
-        foreach ($request->items as $item) {
-            $deliveryItems = new DeliveryItems();
-            $deliveryItems->delivery_receipt_id = $deliveryReceipt->id; // FK to DeliveryReceipt
-            $deliveryItems->product_name = $item['product_name'];
-            $deliveryItems->quantity = $item['quantity'];
-            $deliveryItems->save();
-        }
-
-        return response()->json([
-            'success' => true,
-            'deliveryReceipt' => $deliveryReceipt
-        ]);
-
-
+    foreach ($request->items as $item) {
+        $deliveryItems = new DeliveryItems();
+        $deliveryItems->delivery_receipt_id = $deliveryReceipt->id; // FK to DeliveryReceipt
+        $deliveryItems->product_code = $item['product_code'];
+        $deliveryItems->product_name = $item['product_name'];
+        $deliveryItems->quantity = $item['quantity'];
+        $deliveryItems->save();
     }
 
+    return response()->json([
+        'success' => true,
+        'deliveryReceipt' => $deliveryReceipt
+    ]);
+}
 
 
     public function getDeliveryReceipts(Request $request) {
@@ -104,11 +91,11 @@ class DeliveryReceiptsApiController extends Controller
 
         // Revert the quantity of each product
         foreach ($deliveryReceipt->items as $item) {
-            $product = Products::where('name', $item->product_name)->first();
+            $product = Products::where('product_code', $item->product_code)->first();
 
             // Ensure product exists
             if (!$product) {
-                throw new \Exception("Product not found: " . $item->product_name);
+                throw new \Exception("Product not found: " . $item->product_code);
             }
 
             // Retrieve the stock history for this product in reverse order (latest first)

@@ -39,6 +39,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
   const [loading, setLoading] = useState(false);
   const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
   const [selectedBranchName, setSelectedBranchName] = useState<string>('');
+  const [productCode, setProductCode] = useState<string>('');
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -85,6 +86,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
     }
 
     const formData = new FormData();
+    formData.append('product_code', productCode);
     formData.append('name', name);
     formData.append('description', description);
     formData.append('price', price.toString());
@@ -109,6 +111,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
   };
 
   const resetForm = () => {
+    setProductCode('');
     setName('');
     setDescription('');
     setCategory('');
@@ -142,6 +145,16 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="mb-4">
+              <label className="block mb-1">Product Code</label>
+              <input
+                type="text"
+                value={productCode}
+                onChange={(e) => setProductCode(e.target.value)}
+                className="border rounded w-full p-2"
+                required
+              />
             </div>
             <div className="mb-4">
               <label className="block mb-1">Name</label>

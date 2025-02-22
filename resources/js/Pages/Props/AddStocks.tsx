@@ -7,9 +7,11 @@ interface InventoryItem {
   name: string;
   quantity: number;
   price: number;
+  product_code: string;
 }
 
 interface Item {
+  product_code: string;
   name: string;
   price: number;
   quantity: number;
@@ -28,7 +30,7 @@ interface User {
 
 const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSuccess }) => {
   const { auth } = usePage().props as { auth: { user: User } };
-  const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0 }]);
+  const [receiptItems, setReceiptItems] = useState<Item[]>([{product_code: "", name: '', price: 0, quantity: 0 }]);
   const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
   const [selectedBranchName, setSelectedBranchName] = useState<string>('');
@@ -52,7 +54,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
 
   const closeAddStocksModal = () => {
     closeModal();
-    setReceiptItems([{ name: '', price: 0, quantity: 0 }]);
+    setReceiptItems([{product_code: "", name: '', price: 0, quantity: 0 }]);
     setProductSuggestions([]);
     setSearchTerms(['']);
     setDeliveryNumber('');
@@ -69,7 +71,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   };
 
   const addReceiptItem = () => {
-    setReceiptItems([...receiptItems, { name: '', price: 0, quantity: 0 }]);
+    setReceiptItems([...receiptItems, {product_code: "", name: '', price: 0, quantity: 0 }]);
     setProductSuggestions([...productSuggestions, []]);
     setSearchTerms([...searchTerms, '']);
   };
@@ -84,6 +86,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
     product_name: item.name,
     price: item.price,
     quantity: item.quantity,
+    product_code: item.product_code,
   }));
 
   const payload = {
@@ -100,6 +103,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
       itemsPayload.map((item) =>
         apiService.post('/add-quantity', {
           id: item.id,
+          product_code: item.product_code,
           quantity: item.quantity,
           name: deliveredBy,
           receipt_number: deliveryNumber,
@@ -108,7 +112,6 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
       )
     );
 
-    
 
     // Second API request: Add delivery receipt only if quantity update succeeds
     const response = await apiService.post('/add-delivery-receipt', payload);
@@ -170,7 +173,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
 
   const handleSuggestionClick = (index: number, product: InventoryItem) => {
     const updatedItems = receiptItems.map((item, i) =>
-      i === index ? { ...item, id: product.id, name: product.name, price: product.price } : item
+      i === index ? { ...item, id: product.id, name: product.name, price: product.price, product_code: product.product_code, } : item
     );
     setReceiptItems(updatedItems);
 
@@ -250,6 +253,17 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
             <div className="max-h-60 overflow-y-auto flex-grow mt-5 mb-1">
               {receiptItems.map((item, index) => (
                 <div key={index} className="flex space-x-4 mb-4">
+                   <div className="flex-1">
+                    <label className="block text-sm font-medium mb-1">Product Code</label>
+                    <input
+                      type="number"
+                      value={item.product_code}
+                      onChange={(e) => handleItemChange(index, 'product_code', e.target.value)}
+                      className="border border-gray-300 p-2 w-full rounded"
+                      placeholder="Product Code"
+                      readOnly
+                    />
+                  </div>
                   <div className="flex-1 relative">
                     <label className="block text-sm font-medium mb-1">Item Name</label>
                     <input
@@ -257,7 +271,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
                       value={item.name}
                       onChange={(e) => handleSearchTermChange(index, e.target.value)}
                       className="border border-gray-300 p-2 w-full rounded"
-                      placeholder="Item name"
+                      placeholder="Search Item"
                     />
                     {productSuggestions[index]?.length > 0 && (
                       <ul className="absolute z-10 bg-white border border-gray-300 w-full mt-1 max-h-40 overflow-y-auto">

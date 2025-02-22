@@ -13,6 +13,7 @@ interface InventoryItem {
 }
 
 interface Item {
+  product_code: string;
   name: string;
   price: number;
   quantity: number;
@@ -49,7 +50,7 @@ interface InventoryManagementProps {
 const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
   const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState<boolean>(false);
-  const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0, id: 0 }]);
+  const [receiptItems, setReceiptItems] = useState<Item[]>([{product_code: '', name: '', price: 0, quantity: 0, id: 0 }]);
   const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
   const [client, setClient] = useState<string>('');
@@ -78,7 +79,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   };
 
   const resetReceiptForm = () => {
-    setReceiptItems([{ name: '', price: 0, quantity: 0, id: 0 }]);
+    setReceiptItems([{product_code: "", name: '', price: 0, quantity: 0, id: 0 }]);
     setProductSuggestions([]);
     setSearchTerms(['']);
     setClient('');
@@ -99,7 +100,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   };
 
   const addReceiptItem = () => {
-    setReceiptItems([...receiptItems, { name: '', price: 0, quantity: 0, id: 0 }]);
+    setReceiptItems([...receiptItems, {product_code: "", name: '', price: 0, quantity: 0, id: 0 }]);
     setProductSuggestions([...productSuggestions, []]);
     setSearchTerms([...searchTerms, '']);
   };
@@ -130,6 +131,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
     id: product.id, 
     name: product.name,
     price: product.price,
+    product_code: product.product_code,
   };
   
   // Clear suggestions for the selected index
@@ -155,6 +157,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
 
     const itemsPayload = receiptItems.map(item => ({
       id: item.id, // Include product ID
+      product_code: item.product_code,
       product_name: item.name,
       price: item.price,
       quantity: item.quantity,
@@ -166,6 +169,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
       try {
         await apiService.post('/deduct-quantity', {
           id: item.id, // Send product ID
+          product_code: item.product_code,
           quantity: item.quantity,
           name: client,
           receipt_number: receiptNumber,
@@ -204,7 +208,6 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
         console.error('Error submitting sales order:', error.message);
       }
       alert('Error submitting the sales order.');
-      setIsSubmitting(false);
       return; // Stop the process if there's an error
     }
   } catch (error: unknown) {
@@ -416,7 +419,19 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
 
                   <div className="max-h-60 overflow-y-auto mb-4">
                     {receiptItems.map((item, index) => (
-                      <div key={index} className="grid grid-cols-5 gap-2 items-center mb-4">
+                      <div key={index} className="grid grid-cols-6 gap-2 items-center mb-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Product Code</label>
+                          <input
+                            type="number"
+                            value={item.product_code}
+                            onChange={(e) => handleItemChange(index, 'product_code', e.target.value)}
+                            className="border border-gray-300 p-2 w-full rounded"
+                            placeholder="Product code"
+                            required
+                            readOnly
+                          />
+                        </div>
                         <div className="relative">
                           <label className="block text-sm font-medium mb-1">Item</label>
                           <input
@@ -475,7 +490,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                         <button
                           type="button"
                           onClick={() => removeReceiptItem(index)}
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:text-red-700 "
                         >
                           &times;
                         </button>

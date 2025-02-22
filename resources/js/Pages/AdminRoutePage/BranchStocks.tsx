@@ -18,6 +18,7 @@ interface Branch {
 }
 
 interface Product {
+  product_code: string;
   id: number;
   name: string;
   category: string;
@@ -194,6 +195,7 @@ const ProductTable: React.FC = () => {
             <table className="min-w-full bg-white shadow-md rounded-lg">
               <thead>
                 <tr>
+                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Product Code</th>
                   <th className="py-2 px-4 bg-gray-200 font-medium text-left">Product Name</th>
                   <th className="py-2 px-4 bg-gray-200 font-medium text-left">Category</th>
                   <th className="py-2 px-4 bg-gray-200 font-medium text-left">Price</th>
@@ -205,6 +207,7 @@ const ProductTable: React.FC = () => {
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
                     <tr key={product.id} className="border-b hover:bg-gray-100">
+                      <td className="py-2 px-4">{product.product_code}</td>
                       <td className="py-2 px-4">{product.name}</td>
                       <td className="py-2 px-4">{product.category}</td>
                       <td className="py-2 px-4">₱{product.price.toLocaleString()}</td>
