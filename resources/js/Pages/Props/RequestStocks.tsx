@@ -7,6 +7,7 @@ interface Item {
   quantity: number;
   id?: number;
   price?: number;
+  product_code: string;
 }
 
 interface Auth {
@@ -24,11 +25,11 @@ interface RequestStocksProps {
 const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth }) => {
   if (!isOpen) return null; // Hide modal when `isOpen` is false
 
-  const [requestItems, setRequestItems] = useState<Item[]>([{ name: '', quantity: 0 }]);
+  const [requestItems, setRequestItems] = useState<Item[]>([{product_code: '', name: '', quantity: 0 }]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
   const [productSuggestions, setProductSuggestions] = useState<Item[][]>([[]]);
-  const [selectedBranch, setSelectedBranch] = useState('');
   const [date, setDate] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   // Set today's date when the component mounts
   useEffect(() => {
@@ -60,7 +61,7 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
         setProductSuggestions(updatedSuggestions);
       }
     });
-  }, [searchTerms, selectedBranch]);
+  }, [searchTerms]);
 
   const handleSearchTermChange = (index: number, value: string) => {
     const updatedSearchTerms = [...searchTerms];
@@ -71,7 +72,7 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
 
   const handleSuggestionClick = (index: number, product: Item) => {
     const updatedItems = requestItems.map((item, i) =>
-      i === index ? { ...item, id: product.id, name: product.name, price: product.price } : item
+      i === index ? { ...item, id: product.id, product_code: product.product_code, name: product.name, price: product.price } : item
     );
     setRequestItems(updatedItems);
 
@@ -91,7 +92,7 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
   };
 
   const addRequestItem = () => {
-    setRequestItems([...requestItems, { name: '', quantity: 0 }]);
+    setRequestItems([...requestItems, {product_code: '', name: '', quantity: 0 }]);
     setSearchTerms([...searchTerms, '']);
     setProductSuggestions([...productSuggestions, []]);
   };
@@ -111,20 +112,20 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
         onClose(); // Close modal
         resetForm();
       } else {
-        throw new Error('Failed to submit stock request.');
+        setError('Failed to submit stock request.');
       }
     } catch (error) {
       console.error('Error submitting stock request:', error);
-      alert('An error occurred while submitting the stock request.');
+      setError('An error occurred while submitting the stock request.');
     }
   };
 
   const resetForm = () => {
-    setRequestItems([{ name: '', quantity: 0 }]);
-    setSelectedBranch('');
+    setRequestItems([{ product_code: '', name: '', quantity: 0 }]);
     setDate('');
     setSearchTerms(['']);
     setProductSuggestions([[]]);
+    setError(null);
   };
 
   return (
@@ -132,21 +133,38 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
       <Head title="Stock Request" />
       {isOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl h-full flex flex-col">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl h-auto flex flex-col">
             <h2 className="text-lg font-bold mb-4">Request Stock</h2>
 
-            {/* Branch Select and Date Inputs */}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <strong className="font-bold">Error:</strong>
+                <span className="block sm:inline"> {error}</span>
+              </div>
+            )}
+
             <div className="max-h-60 overflow-y-auto flex-grow mt-5 mb-1">
               {requestItems.map((item, index) => (
-                <div key={index} className="flex space-x-4 mb-4">
-                  <div className="flex-1">
+                <div key={index} className="grid grid-cols-4 gap-4 mb-4">
+                  <div className="col-span-1">
+                    <label className="block text-sm font-medium mb-1">Product Code</label>
+                    <input
+                      type="text"
+                      value={item.product_code}
+                      onChange={(e) => handleItemChange(index, 'product_code', e.target.value)}
+                      className="border rounded w-full p-2"
+                      readOnly
+                      required
+                    />
+                  </div>
+                  <div className="col-span-1">
                     <label className="block text-sm font-medium mb-1">Item Name</label>
                     <input
                       type="text"
                       value={item.name}
                       onChange={(e) => handleSearchTermChange(index, e.target.value)}
                       className="border border-gray-300 p-2 w-full rounded"
-                      placeholder="Item name"
+                      placeholder="Search Item"
                     />
                     {productSuggestions[index] && productSuggestions[index].length > 0 && (
                       <ul className="border mt-2 max-h-32 overflow-y-auto bg-white rounded">
@@ -162,7 +180,7 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
                       </ul>
                     )}
                   </div>
-                  <div className="flex-1">
+                  <div className="col-span-1">
                     <label className="block text-sm font-medium mb-1">Quantity</label>
                     <input
                       type="number"
@@ -175,7 +193,7 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
                   <button
                     type="button"
                     onClick={() => removeRequestItem(index)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-red-500 hover:text-red-700 mt-6 col-span-1"
                     aria-label="Remove Item"
                   >
                     &times;

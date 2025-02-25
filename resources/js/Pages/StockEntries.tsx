@@ -215,11 +215,11 @@ if (selectedMonth !== null) {
         onSuccess={handleAddStocksSuccess}
       />
       {/* Modal for Requesting Stock */}
-<RequestStocks
-  isOpen={isRequestStockModalOpen}
-  onClose={() => setIsRequestStockModalOpen(false)}
-  auth={auth}
-/>
+    <RequestStocks
+      isOpen={isRequestStockModalOpen}
+      onClose={() => setIsRequestStockModalOpen(false)}
+      auth={auth}
+    />
     </AuthenticatedLayout>
   );
 };

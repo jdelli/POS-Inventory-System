@@ -11,6 +11,8 @@ class RequestStocksItems extends Model
 
     protected $fillable = [
         'request_stocks_id',
+        'product_id',
+        'product_code',
         'product_name',
         'quantity',
     ];

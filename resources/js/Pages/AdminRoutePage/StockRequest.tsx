@@ -60,7 +60,7 @@ const StockRequest: React.FC = () => {
   };
 
   return (
-    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Request Stocks</h2>}>
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stocks Request</h2>}>
       <div className="container mx-auto p-4">
         <table className="min-w-full table-auto border border-gray-200">
           <thead className="bg-gray-300 text-gray-600 uppercase text-sm leading-normal">

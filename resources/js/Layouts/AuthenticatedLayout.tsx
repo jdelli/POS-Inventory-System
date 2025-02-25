@@ -75,7 +75,14 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                                         className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
                                     >
                                         Customer Orders
-                                    </NavLink>
+                                </NavLink>
+                                <NavLink
+                                        href={route('user-reports')}
+                                        active={route().current('user-reports')}
+                                        className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
+                                    >
+                                        Reports
+                                </NavLink>
                     </nav>
                 </div>
             </aside>

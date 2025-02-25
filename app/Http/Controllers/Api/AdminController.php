@@ -163,6 +163,19 @@ public function getAllBranches()
         'last_page' => $salesOrders->lastPage(),
     ]);
 }
+
+
+public function dailySalesReportAllBranch(Request $request)
+    {
+        $sales = SalesOrder::with('items')
+            ->selectRaw('date, SUM(items.total) as total_sales')
+            ->join('sales_order_items as items', 'sales_orders.id', '=', 'items.sales_order_id')
+            ->groupBy('date')
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json($sales);
+    }
     
 
 

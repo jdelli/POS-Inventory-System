@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CustomerOrderController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\RequestStocksController;
+use App\Http\Controllers\Api\SalesReportController;
 
 
 Route::get('/user', function (Request $request) {
@@ -56,6 +57,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/add-stock-request', [RequestStocksController::class, 'addStockRequest']);
     Route::get('/fetch-stock-requests', [RequestStocksController::class, 'getStockRequests']);
     Route::delete('/delete-stock-request/{id}', [RequestStocksController::class, 'deleteStockRequest']);
+
+    // Sales Report
+    Route::get('/sales-report/daily', [SalesReportController::class, 'dailySalesReport']);
+    Route::get('/sales-orders-by-date', [SalesReportController::class, 'getSalesOrdersByDate']);
 
     // Admin
     Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);

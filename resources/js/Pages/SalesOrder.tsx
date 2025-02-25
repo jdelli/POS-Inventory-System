@@ -379,7 +379,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
           {/* Receipt Modal */}
           {isReceiptModalOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-3xl relative">
+              <div className="bg-white p-6 rounded-lg shadow-lg  max-w-3x2 relative">
                 <h2 className="text-lg font-bold mb-4">New Sales Order</h2>
                 <form onSubmit={(e) => { e.preventDefault(); submitSalesOrder(); }}>
                   <div className="grid grid-cols-1 gap-4 mb-4">

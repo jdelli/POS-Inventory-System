@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('delivery_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('delivery_receipt_id')->constrained()->onDelete('cascade');
-            $table->string('product_code')->unique(); // Changed to string
+            $table->string('product_code');
             $table->string('product_name');
             $table->integer('quantity');
             $table->timestamps();
