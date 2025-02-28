@@ -10,7 +10,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout"; // Ensure this is the correct import path
+import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
+import apiService from "./Services/ApiService";
 
 interface SalesOrderItem {
   product_code: string;
@@ -28,12 +29,21 @@ interface SalesOrder {
   total_sales: number;
 }
 
+interface Product {
+  product_code: string;
+  product_name: string;
+  total_quantity_sold: number;
+  total_sales: number;
+}
+
 const DailySalesReport: React.FC = () => {
   const [salesData, setSalesData] = useState<SalesOrder[]>([]);
   const [selectedSalesOrder, setSelectedSalesOrder] = useState<SalesOrder[]>([]);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const { auth } = usePage().props as { auth: { user: { name: string } } };
+  const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
+  const [monthlySales, setMonthlySales] = useState<Product[]>([]);
 
   useEffect(() => {
     if (!auth?.user?.name) return;
@@ -59,71 +69,92 @@ const DailySalesReport: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const fetchMonthlySales = async () => {
+    try {
+      const response = await apiService.get('/fetch-monthly-sales');
+      const sortedSales = response.data.sort((a: Product, b: Product) => b.total_quantity_sold - a.total_quantity_sold);
+      setMonthlySales(sortedSales);
+    } catch (error) {
+      console.error('Error fetching monthly sales:', error);
+    }
+  };
+
   const calculateTotal = (items: SalesOrderItem[]): number =>
     items.reduce((total, item) => total + item.price * item.quantity, 0);
 
   const computeGrandTotal = (orders: SalesOrder[]): number =>
     orders.reduce((grandTotal, order) => grandTotal + calculateTotal(order.items), 0);
 
+  const openSalesModal = () => {
+    setIsSalesModalOpen(true);
+    fetchMonthlySales();
+  };
+
   const handlePrintAll = () => {
-  if (!selectedSalesOrder.length) return;
-  const printContent = document.getElementById("print-section-all");
-  if (printContent) {
-    const newWindow = window.open("", "_blank");
-    newWindow?.document.write(`
-      <html>
-        <head>
-          <title>Sales Orders - ${selectedSalesOrder[0].date}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .receipt { margin-bottom: 20px; border-bottom: 1px solid black; padding-bottom: 10px; }
-            .grand-total { margin-top: 20px; font-weight: bold; text-align: right; }
-            .border-separation { margin-top: 20px; border-top: 2px solid black; padding-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <h2>Sales Orders for ${selectedSalesOrder[0].date}</h2>
-          ${selectedSalesOrder.map((order, index) => `
-            <div class="receipt">
-              <p><strong>Receipt #${index + 1}:</strong> ${order.receipt_number}</p>
-              <p><strong>Customer:</strong> ${order.customer_name}</p>
-              <p><strong>Total Sales:</strong> $${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
+    if (!selectedSalesOrder.length) return;
+    const printContent = document.getElementById("print-section-all");
+    if (printContent) {
+      const newWindow = window.open("", "_blank");
+      newWindow?.document.write(`
+        <html>
+          <head>
+            <title>Sales Orders - ${selectedSalesOrder[0].date}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              .receipt { margin-bottom: 20px; border-bottom: 1px solid black; padding-bottom: 10px; }
+              .grand-total { margin-top: 20px; font-weight: bold; text-align: right; }
+              .border-separation { margin-top: 20px; border-top: 2px solid black; padding-top: 10px; }
+            </style>
+          </head>
+          <body>
+            <h2>Sales Orders for ${selectedSalesOrder[0].date}</h2>
+            ${selectedSalesOrder.map((order, index) => `
+              <div class="receipt">
+                <p><strong>Receipt #${index + 1}:</strong> ${order.receipt_number}</p>
+                <p><strong>Customer:</strong> ${order.customer_name}</p>
+                <p><strong>Total Sales:</strong> $${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
+              </div>
+            `).join('')}
+            <div class="border-separation grand-total">
+              Grand Total: $
+              ${selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </div>
-          `).join('')}
-          <div class="border-separation grand-total">
-            Grand Total: $
-            ${selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.close();
-            }
-          </script>
-        </body>
-      </html>
-    `);
-    newWindow?.document.close();
-  }
-};
+            <script>
+              window.onload = function() {
+                window.print();
+                window.close();
+              }
+            </script>
+          </body>
+        </html>
+      `);
+      newWindow?.document.close();
+    }
+  };
 
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Report</h2>}>
       <Head title="Sales Report" />
       <div className="p-4 bg-white shadow rounded-lg">
+        <button
+          onClick={openSalesModal}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          View Monthly Sales
+        </button>
 
         <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip />
-        <Line type="monotone" dataKey="total_sales" stroke="#82ca9d" />
-      </LineChart>
-    </ResponsiveContainer>
+          <LineChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="total_sales" stroke="#82ca9d" />
+          </LineChart>
+        </ResponsiveContainer>
 
         <div className="overflow-x-auto mt-4">
           <table className="w-full border border-gray-300">
@@ -138,7 +169,7 @@ const DailySalesReport: React.FC = () => {
             </thead>
             <tbody>
               {salesData.map((data, index) => (
-                <tr key={index} className="text-center border">
+                <tr key={data.id} className="text-center border">
                   <td className="p-2 border">{index + 1}</td>
                   <td className="p-2 border">{data.date}</td>
                   <td className="p-2 border">
@@ -156,45 +187,84 @@ const DailySalesReport: React.FC = () => {
           </table>
         </div>
 
-       {isModalOpen && selectedSalesOrder.length > 0 && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Sales Orders for {selectedSalesOrder[0].date}</h2>
-              <button onClick={handlePrintAll} className="px-4 py-2 bg-blue-500 text-white rounded">
-                Print
+        {isModalOpen && selectedSalesOrder.length > 0 && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Sales Orders for {selectedSalesOrder[0].date}</h2>
+                <button onClick={handlePrintAll} className="px-4 py-2 bg-blue-500 text-white rounded">
+                  Print
+                </button>
+              </div>
+
+              {loading ? (
+                <p>Loading...</p>
+              ) : (
+                <div id="print-section-all">
+                  {selectedSalesOrder.map((order, index) => (
+                    <div key={order.id} className="mb-4 border-b pb-4">
+                      <p>{index + 1}</p>
+                      <p><strong>Receipt #:</strong> {order.receipt_number}</p>
+                      <p><strong>Customer:</strong> {order.customer_name}</p>
+                      <p><strong>Total Sales:</strong> ${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
+                    </div>
+                  ))}
+                  {/* Grand Total */}
+                  <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
+                    Grand Total: $
+                    {selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => setIsModalOpen(false)} className="mt-4 px-4 py-2 bg-red-500 text-white rounded w-full">
+                Close
               </button>
             </div>
-
-            {loading ? (
-              <p>Loading...</p>
-            ) : (
-              <div id="print-section-all">
-                {selectedSalesOrder.map((order, index) => (
-                  <div key={order.id} className="mb-4 border-b pb-4">
-                    <p>{index + 1}</p>
-                    <p><strong>Receipt #:</strong> {order.receipt_number}</p>
-                    <p><strong>Customer:</strong> {order.customer_name}</p>
-                    <p><strong>Total Sales:</strong> ${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
-                  </div>
-                ))}
-                {/* Grand Total */}
-                <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
-                  Grand Total: $
-                  {selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </div>
-              </div>
-            )}
-
-            <button onClick={() => setIsModalOpen(false)} className="mt-4 px-4 py-2 bg-red-500 text-white rounded w-full">
-              Close
-            </button>
           </div>
-        </div>
-      )}
+        )}
+
+        {/* Monthly Sales Modal */}
+        {isSalesModalOpen && (
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-3/4">
+              <h2 className="text-xl font-bold mb-4">Monthly Sales Report</h2>
+              <table className="min-w-full bg-white shadow-md rounded-lg">
+                <thead>
+                  <tr>
+                    <th className="py-2 px-4 bg-gray-300 text-left">Product Name</th>
+                    <th className="py-2 px-4 bg-gray-300 text-left">Category</th>
+                    <th className="py-2 px-4 bg-gray-300 text-left">Total Sold</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlySales.length > 0 ? (
+                    monthlySales.map((product) => (
+                      <tr key={product.product_code} className="border-b hover:bg-gray-200">
+                        <td className="py-2 px-4">{product.product_name}</td>
+                        <td className="py-2 px-4">{product.category}</td>
+                        <td className="py-2 px-4 text-green-600">{product.total_quantity_sold}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={3} className="text-center py-4">No sales data available.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+              <button
+                onClick={() => setIsSalesModalOpen(false)}
+                className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </AuthenticatedLayout>
   );

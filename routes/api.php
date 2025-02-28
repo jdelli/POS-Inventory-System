@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\RequestStocksController;
 use App\Http\Controllers\Api\SalesReportController;
 
 
+
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
@@ -60,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sales Report
     Route::get('/sales-report/daily', [SalesReportController::class, 'dailySalesReport']);
     Route::get('/sales-orders-by-date', [SalesReportController::class, 'getSalesOrdersByDate']);
+    Route::get('/fetch-monthly-sales', [SalesReportController::class, 'fetchMonthlySales']);
 
     // Admin
     Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);
