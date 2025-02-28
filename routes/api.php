@@ -48,7 +48,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/fetch-delivery-receipts', [DeliveryReceiptsApiController::class, 'getDeliveryReceipts']);
 
     // Customer Order
-    Route::post('/add-customer-order', [CustomerOrderController::class, 'addCustomerOrder']);
     Route::get('/orders', [CustomerOrderController::class, 'getAllCustomerOrders']);
     Route::put('/update-status/{id}', [CustomerOrderController::class, 'updateCustomerOrderStatus']);
     Route::put('/update-branch/{id}', [CustomerOrderController::class, 'forwardOrder']);
@@ -79,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
 // Public Routes
 Route::get('/get-branches', [AdminController::class, 'getAllBranches']);
 Route::get("/fetch-products", [ProductsApiController::class, "fetchProducts"]);
+Route::post('/add-customer-order', [CustomerOrderController::class, 'addCustomerOrder']);
 
 
 

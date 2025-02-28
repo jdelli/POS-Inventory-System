@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { usePage, Head } from "@inertiajs/react";
 import axios from "axios";
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -66,36 +66,49 @@ const DailySalesReport: React.FC = () => {
     orders.reduce((grandTotal, order) => grandTotal + calculateTotal(order.items), 0);
 
   const handlePrintAll = () => {
-    if (!selectedSalesOrder.length) return;
-    const printContent = document.getElementById("print-section-all");
-    if (printContent) {
-      const newWindow = window.open("", "_blank");
-      newWindow?.document.write(`
-        <html>
-          <head>
-            <title>Sales Orders - ${selectedSalesOrder[0].date}</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              th, td { border: 1px solid black; padding: 8px; text-align: left; }
-              th { background-color: #f2f2f2; }
-            </style>
-          </head>
-          <body>
-            <h2>Sales Orders for ${selectedSalesOrder[0].date}</h2>
-            ${printContent.innerHTML}
-            <script>
-              window.onload = function() {
-                window.print();
-                window.close();
-              }
-            </script>
-          </body>
-        </html>
-      `);
-      newWindow?.document.close();
-    }
-  };
+  if (!selectedSalesOrder.length) return;
+  const printContent = document.getElementById("print-section-all");
+  if (printContent) {
+    const newWindow = window.open("", "_blank");
+    newWindow?.document.write(`
+      <html>
+        <head>
+          <title>Sales Orders - ${selectedSalesOrder[0].date}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .receipt { margin-bottom: 20px; border-bottom: 1px solid black; padding-bottom: 10px; }
+            .grand-total { margin-top: 20px; font-weight: bold; text-align: right; }
+            .border-separation { margin-top: 20px; border-top: 2px solid black; padding-top: 10px; }
+          </style>
+        </head>
+        <body>
+          <h2>Sales Orders for ${selectedSalesOrder[0].date}</h2>
+          ${selectedSalesOrder.map((order, index) => `
+            <div class="receipt">
+              <p><strong>Receipt #${index + 1}:</strong> ${order.receipt_number}</p>
+              <p><strong>Customer:</strong> ${order.customer_name}</p>
+              <p><strong>Total Sales:</strong> $${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
+            </div>
+          `).join('')}
+          <div class="border-separation grand-total">
+            Grand Total: $
+            ${selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}
+          </div>
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    newWindow?.document.close();
+  }
+};
 
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Report</h2>}>
@@ -103,14 +116,14 @@ const DailySalesReport: React.FC = () => {
       <div className="p-4 bg-white shadow rounded-lg">
 
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="total_sales" fill="#82ca9d" />
-          </BarChart>
-        </ResponsiveContainer>
+      <LineChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="total_sales" stroke="#82ca9d" />
+      </LineChart>
+    </ResponsiveContainer>
 
         <div className="overflow-x-auto mt-4">
           <table className="w-full border border-gray-300">
@@ -143,64 +156,45 @@ const DailySalesReport: React.FC = () => {
           </table>
         </div>
 
-        {isModalOpen && selectedSalesOrder.length > 0 && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Sales Orders for {selectedSalesOrder[0].date}</h2>
-                <button onClick={handlePrintAll} className="px-4 py-2 bg-blue-500 text-white rounded">
-                  Print
-                </button>
-              </div>
-
-              {loading ? (
-                <p>Loading...</p>
-              ) : (
-                <div id="print-section-all">
-                  {selectedSalesOrder.map((order) => (
-                    <div key={order.id} className="mb-4 border-b pb-4">
-                      <p><strong>Receipt #:</strong> {order.receipt_number}</p>
-                      <p><strong>Customer:</strong> {order.customer_name}</p>
-
-                      <table className="w-full border mt-4">
-                        <thead>
-                          <tr className="bg-gray-200">
-                            <th className="p-2 border">Product</th>
-                            <th className="p-2 border">Quantity</th>
-                            <th className="p-2 border">Price ($)</th>
-                            <th className="p-2 border">Total ($)</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {order.items.map((item, index) => (
-                            <tr key={index} className="border">
-                              <td className="p-2 border">{item.product_name} ({item.product_code})</td>
-                              <td className="p-2 border">{item.quantity}</td>
-                              <td className="p-2 border">${item.price}</td>
-                              <td className="p-2 border">${(item.price * item.quantity)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  ))}
-                  {/* Grand Total */}
-          <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
-            Grand Total: $
-            {computeGrandTotal(selectedSalesOrder).toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </div>
-                </div>
-              )}
-
-              <button onClick={() => setIsModalOpen(false)} className="mt-4 px-4 py-2 bg-red-500 text-white rounded w-full">
-                Close
+       {isModalOpen && selectedSalesOrder.length > 0 && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Sales Orders for {selectedSalesOrder[0].date}</h2>
+              <button onClick={handlePrintAll} className="px-4 py-2 bg-blue-500 text-white rounded">
+                Print
               </button>
             </div>
+
+            {loading ? (
+              <p>Loading...</p>
+            ) : (
+              <div id="print-section-all">
+                {selectedSalesOrder.map((order, index) => (
+                  <div key={order.id} className="mb-4 border-b pb-4">
+                    <p>{index + 1}</p>
+                    <p><strong>Receipt #:</strong> {order.receipt_number}</p>
+                    <p><strong>Customer:</strong> {order.customer_name}</p>
+                    <p><strong>Total Sales:</strong> ${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
+                  </div>
+                ))}
+                {/* Grand Total */}
+                <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
+                  Grand Total: $
+                  {selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+              </div>
+            )}
+
+            <button onClick={() => setIsModalOpen(false)} className="mt-4 px-4 py-2 bg-red-500 text-white rounded w-full">
+              Close
+            </button>
           </div>
-        )}
+        </div>
+      )}
       </div>
     </AuthenticatedLayout>
   );
