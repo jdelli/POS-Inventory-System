@@ -34,6 +34,7 @@ interface Product {
   product_name: string;
   total_quantity_sold: number;
   total_sales: number;
+  category: string;
 }
 
 const DailySalesReport: React.FC = () => {
@@ -44,6 +45,9 @@ const DailySalesReport: React.FC = () => {
   const { auth } = usePage().props as { auth: { user: { name: string } } };
   const [isSalesModalOpen, setIsSalesModalOpen] = useState(false);
   const [monthlySales, setMonthlySales] = useState<Product[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [grandTotal, setGrandTotal] = useState<Product[]>([]);
 
   useEffect(() => {
     if (!auth?.user?.name) return;
@@ -70,24 +74,40 @@ const DailySalesReport: React.FC = () => {
   };
 
   const fetchMonthlySales = async () => {
-    try {
-      const response = await apiService.get('/fetch-monthly-sales');
-      const sortedSales = response.data.sort((a: Product, b: Product) => b.total_quantity_sold - a.total_quantity_sold);
-      setMonthlySales(sortedSales);
-    } catch (error) {
-      console.error('Error fetching monthly sales:', error);
+  try {
+    const response = await apiService.get("/fetch-monthly-sales", {
+      params: { month: selectedMonth, year: selectedYear },
+    });
+
+    console.log("API Response:", response.data); // Debugging
+
+    if (!Array.isArray(response.data.monthlySales)) {
+      throw new Error("Expected an array but got: " + JSON.stringify(response.data));
     }
-  };
 
-  const calculateTotal = (items: SalesOrderItem[]): number =>
-    items.reduce((total, item) => total + item.price * item.quantity, 0);
+    const sortedSales = response.data.monthlySales.sort(
+      (a: Product, b: Product) => b.total_quantity_sold - a.total_quantity_sold
+    );
 
-  const computeGrandTotal = (orders: SalesOrder[]): number =>
-    orders.reduce((grandTotal, order) => grandTotal + calculateTotal(order.items), 0);
+    setMonthlySales(sortedSales);
+    setGrandTotal(response.data.grandTotal); // Store grandTotal separately
+  } catch (error) {
+    console.error("Error fetching monthly sales:", error);
+  }
+};
+
 
   const openSalesModal = () => {
     setIsSalesModalOpen(true);
     fetchMonthlySales();
+  };
+
+  const handleMonthChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedMonth(parseInt(event.target.value, 10));
+  };
+
+  const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedYear(parseInt(event.target.value, 10));
   };
 
   const handlePrintAll = () => {
@@ -108,18 +128,23 @@ const DailySalesReport: React.FC = () => {
           </head>
           <body>
             <h2>Sales Orders for ${selectedSalesOrder[0].date}</h2>
-            ${selectedSalesOrder.map((order, index) => `
+            ${selectedSalesOrder.map(
+              (order, index) => `
               <div class="receipt">
                 <p><strong>Receipt #${index + 1}:</strong> ${order.receipt_number}</p>
                 <p><strong>Customer:</strong> ${order.customer_name}</p>
                 <p><strong>Total Sales:</strong> $${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
               </div>
-            `).join('')}
+            `
+            ).join("")}
             <div class="border-separation grand-total">
               Grand Total: $
-              ${selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
+              ${selectedSalesOrder.reduce(
+                (acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0),
+                0
+              ).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
               })}
             </div>
             <script>
@@ -157,6 +182,7 @@ const DailySalesReport: React.FC = () => {
         </ResponsiveContainer>
 
         <div className="overflow-x-auto mt-4">
+          <h1 className="text-center font-bold">Daily Sales Report</h1>
           <table className="w-full border border-gray-300">
             <thead>
               <tr className="bg-gray-200">
@@ -173,7 +199,7 @@ const DailySalesReport: React.FC = () => {
                   <td className="p-2 border">{index + 1}</td>
                   <td className="p-2 border">{data.date}</td>
                   <td className="p-2 border">
-                    ${data.total_sales}
+                    ${data.total_sales.toLocaleString()}
                   </td>
                   <td className="p-2 border text-green-600 font-semibold">Completed</td>
                   <td className="p-2 border">
@@ -186,7 +212,7 @@ const DailySalesReport: React.FC = () => {
             </tbody>
           </table>
         </div>
-
+                                                    
         {isModalOpen && selectedSalesOrder.length > 0 && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -209,13 +235,9 @@ const DailySalesReport: React.FC = () => {
                       <p><strong>Total Sales:</strong> ${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
                     </div>
                   ))}
-                  {/* Grand Total */}
                   <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
                     Grand Total: $
-                    {selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                   </div>
                 </div>
               )}
@@ -232,12 +254,34 @@ const DailySalesReport: React.FC = () => {
           <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-3/4">
               <h2 className="text-xl font-bold mb-4">Monthly Sales Report</h2>
+              <div className="flex mb-4">
+                <select value={selectedMonth} onChange={handleMonthChange} className="mr-2 p-2 border rounded">
+                  {[...Array(12).keys()].map((month) => (
+                    <option key={month + 1} value={month + 1}>
+                      {new Date(0, month).toLocaleString("default", { month: "long" })}
+                    </option>
+                  ))}
+                </select>
+                <select value={selectedYear} onChange={handleYearChange} className="p-2 border rounded">
+                  {[...Array(10).keys()].map((year) => (
+                    <option key={year + (new Date().getFullYear() - 5)} value={year + (new Date().getFullYear() - 5)}>
+                      {year + (new Date().getFullYear() - 5)}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={fetchMonthlySales}
+                  className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 ml-2"
+                >
+                  Filter
+                </button>
+              </div>
               <table className="min-w-full bg-white shadow-md rounded-lg">
                 <thead>
                   <tr>
                     <th className="py-2 px-4 bg-gray-300 text-left">Product Name</th>
-                    <th className="py-2 px-4 bg-gray-300 text-left">Category</th>
-                    <th className="py-2 px-4 bg-gray-300 text-left">Total Sold</th>
+                    <th className="py-2 px-4 bg-gray-300 text-left">Total Quantity Sold</th>
+                    <th className="py-2 px-4 bg-gray-300 text-left">Total Sales</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -245,8 +289,8 @@ const DailySalesReport: React.FC = () => {
                     monthlySales.map((product) => (
                       <tr key={product.product_code} className="border-b hover:bg-gray-200">
                         <td className="py-2 px-4">{product.product_name}</td>
-                        <td className="py-2 px-4">{product.category}</td>
-                        <td className="py-2 px-4 text-green-600">{product.total_quantity_sold}</td>
+                        <td className="py-2 px-4 text-green-600">{product.total_quantity_sold.toLocaleString()}</td>
+                        <td className="py-2 px-4 text-green-600">${product.total_sales.toLocaleString()}</td>
                       </tr>
                     ))
                   ) : (
@@ -256,6 +300,9 @@ const DailySalesReport: React.FC = () => {
                   )}
                 </tbody>
               </table>
+              <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
+                 Grand Total: ${grandTotal.toLocaleString()}
+              </div>
               <button
                 onClick={() => setIsSalesModalOpen(false)}
                 className="mt-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"

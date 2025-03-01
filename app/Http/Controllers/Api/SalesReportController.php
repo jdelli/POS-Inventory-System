@@ -46,28 +46,37 @@ public function getSalesOrdersByDate(Request $request)
     return response()->json($salesOrders);
 }
 
-public function fetchMonthlySales()
-    {
-        try {
-            // Get sales data for the current month
-            $monthlySales = SalesOrderItems::select(
-                    'product_code',
-                    'product_name',
-                    DB::raw('SUM(quantity) as total_quantity_sold'),
-                    DB::raw('SUM(total) as total_sales')
-                )
-                ->whereHas('salesOrder', function ($query) {
-                    $query->whereMonth('date', date('m'))
-                          ->whereYear('date', date('Y'));
-                })
-                ->groupBy('product_code', 'product_name')
-                ->orderByDesc('total_quantity_sold') // Sort by quantity sold
-                ->get();
+public function fetchMonthlySales(Request $request)
+{
+    try {
+        $month = $request->input('month', date('m'));
+        $year = $request->input('year', date('Y'));
 
-            return response()->json($monthlySales);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to fetch monthly sales', 'message' => $e->getMessage()], 500);
-        }
+        // Get sales data for the specified month and year
+        $monthlySales = SalesOrderItems::select(
+                'product_code',
+                'product_name',
+                DB::raw('SUM(quantity) as total_quantity_sold'),
+                DB::raw('SUM(total) as total_sales')
+            )
+            ->whereHas('salesOrder', function ($query) use ($month, $year) {
+                $query->whereMonth('date', $month)
+                      ->whereYear('date', $year);
+            })
+            ->groupBy('product_code', 'product_name')
+            ->orderByDesc('total_quantity_sold') // Sort by quantity sold
+            ->get();
+
+        // Calculate the Grand Total (sum of total_sales)
+        $grandTotal = $monthlySales->sum('total_sales');
+
+        return response()->json([
+            'monthlySales' => $monthlySales,
+            'grandTotal' => $grandTotal, // Include Grand Total in response
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch monthly sales', 'message' => $e->getMessage()], 500);
     }
+}
 
 }
