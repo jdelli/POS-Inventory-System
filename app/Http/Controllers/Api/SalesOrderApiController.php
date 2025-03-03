@@ -207,33 +207,40 @@ public function deleteSalesOrder($orderId)
     DB::beginTransaction();
 
     try {
-        // Fetch the sales order
+        // Fetch the sales order with its items
         $salesOrder = SalesOrder::with('items')->findOrFail($orderId);
 
-        // Revert the quantity of each product
         foreach ($salesOrder->items as $item) {
             $product = Products::where('product_code', $item->product_code)->first();
 
-            // Ensure product exists
             if (!$product) {
                 throw new \Exception("Product not found: " . $item->product_code);
             }
 
-            // Retrieve the stock history for this product in reverse order (latest first)
+            // Get the exact quantity deducted for this sales order
+            $quantityToRevert = $item->quantity;
+
+            // Retrieve stock history where stock was deducted, ordered by newest first
             $stockHistories = StockHistory::where('product_id', $product->id)
+                ->where('action', 'deducted')
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            foreach ($stockHistories as $latestHistory) {
-                // Revert stock deducted during the sales order
-                if ($latestHistory->action === 'deducted') {
-                    // If stock was deducted, we need to add it back (increase quantity)
-                    // Ensure you're adding a positive value to the product's quantity
-                    $product->quantity += abs($latestHistory->quantity_changed); // Use abs() to ensure positivity
-                    // Delete the stock history entry after undoing the action
-                    $latestHistory->delete();
-                } 
-                // If stock was added, do nothing to the stock history
+            foreach ($stockHistories as $history) {
+                if ($quantityToRevert <= 0) break; // Stop when we've reverted enough
+
+                if ($history->quantity_changed <= $quantityToRevert) {
+                    // If history entry is smaller than or equal to the quantity to revert
+                    $product->quantity -= $history->quantity_changed;
+                    $quantityToRevert += $history->quantity_changed;
+                    $history->delete(); // Delete only this specific stock history entry
+                } else {
+                    // If history entry is larger than the quantity to revert
+                    $product->quantity -= $quantityToRevert;
+                    $history->quantity_changed += $quantityToRevert; // Adjust the remaining history
+                    $history->save();
+                    $quantityToRevert = 0; // All quantity has been reverted
+                }
             }
 
             // Save the updated product quantity
@@ -261,6 +268,7 @@ public function deleteSalesOrder($orderId)
         ], 500);
     }
 }
+
 
 
 

@@ -86,37 +86,48 @@ class DeliveryReceiptsApiController extends Controller
     DB::beginTransaction();
 
     try {
-        // Fetch the delivery receipt
+        // Fetch the delivery receipt with its items
         $deliveryReceipt = DeliveryReceipt::with('items')->findOrFail($id);
 
-        // Revert the quantity of each product
         foreach ($deliveryReceipt->items as $item) {
             $product = Products::where('product_code', $item->product_code)->first();
 
-            // Ensure product exists
             if (!$product) {
                 throw new \Exception("Product not found: " . $item->product_code);
             }
 
-            // Retrieve the stock history for this product in reverse order (latest first)
+            // Get the exact quantity added from this delivery receipt
+            $quantityToRevert = $item->quantity;
+
+            // Retrieve stock history where stock was added, ordered by newest first
             $stockHistories = StockHistory::where('product_id', $product->id)
+                ->where('action', 'added')
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Revert the stock based on the stock history
-            foreach ($stockHistories as $latestHistory) {
-                if ($latestHistory->action === 'added') {
-                    // If stock was added, we should delete the stock history entry for this addition
-                    $latestHistory->delete();
-                    // Decrease the quantity of the product
-                    $product->quantity -= $latestHistory->quantity_changed;
-                } 
-                // If it's deducted, we should leave the history intact
+            foreach ($stockHistories as $history) {
+                if ($quantityToRevert <= 0) break; // Stop when enough has been reverted
+
+                if ($history->quantity_changed <= $quantityToRevert) {
+                    // If history entry is smaller than or equal to the quantity to revert
+                    $product->quantity -= $history->quantity_changed;
+                    $quantityToRevert -= $history->quantity_changed;
+                    $history->delete(); // Delete only this specific stock history entry
+                } else {
+                    // If history entry is larger than the quantity to revert
+                    $product->quantity -= $quantityToRevert;
+                    $history->quantity_changed -= $quantityToRevert; // Adjust remaining history
+                    $history->save();
+                    $quantityToRevert = 0; // All quantity has been reverted
+                }
             }
 
             // Save the updated product quantity
             $product->save();
         }
+
+        // Delete the delivery receipt items
+        DeliveryItems::where('delivery_receipt_id', $id)->delete();
 
         // Delete the delivery receipt
         $deliveryReceipt->delete();
@@ -136,6 +147,7 @@ class DeliveryReceiptsApiController extends Controller
         ], 500);
     }
 }
+
 
 
 }

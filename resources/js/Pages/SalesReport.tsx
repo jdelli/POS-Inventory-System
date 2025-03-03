@@ -160,6 +160,38 @@ const DailySalesReport: React.FC = () => {
     }
   };
 
+  const handlePrintMonthlyReport = () => {
+    const printContent = document.getElementById("print-section-monthly");
+    if (printContent) {
+      const newWindow = window.open("", "_blank");
+      newWindow?.document.write(`
+        <html>
+          <head>
+            <title>Monthly Sales Report - ${selectedMonth}/${selectedYear}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              th, td { border: 1px solid black; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
+              .grand-total { margin-top: 20px; font-weight: bold; text-align: right; }
+            </style>
+          </head>
+          <body>
+            <h2>Monthly Sales Report for ${new Date(selectedYear, selectedMonth - 1).toLocaleString("default", { month: "long" })} ${selectedYear}</h2>
+            ${printContent.innerHTML}
+            <script>
+              window.onload = function() {
+                window.print();
+                window.close();
+              }
+            </script>
+          </body>
+        </html>
+      `);
+      newWindow?.document.close();
+    }
+  };
+
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Report</h2>}>
       <Head title="Sales Report" />
@@ -253,7 +285,12 @@ const DailySalesReport: React.FC = () => {
         {isSalesModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
             <div className="bg-white p-6 rounded-lg shadow-lg w-3/4">
-              <h2 className="text-xl font-bold mb-4">Monthly Sales Report</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold">Monthly Sales Report</h2>
+                <button onClick={handlePrintMonthlyReport} className="px-4 py-2 bg-blue-500 text-white rounded">
+                  Print
+                </button>
+              </div>
               <div className="flex mb-4">
                 <select value={selectedMonth} onChange={handleMonthChange} className="mr-2 p-2 border rounded">
                   {[...Array(12).keys()].map((month) => (
@@ -276,32 +313,34 @@ const DailySalesReport: React.FC = () => {
                   Filter
                 </button>
               </div>
-              <table className="min-w-full bg-white shadow-md rounded-lg">
-                <thead>
-                  <tr>
-                    <th className="py-2 px-4 bg-gray-300 text-left">Product Name</th>
-                    <th className="py-2 px-4 bg-gray-300 text-left">Total Quantity Sold</th>
-                    <th className="py-2 px-4 bg-gray-300 text-left">Total Sales</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthlySales.length > 0 ? (
-                    monthlySales.map((product) => (
-                      <tr key={product.product_code} className="border-b hover:bg-gray-200">
-                        <td className="py-2 px-4">{product.product_name}</td>
-                        <td className="py-2 px-4 text-green-600">{product.total_quantity_sold.toLocaleString()}</td>
-                        <td className="py-2 px-4 text-green-600">${product.total_sales.toLocaleString()}</td>
-                      </tr>
-                    ))
-                  ) : (
+              <div id="print-section-monthly">
+                <table className="min-w-full bg-white shadow-md rounded-lg">
+                  <thead>
                     <tr>
-                      <td colSpan={3} className="text-center py-4">No sales data available.</td>
+                      <th className="py-2 px-4 bg-gray-300 text-left">Product Name</th>
+                      <th className="py-2 px-4 bg-gray-300 text-left">Total Quantity Sold</th>
+                      <th className="py-2 px-4 bg-gray-300 text-left">Total Sales</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-              <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
-                 Grand Total: ${grandTotal.toLocaleString()}
+                  </thead>
+                  <tbody>
+                    {monthlySales.length > 0 ? (
+                      monthlySales.map((product) => (
+                        <tr key={product.product_code} className="border-b hover:bg-gray-200">
+                          <td className="py-2 px-4">{product.product_name}</td>
+                          <td className="py-2 px-4 text-green-600">{product.total_quantity_sold.toLocaleString()}</td>
+                          <td className="py-2 px-4 text-green-600">${product.total_sales.toLocaleString()}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={3} className="text-center py-4">No sales data available.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+                <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
+                  Grand Total: ${grandTotal.toLocaleString()}
+                </div>
               </div>
               <button
                 onClick={() => setIsSalesModalOpen(false)}
