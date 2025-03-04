@@ -33,6 +33,8 @@ interface SalesOrder {
   receipt_number: string;
   date: string;
   items: SalesOrderItem[];
+  payment_option: string;
+
 }
 
 // Define the Auth interface
@@ -64,6 +66,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [paymentOption, setPaymentOption] = useState<string>('');
 
   // Functions
   const openReceiptModal = () => setIsReceiptModalOpen(true);
@@ -141,12 +144,13 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
 };
 
 
-  const submitSalesOrder = async () => {
+ const submitSalesOrder = async () => {
   try {
     if (
       !client || 
       !receiptNumber || 
       !date || 
+      !paymentOption || 
       receiptItems.some(item => !item.name || item.quantity <= 0 || item.price <= 0)
     ) {
       alert('Please fill in all fields correctly.');
@@ -164,11 +168,33 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
       total: item.price * item.quantity,
     }));
 
-    // Validate stock for each item
+    // Submit the sales order first
+    let salesOrderResponse;
+    try {
+      salesOrderResponse = await apiService.post('/add-sales-order', {
+        customer_name: client,
+        receipt_number: receiptNumber,
+        date,
+        payment_option: paymentOption,
+        items: itemsPayload,
+        branch_id: auth.user.name,
+      });
+
+      if (!salesOrderResponse.data.success) {
+        alert('Error submitting the sales order.');
+        return; // Stop execution if sales order fails
+      }
+    } catch (error: unknown) {
+      console.error('Error submitting sales order:', error);
+      alert('Error submitting the sales order.');
+      return; // Stop execution if sales order fails
+    }
+
+    // Deduct stock for each item only if sales order succeeds
     for (const item of itemsPayload) {
       try {
         await apiService.post('/deduct-quantity', {
-          id: item.id, // Send product ID
+          id: item.id,
           product_code: item.product_code,
           quantity: item.quantity,
           name: client,
@@ -177,49 +203,27 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
         });
       } catch (error: unknown) {
         if (error instanceof Error && 'response' in error && (error as any).response?.status === 400) {
-          const response = (error as any).response;
-          alert(response.data.message);
+          alert((error as any).response.data.message);
         } else {
           alert('An error occurred while validating stock.');
         }
         setIsSubmitting(false);
-        return; // Stop the process if there's an error
+        return; // Stop execution if stock validation fails
       }
     }
 
-    // Submit the sales order
-    try {
-      const response = await apiService.post('/add-sales-order', {
-        customer_name: client,
-        receipt_number: receiptNumber,
-        date,
-        items: itemsPayload,
-        branch_id: auth.user.name,
-      });
-
-      if (response.data.success) {
-        alert('Sales order submitted successfully!');
-        closeReceiptModal();
-      } else {
-        alert('Error submitting the sales order.');
-      }
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Error submitting sales order:', error.message);
-      }
-      alert('Error submitting the sales order.');
-      return; // Stop the process if there's an error
-    }
+    alert('Sales order submitted successfully!');
+    closeReceiptModal();
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error('Error submitting sales order:', error.message);
-    }
-    alert('Error submitting the sales order.');
+    console.error('Unexpected error:', error);
+    alert('An unexpected error occurred.');
   } finally {
     setIsSubmitting(false);
     fetchSalesReceipts();
   }
 };
+
+
 
 
 
@@ -342,7 +346,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                 <th className="px-4 py-2 bg-gray-300">Date</th>
                 <th className="px-4 py-2 bg-gray-300">Receipt Number</th>
                 <th className="px-4 py-2 bg-gray-300">Customer</th>
-                <th className="px-4 py-2 bg-gray-300">Total</th>
+                <th className="px-4 py-2 bg-gray-300">Number of Items</th>
                 <th className="px-4 py-2 bg-gray-300">Actions</th>
               </tr>
             </thead>
@@ -379,7 +383,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
           {/* Receipt Modal */}
           {isReceiptModalOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg  max-w-3x2 relative">
+              <div className="bg-white p-6 rounded-lg shadow-lg max-w-3x2 relative">
                 <h2 className="text-lg font-bold mb-4">New Sales Order</h2>
                 <form onSubmit={(e) => { e.preventDefault(); submitSalesOrder(); }}>
                   <div className="grid grid-cols-1 gap-4 mb-4">
@@ -414,6 +418,22 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                         className="border border-gray-300 p-2 w-full rounded"
                         required
                       />
+                    </div>
+                    {/* Payment Option Dropdown */}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Payment Option</label>
+                      <select
+                        value={paymentOption}
+                        onChange={(e) => setPaymentOption(e.target.value)}
+                        className="border border-gray-300 p-2 w-full rounded"
+                        required
+                      >
+                        <option value="" disabled>Select Payment Option</option>
+                        <option value="cash">Cash</option>
+                        <option value="gcash">Gcash</option>
+                        <option value="bank_transfer">Bank Transfer</option>
+                        <option value="others">Others</option>
+                      </select>
                     </div>
                   </div>
 
@@ -490,7 +510,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                         <button
                           type="button"
                           onClick={() => removeReceiptItem(index)}
-                          className="text-red-500 hover:text-red-700 "
+                          className="text-red-500 hover:text-red-700"
                         >
                           &times;
                         </button>
@@ -527,6 +547,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
               </div>
             </div>
           )}
+
 
           {/* Pagination */}
           <div className="mt-4 flex justify-between">

@@ -44,7 +44,7 @@ const SalesInvoice: React.FC = () => {
     // Add Quotation Title
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    const title = "CCTV Quotation";
+    const title = "Quotation";
     doc.text(title, (pageWidth - doc.getTextWidth(title)) / 2, 100);
 
     // Customer and invoice date details

@@ -51,6 +51,12 @@ Route::middleware(['checkrole:user'])->group(function () {
 
 
 
+    
+    Route::get('/user-test', function () {
+        return Inertia::render('DailySalesReports');
+    })->name('user-test');
+
+
 
 });
 

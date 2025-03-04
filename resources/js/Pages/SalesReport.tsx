@@ -48,6 +48,9 @@ const DailySalesReport: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [grandTotal, setGrandTotal] = useState<Product[]>([]);
+  const [isCashBreakdownModalOpen, setIsCashBreakdownModalOpen] = useState(false);
+  const [cashBreakdown, setCashBreakdown] = useState<{ [key: number]: number }>({});
+
 
   useEffect(() => {
     if (!auth?.user?.name) return;
@@ -95,7 +98,6 @@ const DailySalesReport: React.FC = () => {
     console.error("Error fetching monthly sales:", error);
   }
 };
-
 
   const openSalesModal = () => {
     setIsSalesModalOpen(true);
@@ -192,6 +194,42 @@ const DailySalesReport: React.FC = () => {
     }
   };
 
+  const openCashBreakdownModal = () => {
+    setIsCashBreakdownModalOpen(true);
+  };
+
+  const closeCashBreakdownModal = () => {
+    setIsCashBreakdownModalOpen(false);
+  };
+
+  const handlePrintCashBreakdown = () => {
+    const printContent = document.getElementById("print-section-cash-breakdown");
+    if (printContent) {
+      const newWindow = window.open("", "_blank");
+      newWindow?.document.write(`
+        <html>
+          <head>
+            <title>Cash Breakdown</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; }
+            </style>
+          </head>
+          <body>
+            <h2>Cash Breakdown</h2>
+            ${printContent.innerHTML}
+            <script>
+              window.onload = function() {
+                window.print();
+                window.close();
+              }
+            </script>
+          </body>
+        </html>
+      `);
+      newWindow?.document.close();
+    }
+  };
+
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Report</h2>}>
       <Head title="Sales Report" />
@@ -201,6 +239,13 @@ const DailySalesReport: React.FC = () => {
           className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
         >
           View Monthly Sales
+        </button>
+
+        <button
+          onClick={openCashBreakdownModal}
+          className="bg-blue-500 text-white px-4 py-2 rounded ml-2 hover:bg-blue-600"
+        >
+          Cash Breakdown
         </button>
 
         <ResponsiveContainer width="100%" height={300}>
@@ -213,37 +258,62 @@ const DailySalesReport: React.FC = () => {
           </LineChart>
         </ResponsiveContainer>
 
-        <div className="overflow-x-auto mt-4">
-          <h1 className="text-center font-bold">Daily Sales Report</h1>
-          <table className="w-full border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="p-2 border">#</th>
-                <th className="p-2 border">Date</th>
-                <th className="p-2 border">Sales ($)</th>
-                <th className="p-2 border">Status</th>
-                <th className="p-2 border">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {salesData.map((data, index) => (
-                <tr key={data.id} className="text-center border">
-                  <td className="p-2 border">{index + 1}</td>
-                  <td className="p-2 border">{data.date}</td>
-                  <td className="p-2 border">
-                    ${data.total_sales.toLocaleString()}
-                  </td>
-                  <td className="p-2 border text-green-600 font-semibold">Completed</td>
-                  <td className="p-2 border">
-                    <button onClick={() => handleOpenModal(data.date)} className="mr-2 text-blue-500">
-                      View Items
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+       <div className="flex flex-wrap lg:flex-nowrap gap-4 mt-4 w-full">
+  {/* Daily Sales Report Table */}
+  <div className="w-full lg:w-1/2">
+    <h1 className="text-center font-bold">Daily Sales Report</h1>
+    <table className="w-full border border-gray-300">
+      <thead>
+        <tr className="bg-gray-200">
+          <th className="p-2 border">#</th>
+          <th className="p-2 border">Date</th>
+          <th className="p-2 border">Sales ($)</th>
+          <th className="p-2 border">Status</th>
+          <th className="p-2 border">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {salesData.map((data, index) => (
+          <tr key={data.id} className="text-center border">
+            <td className="p-2 border">{index + 1}</td>
+            <td className="p-2 border">{data.date}</td>
+            <td className="p-2 border">${data.total_sales.toLocaleString()}</td>
+            <td className="p-2 border text-green-600 font-semibold">Completed</td>
+            <td className="p-2 border">
+              <button onClick={() => handleOpenModal(data.date)} className="mr-2 text-blue-500">
+                View Items
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {/* Top-Selling Products Table with Left Border */}
+  <div className="w-full lg:w-1/2 lg:border-l border-gray-600 pl-4">
+    <h1 className="text-center font-bold">Top-Selling Products</h1>
+    <table className="w-full border border-gray-300">
+      <thead>
+        <tr className="bg-gray-200">
+          <th className="p-2 border">Product Name</th>
+          <th className="p-2 border">Quantity Sold</th>
+          <th className="p-2 border">Total Revenue ($)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr className="text-center border">
+          <td className="p-2 border"></td>
+          <td className="p-2 border"></td>
+          <td className="p-2 border">$</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+        
                                                     
         {isModalOpen && selectedSalesOrder.length > 0 && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -351,6 +421,69 @@ const DailySalesReport: React.FC = () => {
             </div>
           </div>
         )}
+
+       {/* Cash Breakdown Modal */}
+{isCashBreakdownModalOpen && (
+  <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
+    <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold">Cash Breakdown</h2>
+        <button onClick={handlePrintCashBreakdown} className="px-4 py-2 bg-blue-500 text-white rounded">
+          Print
+        </button>
+      </div>
+      <div id="print-section-cash-breakdown">
+        {/* Cash Breakdown Form */}
+        <div className="grid grid-cols-2 gap-4">
+          {[
+            { denom: 1000, label: "₱1,000" },
+            { denom: 500, label: "₱500" },
+            { denom: 200, label: "₱200" },
+            { denom: 100, label: "₱100" },
+            { denom: 50, label: "₱50" },
+            { denom: 20, label: "₱20" },
+            { denom: 10, label: "₱10" },
+            { denom: 5, label: "₱5" },
+            { denom: 1, label: "₱1" },
+          ].map(({ denom, label }) => (
+            <div key={denom} className="flex items-center space-x-2">
+              <label className="w-20">{label}</label>
+              <input
+                type="number"
+                min="0"
+                value={cashBreakdown[denom] || ""}
+                onChange={(e) => setCashBreakdown({ ...cashBreakdown, [denom]: parseInt(e.target.value) || 0 })}
+                className="w-full px-2 py-1 border rounded"
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Total Display */}
+        <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
+          Total: ₱{Object.entries(cashBreakdown).reduce((sum, [denom, qty]) => sum + parseInt(denom) * qty, 0)}
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex justify-end space-x-2 mt-4">
+        <button
+          onClick={() => alert("Create Cash Breakdown")}
+          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        >
+          Create
+        </button>
+        <button
+          onClick={closeCashBreakdownModal}
+          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       </div>
     </AuthenticatedLayout>
   );

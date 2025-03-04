@@ -16,15 +16,17 @@ use App\Models\StockHistory;
 
 class SalesOrderApiController extends Controller
 {
-   public function addSalesOrder(Request $request)
+  public function addSalesOrder(Request $request)
 {
     // Validate the request input with custom rule for product_name existence
     $request->validate([
         'receipt_number' => 'required|string|max:255',
         'customer_name' => 'required|string|max:255',
         'date' => 'required|date',
+        'branch_id' => 'required|string|max:255', // Ensure branch_id is required
+        'payment_option' => 'required|in:cash,gcash,bank_transfer,others', // Add validation for ENUM values
         'items' => 'required|array',
-        'items.*.product_code' => 'required|string|max:255', // Updated to string
+        'items.*.product_code' => 'required|string|max:255',
         'items.*.product_name' => 'required|string|max:255',
         'items.*.quantity' => 'required|integer|min:1',
         'items.*.price' => 'required|numeric|min:0',
@@ -36,7 +38,8 @@ class SalesOrderApiController extends Controller
     $salesOrder->receipt_number = $request->receipt_number;
     $salesOrder->customer_name = $request->customer_name;
     $salesOrder->date = $request->date;
-    $salesOrder->branch_id = $request->branch_id; // Add this line to set branch_id
+    $salesOrder->branch_id = $request->branch_id;
+    $salesOrder->payment_option = $request->payment_option; // Assign payment option
     $salesOrder->save();
 
     // Save the individual items
@@ -58,7 +61,6 @@ class SalesOrderApiController extends Controller
         'salesOrder' => $salesOrder
     ]);
 }
-
 
 
 

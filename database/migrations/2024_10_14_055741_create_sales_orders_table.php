@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('receipt_number');
             $table->string('customer_name');
             $table->date('date');
+            $table->enum('payment_option', ['cash', 'gcash', 'bank_transfer', 'others']);
             $table->timestamps();
         });
     }

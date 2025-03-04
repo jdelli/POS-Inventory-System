@@ -10,13 +10,13 @@ class SalesOrder extends Model
     use HasFactory;
 
 
-    protected $fillable = [
-        'branch_id',
-        'receipt_number',
-        'customer_name',
-        'date'
-    ];
-
+  protected $fillable = [
+    'branch_id',
+    'receipt_number',
+    'customer_name',
+    'date',
+    'payment_option',
+];
     // Relationship with SalesOrderItem
     public function items()
     {

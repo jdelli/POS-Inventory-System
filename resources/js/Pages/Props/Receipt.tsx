@@ -15,6 +15,7 @@ interface ReceiptProps {
     customer_name: string;
     receipt_number: string;
     date: string;
+    payment_option: string;
     items: SalesOrderItem[];
   };
 }
@@ -47,6 +48,9 @@ const Receipt: React.FC<ReceiptProps> = ({ isOpen, onClose, selectedOrder }) => 
           </p>
           <p>
             <strong>Date:</strong> {selectedOrder.date}
+          </p>
+          <p>
+            <strong className='text-red-800'>Mode of Payment: {selectedOrder.payment_option}</strong> 
           </p>
         </div>
 
