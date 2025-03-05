@@ -62,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales-report/daily', [SalesReportController::class, 'dailySalesReport']);
     Route::get('/sales-orders-by-date', [SalesReportController::class, 'getSalesOrdersByDate']);
     Route::get('/fetch-monthly-sales', [SalesReportController::class, 'fetchMonthlySales']);
+    Route::get('/sales-total', [SalesReportController::class, 'getTotalSales']);
 
     // Admin
     Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);

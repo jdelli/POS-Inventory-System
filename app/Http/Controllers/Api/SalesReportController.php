@@ -51,6 +51,7 @@ public function fetchMonthlySales(Request $request)
     try {
         $month = $request->input('month', date('m'));
         $year = $request->input('year', date('Y'));
+        $branchId = $request->input('user_name'); // Changed variable name for clarity
 
         // Get sales data for the specified month and year
         $monthlySales = SalesOrderItems::select(
@@ -59,8 +60,9 @@ public function fetchMonthlySales(Request $request)
                 DB::raw('SUM(quantity) as total_quantity_sold'),
                 DB::raw('SUM(total) as total_sales')
             )
-            ->whereHas('salesOrder', function ($query) use ($month, $year) {
-                $query->whereMonth('date', $month)
+            ->whereHas('salesOrder', function ($query) use ($month, $year, $branchId) {
+                $query->where('branch_id', $branchId) // Ensure branch filtering
+                      ->whereMonth('date', $month)
                       ->whereYear('date', $year);
             })
             ->groupBy('product_code', 'product_name')
@@ -78,5 +80,35 @@ public function fetchMonthlySales(Request $request)
         return response()->json(['error' => 'Failed to fetch monthly sales', 'message' => $e->getMessage()], 500);
     }
 }
+
+
+public function getTotalSales(Request $request)
+{
+    try {
+        $branchId = $request->input('user_name'); 
+
+        // Validate date range input
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+        ]);
+
+        // Get total sales within the specified date range and branch
+        $totalSales = SalesOrderItems::whereHas('salesOrder', function ($query) use ($request, $branchId) {
+            $query->where('branch_id', $branchId) // Ensure branch filtering
+                  ->whereBetween('date', [$request->start_date, $request->end_date]);
+        })->sum('total');
+
+        return response()->json([
+            'total_sales' => $totalSales,
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Failed to fetch total sales', 'message' => $e->getMessage()], 500);
+    }
+}
+
+
+
+
 
 }

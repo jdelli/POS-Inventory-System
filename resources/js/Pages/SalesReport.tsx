@@ -2,16 +2,16 @@ import React, { useEffect, useState } from "react";
 import { usePage, Head } from "@inertiajs/react";
 import axios from "axios";
 import {
-  LineChart,
-  Line,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  CartesianGrid,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+} from 'recharts';
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import apiService from "./Services/ApiService";
+import apiService from './Services/ApiService';
 
 interface SalesOrderItem {
   product_code: string;
@@ -27,6 +27,7 @@ interface SalesOrder {
   date: string;
   items: SalesOrderItem[];
   total_sales: number;
+  payment_option: string;
 }
 
 interface Product {
@@ -50,18 +51,55 @@ const DailySalesReport: React.FC = () => {
   const [grandTotal, setGrandTotal] = useState<Product[]>([]);
   const [isCashBreakdownModalOpen, setIsCashBreakdownModalOpen] = useState(false);
   const [cashBreakdown, setCashBreakdown] = useState<{ [key: number]: number }>({});
+  const [expenses, setExpenses] = useState<{ particular: string; amount: number }[]>([]);
+  const [totalSales, setTotalSales] = useState(0);
+  const [startDate, setStartDate] = useState(""); // User input for start date
+  const [endDate, setEndDate] = useState(""); // User input for end date
+
+
+  const totalExpensesAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  const remainingCash = totalSales - totalExpensesAmount;
+
 
 
   useEffect(() => {
     if (!auth?.user?.name) return;
 
-    axios
-      .get("/api/sales-report/daily", {
+    apiService
+      .get("/sales-report/daily", {
         params: { user_name: auth.user.name },
       })
       .then((response) => setSalesData(response.data))
       .catch((error) => console.error("Error fetching sales data:", error));
   }, [auth?.user?.name]);
+
+
+
+  const fetchTotalSales = async () => {
+  if (!startDate || !endDate) {
+    alert("Please select a date range.");
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `/api/sales-total?start_date=${startDate}&end_date=${endDate}&user_name=${auth.user.name}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    setTotalSales(data.total_sales);
+  } catch (error) {
+    console.error("Error fetching total sales:", error);
+  }
+};
+
+
+
+
 
   const handleOpenModal = (date: string) => {
     setLoading(true);
@@ -79,7 +117,7 @@ const DailySalesReport: React.FC = () => {
   const fetchMonthlySales = async () => {
   try {
     const response = await apiService.get("/fetch-monthly-sales", {
-      params: { month: selectedMonth, year: selectedYear },
+      params: { month: selectedMonth, year: selectedYear, user_name: auth.user.name },
     });
 
     console.log("API Response:", response.data); // Debugging
@@ -202,33 +240,6 @@ const DailySalesReport: React.FC = () => {
     setIsCashBreakdownModalOpen(false);
   };
 
-  const handlePrintCashBreakdown = () => {
-    const printContent = document.getElementById("print-section-cash-breakdown");
-    if (printContent) {
-      const newWindow = window.open("", "_blank");
-      newWindow?.document.write(`
-        <html>
-          <head>
-            <title>Cash Breakdown</title>
-            <style>
-              body { font-family: Arial, sans-serif; padding: 20px; }
-            </style>
-          </head>
-          <body>
-            <h2>Cash Breakdown</h2>
-            ${printContent.innerHTML}
-            <script>
-              window.onload = function() {
-                window.print();
-                window.close();
-              }
-            </script>
-          </body>
-        </html>
-      `);
-      newWindow?.document.close();
-    }
-  };
 
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Report</h2>}>
@@ -248,15 +259,16 @@ const DailySalesReport: React.FC = () => {
           Cash Breakdown
         </button>
 
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="total_sales" stroke="#82ca9d" />
-          </LineChart>
-        </ResponsiveContainer>
+       <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={salesData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" tick={{ fontSize: 12 }} angle={-15} textAnchor="end" />
+          <YAxis domain={['auto']} tickFormatter={(value) => `₱${value.toLocaleString()}`} />
+          <Tooltip formatter={(value) => [`₱${value.toLocaleString()}`, "Total Sales"]} />
+          <Bar dataKey="total_sales" fill="#82ca9d" barSize={40} radius={[5, 5, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+
 
        <div className="flex flex-wrap lg:flex-nowrap gap-4 mt-4 w-full">
   {/* Daily Sales Report Table */}
@@ -267,8 +279,7 @@ const DailySalesReport: React.FC = () => {
         <tr className="bg-gray-200">
           <th className="p-2 border">#</th>
           <th className="p-2 border">Date</th>
-          <th className="p-2 border">Sales ($)</th>
-          <th className="p-2 border">Status</th>
+          <th className="p-2 border">Total Sales</th>
           <th className="p-2 border">Actions</th>
         </tr>
       </thead>
@@ -278,7 +289,6 @@ const DailySalesReport: React.FC = () => {
             <td className="p-2 border">{index + 1}</td>
             <td className="p-2 border">{data.date}</td>
             <td className="p-2 border">${data.total_sales.toLocaleString()}</td>
-            <td className="p-2 border text-green-600 font-semibold">Completed</td>
             <td className="p-2 border">
               <button onClick={() => handleOpenModal(data.date)} className="mr-2 text-blue-500">
                 View Items
@@ -290,22 +300,22 @@ const DailySalesReport: React.FC = () => {
     </table>
   </div>
 
-  {/* Top-Selling Products Table with Left Border */}
+  {/* Remittance */}
   <div className="w-full lg:w-1/2 lg:border-l border-gray-600 pl-4">
-    <h1 className="text-center font-bold">Top-Selling Products</h1>
+    <h1 className="text-center font-bold">Remittance</h1>
     <table className="w-full border border-gray-300">
       <thead>
         <tr className="bg-gray-200">
-          <th className="p-2 border">Product Name</th>
-          <th className="p-2 border">Quantity Sold</th>
-          <th className="p-2 border">Total Revenue ($)</th>
+          <th className="p-2 border">Date</th>
+          <th className="p-2 border">Status</th>
+          <th className="p-2 border">Actions</th>
         </tr>
       </thead>
       <tbody>
         <tr className="text-center border">
           <td className="p-2 border"></td>
           <td className="p-2 border"></td>
-          <td className="p-2 border">$</td>
+          <td className="p-2 border"></td>
         </tr>
       </tbody>
     </table>
@@ -335,6 +345,7 @@ const DailySalesReport: React.FC = () => {
                       <p><strong>Receipt #:</strong> {order.receipt_number}</p>
                       <p><strong>Customer:</strong> {order.customer_name}</p>
                       <p><strong>Total Sales:</strong> ${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
+                      <p><strong>Mode of Payment:</strong> {order.payment_option}</p>
                     </div>
                   ))}
                   <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
@@ -422,16 +433,42 @@ const DailySalesReport: React.FC = () => {
           </div>
         )}
 
-       {/* Cash Breakdown Modal */}
+
+
+
+
+ {/* Cash Breakdown Modal */}
 {isCashBreakdownModalOpen && (
   <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
     <div className="bg-white p-6 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
+      
+      {/* Header Section */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Cash Breakdown</h2>
-        <button onClick={handlePrintCashBreakdown} className="px-4 py-2 bg-blue-500 text-white rounded">
-          Print
+      </div>
+
+      {/* Date Range Selection */}
+      <div className="flex space-x-4 mb-4">
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="px-2 py-1 border rounded"
+        />
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="px-2 py-1 border rounded"
+        />
+        <button
+          onClick={fetchTotalSales}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Get Sales Total
         </button>
       </div>
+      
       <div id="print-section-cash-breakdown">
         {/* Cash Breakdown Form */}
         <div className="grid grid-cols-2 gap-4">
@@ -452,19 +489,89 @@ const DailySalesReport: React.FC = () => {
                 type="number"
                 min="0"
                 value={cashBreakdown[denom] || ""}
-                onChange={(e) => setCashBreakdown({ ...cashBreakdown, [denom]: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setCashBreakdown({
+                    ...cashBreakdown,
+                    [denom]: parseInt(e.target.value) || 0,
+                  })
+                }
                 className="w-full px-2 py-1 border rounded"
               />
             </div>
           ))}
         </div>
-
+        
         {/* Total Display */}
         <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
-          Total: ₱{Object.entries(cashBreakdown).reduce((sum, [denom, qty]) => sum + parseInt(denom) * qty, 0)}
+          Total: ₱
+          {Object.entries(cashBreakdown).reduce(
+            (sum, [denom, qty]) => sum + parseInt(denom) * qty,
+            0
+          )}
         </div>
       </div>
 
+      {/* Expenses Section */}
+      <div className="mt-4">
+        <h3 className="text-lg font-bold mb-2">Expenses</h3>
+        {expenses.map((expense, index) => (
+          <div key={index} className="grid grid-cols-2 gap-2 items-center mb-2 relative">
+            <input
+              type="text"
+              placeholder="Particular"
+              value={expense.particular}
+              onChange={(e) =>
+                setExpenses(
+                  expenses.map((exp, i) =>
+                    i === index ? { ...exp, particular: e.target.value } : exp
+                  )
+                )
+              }
+              className="px-2 py-1 border rounded w-full"
+            />
+            <input
+              type="number"
+              placeholder="How Much"
+              min="0"
+              value={expense.amount}
+              onChange={(e) =>
+                setExpenses(
+                  expenses.map((exp, i) =>
+                    i === index ? { ...exp, amount: parseFloat(e.target.value) || 0 } : exp
+                  )
+                )
+              }
+              className="px-2 py-1 border rounded w-full"
+            />
+            <button
+              onClick={() => setExpenses(expenses.filter((_, i) => i !== index))}
+              className="absolute -right-6 top-1/2 transform -translate-y-1/2 text-red-500 text-xl"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button
+          onClick={() => setExpenses([...expenses, { particular: "", amount: 0 }])}
+          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Add Expense
+        </button>
+        
+        {/* Overall Expenses Total */}
+        <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
+          Total Expenses: ₱{expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0)}
+        </div>
+      </div>
+      
+      {/* Summary Section */}
+      <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
+        Total Sales in Range: ₱{totalSales}
+      </div>
+      <div className="mt-4 p-2 bg-yellow-100 rounded text-lg font-semibold">
+        Remaining Cash: ₱{remainingCash}
+      </div>
+      
       {/* Buttons */}
       <div className="flex justify-end space-x-2 mt-4">
         <button
@@ -483,6 +590,11 @@ const DailySalesReport: React.FC = () => {
     </div>
   </div>
 )}
+
+
+
+
+
 
       </div>
     </AuthenticatedLayout>
