@@ -63,6 +63,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales-orders-by-date', [SalesReportController::class, 'getSalesOrdersByDate']);
     Route::get('/fetch-monthly-sales', [SalesReportController::class, 'fetchMonthlySales']);
     Route::get('/sales-total', [SalesReportController::class, 'getTotalSales']);
+    Route::prefix('cash-breakdowns')->group(function () {
+        Route::post('/', [SalesReportController::class, 'store']); // Create
+        Route::get('/', [SalesReportController::class, 'index']); // List all
+        Route::get('/{id}', [SalesReportController::class, 'show']); // Show one
+        Route::delete('/{id}', [SalesReportController::class, 'destroy']); // Delete
+    });
+
 
     // Admin
     Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);

@@ -33,7 +33,7 @@ interface SalesOrder {
   receipt_number: string;
   date: string;
   items: SalesOrderItem[];
-  payment_option: string;
+  payment_method: string;
 
 }
 
@@ -429,10 +429,10 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                         required
                       >
                         <option value="" disabled>Select Payment Option</option>
-                        <option value="cash">Cash</option>
-                        <option value="gcash">Gcash</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="others">Others</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Gcash">Gcash</option>
+                        <option value="Bank_Transfer">Bank Transfer</option>
+                        <option value="Others">Others</option>
                       </select>
                     </div>
                   </div>

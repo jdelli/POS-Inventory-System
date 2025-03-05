@@ -24,7 +24,7 @@ class SalesOrderApiController extends Controller
         'customer_name' => 'required|string|max:255',
         'date' => 'required|date',
         'branch_id' => 'required|string|max:255', // Ensure branch_id is required
-        'payment_option' => 'required|in:cash,gcash,bank_transfer,others', // Add validation for ENUM values
+        'payment_option' => 'required|string|max:255', 
         'items' => 'required|array',
         'items.*.product_code' => 'required|string|max:255',
         'items.*.product_name' => 'required|string|max:255',
@@ -39,7 +39,7 @@ class SalesOrderApiController extends Controller
     $salesOrder->customer_name = $request->customer_name;
     $salesOrder->date = $request->date;
     $salesOrder->branch_id = $request->branch_id;
-    $salesOrder->payment_option = $request->payment_option; // Assign payment option
+    $salesOrder->payment_method = $request->payment_option; // Assign payment option
     $salesOrder->save();
 
     // Save the individual items

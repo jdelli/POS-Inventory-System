@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItems;
+use App\Models\Remittance;
 use Illuminate\Support\Facades\DB;
 
 class SalesReportController extends Controller
@@ -106,6 +107,71 @@ public function getTotalSales(Request $request)
         return response()->json(['error' => 'Failed to fetch total sales', 'message' => $e->getMessage()], 500);
     }
 }
+
+
+
+public function store(Request $request)
+    {
+        // Validate input data
+        $request->validate([
+            'date_start'      => 'required|date',
+            'date_end'        => 'required|date|after_or_equal:date_start',
+            'total_sales'     => 'required|numeric|min:0',
+            'cash_breakdown'  => 'required|array',
+            'total_cash'      => 'required|numeric|min:0',
+            'expenses'        => 'nullable|array',
+            'total_expenses'  => 'required|numeric|min:0',
+            'remaining_cash'  => 'required|numeric|min:0',
+        ]);
+
+        // Create a new Cash Breakdown entry
+        $cashBreakdown = Remittance::create([
+            'date_start'      => $request->date_start,
+            'date_end'        => $request->date_end,
+            'total_sales'     => $request->total_sales,
+            'cash_breakdown'  => json_encode($request->cash_breakdown), // Store as JSON
+            'total_cash'      => $request->total_cash,
+            'expenses'        => json_encode($request->expenses), // Store as JSON
+            'total_expenses'  => $request->total_expenses,
+            'remaining_cash'  => $request->remaining_cash,
+        ]);
+
+        return response()->json([
+            'message' => 'Cash breakdown created successfully!',
+            'data'    => $cashBreakdown
+        ], 201);
+    }
+
+    /**
+     * Retrieve all cash breakdowns.
+     */
+    public function index()
+    {
+        $cashBreakdowns = Remittance::orderBy('created_at', 'desc')->get();
+
+        return response()->json($cashBreakdowns);
+    }
+
+    /**
+     * Get a specific cash breakdown by ID.
+     */
+    public function show($id)
+    {
+        $cashBreakdown = Remittance::findOrFail($id);
+
+        return response()->json($cashBreakdown);
+    }
+
+    /**
+     * Delete a cash breakdown entry.
+     */
+    public function destroy($id)
+    {
+        $cashBreakdown = Remittance::findOrFail($id);
+        $cashBreakdown->delete();
+
+        return response()->json(['message' => 'Cash breakdown deleted successfully.']);
+    }
 
 
 

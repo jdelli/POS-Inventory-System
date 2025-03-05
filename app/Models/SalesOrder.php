@@ -15,7 +15,7 @@ class SalesOrder extends Model
     'receipt_number',
     'customer_name',
     'date',
-    'payment_option',
+    'payment_method',
 ];
     // Relationship with SalesOrderItem
     public function items()

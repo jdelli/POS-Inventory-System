@@ -38,6 +38,28 @@ interface Product {
   category: string;
 }
 
+
+
+
+interface Remittance {
+  id: number;
+  date_start: string;
+  date_end: string;
+  total_sales: number;
+  total_cash: number;
+  total_expenses: number;
+  remaining_cash: number;
+  cash_breakdown: string; // Assuming JSON string
+  expenses?: { particular: string; amount: number }[];
+}
+
+
+
+
+
+
+
+
 const DailySalesReport: React.FC = () => {
   const [salesData, setSalesData] = useState<SalesOrder[]>([]);
   const [selectedSalesOrder, setSelectedSalesOrder] = useState<SalesOrder[]>([]);
@@ -55,6 +77,14 @@ const DailySalesReport: React.FC = () => {
   const [totalSales, setTotalSales] = useState(0);
   const [startDate, setStartDate] = useState(""); // User input for start date
   const [endDate, setEndDate] = useState(""); // User input for end date
+  const [totalCash, setTotalCash] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [remittances, setRemittances] = useState([]);
+  const [selectedBreakdown, setSelectedBreakdown] = useState(null);
+  const [isRemittanceModalOpen, setIsRemittanceModalOpen] = useState(false);
+  const [selectedRemittance, setSelectedRemittance] = useState<Remittance | null>(null);
+
+
 
 
   const totalExpensesAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
@@ -72,6 +102,67 @@ const DailySalesReport: React.FC = () => {
       .then((response) => setSalesData(response.data))
       .catch((error) => console.error("Error fetching sales data:", error));
   }, [auth?.user?.name]);
+
+
+
+
+
+  useEffect(() => {
+    const calculatedTotalCash = Object.entries(cashBreakdown).reduce(
+      (sum, [denom, qty]) => sum + parseInt(denom) * qty,
+      0
+    );
+    setTotalCash(calculatedTotalCash);
+
+  }, [cashBreakdown, expenses]);
+
+
+   // Fetch all remittance records
+   useEffect(() => {
+    const fetchRemittances = async () => {
+      try {
+        const response = await apiService.get("/cash-breakdowns");
+        setRemittances(response.data);
+      } catch (error) {
+        console.error("Error fetching remittances:", error);
+      }
+    };
+
+    fetchRemittances();
+  }, []);
+
+  // Open modal with selected remittance data
+  const handleViewDetails = async (id: number) => {
+    try {
+      const response = await apiService.get(`/cash-breakdowns/${id}`);
+      setSelectedRemittance(response.data);
+      setIsRemittanceModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching remittance details:", error);
+    }
+  };
+
+
+  const submitCashBreakdown = async () => {
+    try {
+      const response = await apiService.post("/cash-breakdowns", {
+        date_start: startDate,
+        date_end: endDate,
+        total_sales: totalSales,
+        cash_breakdown: cashBreakdown,
+        total_cash: totalCash,
+        expenses: expenses,
+        total_expenses: totalExpenses,
+        remaining_cash: remainingCash,
+      });
+  
+      alert("Cash Breakdown Created Successfully!");
+      closeCashBreakdownModal();
+    } catch (error) {
+      console.error("Error creating cash breakdown:", error);
+    }
+  };
+  
 
 
 
@@ -300,31 +391,154 @@ const DailySalesReport: React.FC = () => {
     </table>
   </div>
 
-  {/* Remittance */}
+
+
+
   <div className="w-full lg:w-1/2 lg:border-l border-gray-600 pl-4">
-    <h1 className="text-center font-bold">Remittance</h1>
-    <table className="w-full border border-gray-300">
-      <thead>
-        <tr className="bg-gray-200">
-          <th className="p-2 border">Date</th>
-          <th className="p-2 border">Status</th>
-          <th className="p-2 border">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr className="text-center border">
-          <td className="p-2 border"></td>
-          <td className="p-2 border"></td>
-          <td className="p-2 border"></td>
-        </tr>
-      </tbody>
-    </table>
+      <h1 className="text-center font-bold">Remittance</h1>
+      <table className="w-full border border-gray-300">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="p-2 border">Date Start</th>
+            <th className="p-2 border">Date End</th>
+            <th className="p-2 border">Total Sales</th>
+            <th className="p-2 border">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {remittances.length > 0 ? (
+            remittances.map((remit: Remittance) => (
+              <tr key={remit.id} className="text-center border">
+                <td className="p-2 border">{remit.date_start}</td>
+                <td className="p-2 border">{remit.date_end}</td>
+                <td className="p-2 border">{remit.total_sales}</td>
+                <td className="p-2 border">
+                  <button
+                    onClick={() => handleViewDetails(remit.id)}
+                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    View Details
+                  </button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={4} className="p-4 text-center text-gray-500">
+                No remittance records found.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* MODAL */}
+      {isRemittanceModalOpen && selectedRemittance && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-1/3 max-h-[80vh] overflow-y-auto flex flex-col">
+            <h2 className="text-xl font-bold text-center mb-4">Remittance Details</h2>
+            <table className="w-full border">
+              <tbody>
+                <tr>
+                  <td className="p-2 border font-bold">Date From:</td>
+                  <td className="p-2 border">{selectedRemittance.date_start}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 border font-bold">Date To:</td>
+                  <td className="p-2 border">{selectedRemittance.date_end}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 border font-bold">Total Sales:</td>
+                  <td className="p-2 border">{selectedRemittance.total_sales}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 border font-bold">Total Cash:</td>
+                  <td className="p-2 border">{selectedRemittance.total_cash}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 border font-bold">Total Expenses:</td>
+                  <td className="p-2 border">{Array.isArray(selectedRemittance.expenses)
+                    ? selectedRemittance.expenses.reduce((sum, expense) => sum + Number(expense.amount), 0).toFixed(2)
+                    : "0.00"}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 border font-bold">Remaining Cash:</td>
+                  <td className="p-2 border">{selectedRemittance.remaining_cash}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* CASH BREAKDOWN */}
+            <div className="mt-4">
+              <h3 className="text-lg font-bold">Cash Breakdown</h3>
+              <table className="w-full border">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="p-2 border">Denomination</th>
+                    <th className="p-2 border">Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {Object.entries(
+                      JSON.parse(selectedRemittance.cash_breakdown) as Record<string, number>
+                    ).map(([denomination, count]) => (
+                      <tr key={denomination}>
+                        <td className="p-2 border">{denomination}</td>
+                        <td className="p-2 border">{count}</td>
+                      </tr>
+                    )
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* EXPENSES */}
+            {selectedRemittance.expenses && (
+              <div className="mt-4">
+                <h3 className="text-lg font-bold">Expenses</h3>
+                <table className="w-full border">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="p-2 border">Expense Type</th>
+                      <th className="p-2 border">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.isArray(selectedRemittance.expenses) ? (
+                      selectedRemittance.expenses.map((expense, index) => (
+                        <tr key={index}>
+                          <td className="p-2 border">{expense.particular}</td>
+                          <td className="p-2 border">{expense.amount}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={2} className="p-2 border text-center text-gray-500">
+                          No expenses recorded.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {/* CLOSE BUTTON */}
+            <button
+              onClick={() => setIsRemittanceModalOpen(false)}
+              className="mt-4 w-full py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   </div>
-</div>
+  
 
-
-        
-                                                    
+  
+                                           
+        {/* Daily Sales Order */}                                   
         {isModalOpen && selectedSalesOrder.length > 0 && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -574,12 +788,12 @@ const DailySalesReport: React.FC = () => {
       
       {/* Buttons */}
       <div className="flex justify-end space-x-2 mt-4">
-        <button
-          onClick={() => alert("Create Cash Breakdown")}
-          className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-        >
-          Create
-        </button>
+      <button
+        onClick={submitCashBreakdown}
+        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+      >
+        Create
+      </button>
         <button
           onClick={closeCashBreakdownModal}
           className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
