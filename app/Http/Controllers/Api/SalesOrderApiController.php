@@ -170,7 +170,7 @@ public function getTotalClients(Request $request)
 public function getSalesOrderItemsToday(Request $request)
 {
         $userName = $request->query('user_name');
-        $today = Carbon::today();
+        $today = Carbon::now()->setTimezone('Asia/Manila')->format('y/m/d'); // Adjust as needed
         $salesOrders = SalesOrder::where('branch_id', $userName)
             ->whereDate('date', $today)
             ->with('items')
@@ -188,7 +188,7 @@ public function getSalesOrderItemsToday(Request $request)
 public function getDailySales(Request $request)
 {
     $userName = $request->query('user_name');
-    $today = Carbon::today();
+    $today = Carbon::now()->setTimezone('Asia/Manila')->format('y/m/d'); // Adjust as needed
 
     $totalSales = SalesOrder::where('branch_id', $userName)
         ->whereDate('date', $today)

@@ -122,18 +122,22 @@ public function store(Request $request)
             'expenses'        => 'nullable|array',
             'total_expenses'  => 'required|numeric|min:0',
             'remaining_cash'  => 'required|numeric|min:0',
+            'user_name'       => 'required|string',
         ]);
 
         // Create a new Cash Breakdown entry
         $cashBreakdown = Remittance::create([
             'date_start'      => $request->date_start,
             'date_end'        => $request->date_end,
+            'branch_id'       => $request->user_name, // Corrected this
             'total_sales'     => $request->total_sales,
             'cash_breakdown'  => json_encode($request->cash_breakdown), // Store as JSON
             'total_cash'      => $request->total_cash,
             'expenses'        => json_encode($request->expenses), // Store as JSON
             'total_expenses'  => $request->total_expenses,
             'remaining_cash'  => $request->remaining_cash,
+            'status'          => false, // Default to "pending"
+            
         ]);
 
         return response()->json([
@@ -145,22 +149,60 @@ public function store(Request $request)
     /**
      * Retrieve all cash breakdowns.
      */
-    public function index()
-    {
-        $cashBreakdowns = Remittance::orderBy('created_at', 'desc')->get();
+    public function index(Request $request)
+{
+    // Validate that branch_id is provided
+    $request->validate([
+        'branch_id' => 'required|string',
+    ]);
 
-        return response()->json($cashBreakdowns);
-    }
+    // Get the branch_id from the request
+    $branchId = $request->query('branch_id');
+
+    // Fetch remittances for the specific branch
+    $cashBreakdowns = Remittance::where('branch_id', $branchId)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $cashBreakdowns,
+    ]);
+}
+
 
     /**
      * Get a specific cash breakdown by ID.
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        $cashBreakdown = Remittance::findOrFail($id);
-
-        return response()->json($cashBreakdown);
+        // Validate that branch_id is provided in the request
+        $request->validate([
+            'branch_id' => 'required|string',
+        ]);
+    
+        // Get branch_id from query parameters
+        $branchId = $request->query('branch_id');
+    
+        // Fetch remittance data while ensuring the branch matches
+        $cashBreakdown = Remittance::where('id', $id)
+            ->where('branch_id', $branchId)
+            ->first();
+    
+        // Check if remittance was found
+        if (!$cashBreakdown) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No remittance found for this branch.',
+            ], 404);
+        }
+    
+        return response()->json([
+            'success' => true,
+            'data' => $cashBreakdown,
+        ]);
     }
+    
 
     /**
      * Delete a cash breakdown entry.

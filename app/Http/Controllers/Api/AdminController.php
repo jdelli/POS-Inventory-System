@@ -41,11 +41,16 @@ class AdminController extends Controller
 
 
 
-public function getDailySales(Request $request)
+    public function getDailySalesAllBranch(Request $request)
 {
-    $date = $request->query('date', Carbon::today());
+    // Get today's date in 'YY/MM/DD' format for matching database records
+    $date = Carbon::now()->setTimezone('Asia/Manila')->format('y/m/d');
 
-    $sales = SalesOrder::whereDate('date', $date)
+    // Log the date being queried
+    \Log::info("Querying daily sales for date: " . $date);
+
+    // Query sales orders using exact match (VARCHAR column)
+    $sales = SalesOrder::where('date', $date)
         ->join('sales_order_items', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
         ->selectRaw('branch_id, SUM(sales_order_items.price * sales_order_items.quantity) as total_sales')
         ->groupBy('branch_id')

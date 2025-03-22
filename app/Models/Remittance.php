@@ -12,12 +12,14 @@ class Remittance extends Model
     protected $fillable = [
         'date_start',
         'date_end',
+        'branch_id',
         'total_sales',
         'cash_breakdown',
         'total_cash',
         'expenses',
         'total_expenses',
         'remaining_cash',
+        'status',
     ];
 
 

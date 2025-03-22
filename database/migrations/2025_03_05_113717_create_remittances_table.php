@@ -15,12 +15,14 @@ return new class extends Migration
             $table->id();
             $table->date('date_start');
             $table->date('date_end');
+            $table->string('branch_id');
             $table->decimal('total_sales', 15, 2)->default(0);
             $table->json('cash_breakdown'); // Stores denominations and their counts
             $table->decimal('total_cash', 15, 2)->default(0);
             $table->json('expenses'); // Stores expenses as JSON
             $table->decimal('total_expenses', 15, 2)->default(0);
             $table->decimal('remaining_cash', 15, 2)->default(0);
+            $table->boolean('status')->default(false); // false = Pending, true = Received
             $table->timestamps();
         });
     }

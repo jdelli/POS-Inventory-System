@@ -73,7 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin
     Route::get('/sales-by-branch', [AdminController::class, 'getTotalSalesByUser']);
-    Route::get('/daily-sales-by-branch', [AdminController::class, 'getDailySales']);
+    Route::get('/daily-sales-by-branch', [AdminController::class, 'getDailySalesAllBranch']);
     Route::get('/admin-fetch-products-by-branch', [AdminController::class, 'AdminfetchProductsByBranch']);
     Route::get('/stock-history/{id}', [AdminController::class, 'getStockHistory']);
     Route::get('/admin-fetch-delivery-receipts-by-branch', [AdminController::class, 'AdminfetchDeliveryReceiptsByBranch']);

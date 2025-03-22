@@ -51,6 +51,7 @@ interface Remittance {
   remaining_cash: number;
   cash_breakdown: string; // Assuming JSON string
   expenses?: { particular: string; amount: number }[];
+  status: boolean;
 }
 
 
@@ -121,31 +122,63 @@ const DailySalesReport: React.FC = () => {
    useEffect(() => {
     const fetchRemittances = async () => {
       try {
-        const response = await apiService.get("/cash-breakdowns");
-        setRemittances(response.data);
+        const response = await apiService.get("/cash-breakdowns", {
+          params: { branch_id: auth.user.name }, // Send branch_id
+        });
+  
+        if (!response.data.success) {
+          alert("No remittances found for this branch.");
+          return;
+        }
+  
+        setRemittances(response.data.data || []); // Ensure data is properly set
       } catch (error) {
         console.error("Error fetching remittances:", error);
+        alert("Failed to fetch remittances.");
       }
     };
-
+  
     fetchRemittances();
   }, []);
+  
 
   // Open modal with selected remittance data
   const handleViewDetails = async (id: number) => {
     try {
-      const response = await apiService.get(`/cash-breakdowns/${id}`);
-      setSelectedRemittance(response.data);
+      const response = await apiService.get(`/cash-breakdowns/${id}`, {
+        params: { branch_id: auth.user.name }, // Ensure branch filtering
+      });
+  
+      console.log("Fetched data:", response.data); // Debugging
+  
+      if (!response.data.success) {
+        alert("No remittance found for this branch.");
+        return;
+      }
+  
+      const data = {
+        ...response.data.data,
+        expenses:
+          typeof response.data.data.expenses === "string"
+            ? JSON.parse(response.data.data.expenses) // Parse only if it's a string
+            : response.data.data.expenses || [], // Default to an empty array
+      };
+  
+      setSelectedRemittance(data);
       setIsRemittanceModalOpen(true);
     } catch (error) {
       console.error("Error fetching remittance details:", error);
+      alert("Error retrieving remittance details.");
     }
   };
+  
+  
 
 
   const submitCashBreakdown = async () => {
     try {
       const response = await apiService.post("/cash-breakdowns", {
+        user_name: auth.user.name,
         date_start: startDate,
         date_end: endDate,
         total_sales: totalSales,
@@ -402,34 +435,42 @@ const DailySalesReport: React.FC = () => {
             <th className="p-2 border">Date Start</th>
             <th className="p-2 border">Date End</th>
             <th className="p-2 border">Total Sales</th>
+            <th className="p-2 border">Status</th>
             <th className="p-2 border">Actions</th>
           </tr>
         </thead>
         <tbody>
-          {remittances.length > 0 ? (
-            remittances.map((remit: Remittance) => (
-              <tr key={remit.id} className="text-center border">
-                <td className="p-2 border">{remit.date_start}</td>
-                <td className="p-2 border">{remit.date_end}</td>
-                <td className="p-2 border">{remit.total_sales}</td>
-                <td className="p-2 border">
-                  <button
-                    onClick={() => handleViewDetails(remit.id)}
-                    className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    View Details
-                  </button>
-                </td>
-              </tr>
-            ))
+  {remittances.length > 0 ? (
+    remittances.map((remit: Remittance) => (
+      <tr key={remit.id} className="text-center border">
+        <td className="p-2 border">{remit.date_start}</td>
+        <td className="p-2 border">{remit.date_end}</td>
+        <td className="p-2 border">{remit.total_sales}</td>
+        <td className="p-2 border">
+          {remit.status ? (
+            <span className="text-green-600 font-semibold">Received</span>
           ) : (
-            <tr>
-              <td colSpan={4} className="p-4 text-center text-gray-500">
-                No remittance records found.
-              </td>
-            </tr>
+            <span className="text-yellow-500 font-semibold">Pending</span>
           )}
-        </tbody>
+        </td>
+        <td className="p-2 border">
+          <button
+            onClick={() => handleViewDetails(remit.id)}
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            View Details
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan={5} className="p-4 text-center text-gray-500">
+        No remittance records found.
+      </td>
+    </tr>
+  )}
+</tbody>
       </table>
 
       {/* MODAL */}
