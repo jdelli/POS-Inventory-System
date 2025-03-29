@@ -19,6 +19,7 @@ return new class extends Migration
             $table->decimal('total_sales', 15, 2)->default(0);
             $table->json('cash_breakdown'); // Stores denominations and their counts
             $table->decimal('total_cash', 15, 2)->default(0);
+            $table->decimal('online_payments', 15, 2)->default(0);
             $table->json('expenses'); // Stores expenses as JSON
             $table->decimal('total_expenses', 15, 2)->default(0);
             $table->decimal('remaining_cash', 15, 2)->default(0);

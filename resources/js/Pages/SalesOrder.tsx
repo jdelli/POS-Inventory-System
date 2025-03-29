@@ -431,7 +431,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
                         <option value="" disabled>Select Payment Option</option>
                         <option value="Cash">Cash</option>
                         <option value="Gcash">Gcash</option>
-                        <option value="Bank_Transfer">Bank Transfer</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
                         <option value="Others">Others</option>
                       </select>
                     </div>

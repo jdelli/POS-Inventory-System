@@ -8,6 +8,7 @@ use App\Models\SalesOrder;
 use App\Models\SalesOrderItems;
 use App\Models\Remittance;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SalesReportController extends Controller
 {
@@ -86,7 +87,14 @@ public function fetchMonthlySales(Request $request)
 public function getTotalSales(Request $request)
 {
     try {
-        $branchId = $request->input('user_name'); 
+        $branchId = $request->input('user_name');
+
+        // Log request data
+        Log::info('Fetching total sales', [
+            'branch_id' => $branchId,
+            'start_date' => $request->start_date,
+            'end_date' => $request->end_date
+        ]);
 
         // Validate date range input
         $request->validate([
@@ -94,19 +102,41 @@ public function getTotalSales(Request $request)
             'end_date' => 'required|date|after_or_equal:start_date',
         ]);
 
-        // Get total sales within the specified date range and branch
-        $totalSales = SalesOrderItems::whereHas('salesOrder', function ($query) use ($request, $branchId) {
-            $query->where('branch_id', $branchId) // Ensure branch filtering
-                  ->whereBetween('date', [$request->start_date, $request->end_date]);
-        })->sum('total');
+        // Define online payment methods
+        $onlinePayments = ['Gcash', 'Bank Transfer', 'Others'];
+
+        // Query for cash sales
+        $cashOrders = SalesOrder::where('branch_id', $branchId)
+            ->whereBetween('date', [$request->start_date, $request->end_date])
+            ->where('payment_method', 'Cash')
+            ->pluck('id'); // Get only the sales order IDs
+
+        $cashSales = SalesOrderItems::whereIn('sales_order_id', $cashOrders)->sum('total');
+
+        Log::info('Cash sales total:', ['cash_sales' => $cashSales]);
+
+        // Query for online payments
+        $onlineOrders = SalesOrder::where('branch_id', $branchId)
+            ->whereBetween('date', [$request->start_date, $request->end_date])
+            ->whereIn('payment_method', $onlinePayments)
+            ->pluck('id'); // Get only the sales order IDs
+
+        $onlineSales = SalesOrderItems::whereIn('sales_order_id', $onlineOrders)->sum('total');
+
+        Log::info('Online sales total:', ['online_sales' => $onlineSales]);
 
         return response()->json([
-            'total_sales' => $totalSales,
+            'cash_sales' => $cashSales,
+            'online_sales' => $onlineSales,
+            'total_sales' => $cashSales + $onlineSales,
         ]);
     } catch (\Exception $e) {
+        Log::error('Failed to fetch total sales', ['error' => $e->getMessage()]);
         return response()->json(['error' => 'Failed to fetch total sales', 'message' => $e->getMessage()], 500);
     }
 }
+
+
 
 
 
@@ -117,8 +147,6 @@ public function store(Request $request)
             'date_start'      => 'required|date',
             'date_end'        => 'required|date|after_or_equal:date_start',
             'total_sales'     => 'required|numeric|min:0',
-            'cash_breakdown'  => 'required|array',
-            'total_cash'      => 'required|numeric|min:0',
             'expenses'        => 'nullable|array',
             'total_expenses'  => 'required|numeric|min:0',
             'remaining_cash'  => 'required|numeric|min:0',
@@ -136,6 +164,7 @@ public function store(Request $request)
             'expenses'        => json_encode($request->expenses), // Store as JSON
             'total_expenses'  => $request->total_expenses,
             'remaining_cash'  => $request->remaining_cash,
+            'online_payments'  => $request->online_payments,
             'status'          => false, // Default to "pending"
             
         ]);
@@ -211,9 +240,13 @@ public function store(Request $request)
     {
         $cashBreakdown = Remittance::findOrFail($id);
         $cashBreakdown->delete();
-
-        return response()->json(['message' => 'Cash breakdown deleted successfully.']);
+    
+        return response()->json([
+            'success' => true,  // Add this field
+            'message' => 'Cash breakdown deleted successfully.'
+        ]);
     }
+    
 
 
 

@@ -52,6 +52,7 @@ interface Remittance {
   cash_breakdown: string; // Assuming JSON string
   expenses?: { particular: string; amount: number }[];
   status: boolean;
+  online_payments: number;
 }
 
 
@@ -84,6 +85,8 @@ const DailySalesReport: React.FC = () => {
   const [selectedBreakdown, setSelectedBreakdown] = useState(null);
   const [isRemittanceModalOpen, setIsRemittanceModalOpen] = useState(false);
   const [selectedRemittance, setSelectedRemittance] = useState<Remittance | null>(null);
+  const [onlinePayments, setOnlinePayments] = useState(0);
+  const [totalSalesAmount, setTotalSalesAmount] = useState(0);
 
 
 
@@ -119,27 +122,29 @@ const DailySalesReport: React.FC = () => {
 
 
    // Fetch all remittance records
-   useEffect(() => {
-    const fetchRemittances = async () => {
-      try {
-        const response = await apiService.get("/cash-breakdowns", {
-          params: { branch_id: auth.user.name }, // Send branch_id
-        });
+   const fetchRemittances = async () => {
+    try {
+      const response = await apiService.get("/cash-breakdowns", {
+        params: { branch_id: auth.user.name }, // Send branch_id
+      });
   
-        if (!response.data.success) {
-          alert("No remittances found for this branch.");
-          return;
-        }
-  
-        setRemittances(response.data.data || []); // Ensure data is properly set
-      } catch (error) {
-        console.error("Error fetching remittances:", error);
-        alert("Failed to fetch remittances.");
+      if (!response.data.success) {
+        alert("No remittances found for this branch.");
+        return;
       }
-    };
   
+      setRemittances(response.data.data || []); // Ensure data is properly set
+    } catch (error) {
+      console.error("Error fetching remittances:", error);
+      alert("Failed to fetch remittances.");
+    }
+  };
+  
+  // Run fetchRemittances when the component mounts
+  useEffect(() => {
     fetchRemittances();
   }, []);
+  
   
 
   // Open modal with selected remittance data
@@ -181,16 +186,18 @@ const DailySalesReport: React.FC = () => {
         user_name: auth.user.name,
         date_start: startDate,
         date_end: endDate,
-        total_sales: totalSales,
+        total_sales: totalSalesAmount,
         cash_breakdown: cashBreakdown,
-        total_cash: totalCash,
+        total_cash: totalSales,
         expenses: expenses,
         total_expenses: totalExpenses,
         remaining_cash: remainingCash,
+        online_payments: onlinePayments
       });
   
       alert("Cash Breakdown Created Successfully!");
       closeCashBreakdownModal();
+      fetchRemittances();
     } catch (error) {
       console.error("Error creating cash breakdown:", error);
     }
@@ -215,11 +222,32 @@ const DailySalesReport: React.FC = () => {
     }
 
     const data = await response.json();
-    setTotalSales(data.total_sales);
+    setTotalSales(data.cash_sales);
+    setOnlinePayments(data.online_sales);
+    setTotalSalesAmount(data.total_sales);
   } catch (error) {
     console.error("Error fetching total sales:", error);
   }
 };
+
+
+const deleteCashBreakdown = async (id: number) => {
+  try {
+    const response = await apiService.delete(`/cash-breakdowns/${id}`);
+
+    if (response.data.success) {
+      alert("Cash Breakdown deleted successfully");
+      setIsCashBreakdownModalOpen(false);
+    } else {
+      alert("Failed to delete cash breakdown");
+    }
+  } catch (error) {
+    console.error("Error deleting cash breakdown:", error);
+  }
+  fetchRemittances();
+};
+
+
 
 
 
@@ -454,13 +482,22 @@ const DailySalesReport: React.FC = () => {
           )}
         </td>
         <td className="p-2 border">
-          <button
-            onClick={() => handleViewDetails(remit.id)}
-            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            View Details
-          </button>
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={() => handleViewDetails(remit.id)}
+              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              View Details
+            </button>
+            <button
+              onClick={() => deleteCashBreakdown(remit.id)}
+              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Cancel
+            </button>
+          </div>
         </td>
+
       </tr>
     ))
   ) : (
@@ -495,6 +532,10 @@ const DailySalesReport: React.FC = () => {
                 <tr>
                   <td className="p-2 border font-bold">Total Cash:</td>
                   <td className="p-2 border">{selectedRemittance.total_cash}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 border font-bold">Total Online Payments:</td>
+                  <td className="p-2 border">{selectedRemittance.online_payments}</td>
                 </tr>
                 <tr>
                   <td className="p-2 border font-bold">Total Expenses:</td>
@@ -584,7 +625,7 @@ const DailySalesReport: React.FC = () => {
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
             <div className="bg-white p-5 rounded-lg shadow-lg w-3/4 max-w-2xl max-h-[80vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Sales Orders for {selectedSalesOrder[0].date}</h2>
+                <h2 className="text-xl font-bold">Daily Sales Report for {selectedSalesOrder[0].date}</h2>
                 <button onClick={handlePrintAll} className="px-4 py-2 bg-blue-500 text-white rounded">
                   Print
                 </button>
@@ -821,11 +862,18 @@ const DailySalesReport: React.FC = () => {
       
       {/* Summary Section */}
       <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
-        Total Sales in Range: ₱{totalSales}
+        Total Sales Cash: ₱{totalSales}
+      </div>
+      <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
+        Total Sales Online Payment: ₱{onlinePayments}
       </div>
       <div className="mt-4 p-2 bg-yellow-100 rounded text-lg font-semibold">
         Remaining Cash: ₱{remainingCash}
       </div>
+      <div className="mt-4 p-2 bg-green-100 rounded text-lg font-semibold">
+        Total Sales: ₱{totalSalesAmount}
+      </div>
+      
       
       {/* Buttons */}
       <div className="flex justify-end space-x-2 mt-4">

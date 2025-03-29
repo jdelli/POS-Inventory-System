@@ -19,6 +19,7 @@ class Remittance extends Model
         'expenses',
         'total_expenses',
         'remaining_cash',
+        'online_payments',
         'status',
     ];
 
