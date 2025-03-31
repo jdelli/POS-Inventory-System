@@ -16,7 +16,7 @@ class SalesReportController extends Controller
 {
     $userName = $request->input('user_name');
     
-
+    // Paginate the results (10 items per page, adjust as needed)
     $sales = SalesOrder::with('items')
         ->selectRaw('date, SUM(items.total) as total_sales')
         ->join('sales_order_items as items', 'sales_orders.id', '=', 'items.sales_order_id')
@@ -25,7 +25,7 @@ class SalesReportController extends Controller
         })
         ->groupBy('date')
         ->orderBy('date', 'desc')
-        ->get();
+        ->paginate(10);  // Paginate results (10 per page)
 
     return response()->json($sales);
 }
@@ -183,21 +183,26 @@ public function store(Request $request)
     // Validate that branch_id is provided
     $request->validate([
         'branch_id' => 'required|string',
+        'page' => 'nullable|integer|min:1', // Handle page parameter
     ]);
 
-    // Get the branch_id from the request
     $branchId = $request->query('branch_id');
+    $page = $request->query('page', 1); // Default to page 1 if not provided
 
-    // Fetch remittances for the specific branch
+    // Fetch remittances for the specific branch with pagination
     $cashBreakdowns = Remittance::where('branch_id', $branchId)
         ->orderBy('created_at', 'desc')
-        ->get();
+        ->paginate(10, ['*'], 'page', $page); // Paginate 10 items per page
 
     return response()->json([
         'success' => true,
-        'data' => $cashBreakdowns,
+        'data' => $cashBreakdowns->items(),
+        'current_page' => $cashBreakdowns->currentPage(),
+        'last_page' => $cashBreakdowns->lastPage(),
+        'total' => $cashBreakdowns->total(),
     ]);
 }
+
 
 
     /**

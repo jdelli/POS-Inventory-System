@@ -27,7 +27,7 @@ interface SalesOrder {
   date: string;
   items: SalesOrderItem[];
   total_sales: number;
-  payment_option: string;
+  payment_method: string;
 }
 
 interface Product {
@@ -87,6 +87,11 @@ const DailySalesReport: React.FC = () => {
   const [selectedRemittance, setSelectedRemittance] = useState<Remittance | null>(null);
   const [onlinePayments, setOnlinePayments] = useState(0);
   const [totalSalesAmount, setTotalSalesAmount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1); // Track current page
+  const [totalPages, setTotalPages] = useState(1); // Track total pages
+  const [currentPageRemittances, setCurrentPageRemittances] = useState(1); // Track current page
+  const [totalPagesRemittances, setTotalPagesRemittances] = useState(1); // Track total pages
+  
 
 
 
@@ -99,14 +104,27 @@ const DailySalesReport: React.FC = () => {
   useEffect(() => {
     if (!auth?.user?.name) return;
 
+    // Fetch sales data with pagination
     apiService
       .get("/sales-report/daily", {
-        params: { user_name: auth.user.name },
+        params: { 
+          user_name: auth.user.name,
+          page: currentPage, // Add current page to the API request
+        },
       })
-      .then((response) => setSalesData(response.data))
+      .then((response) => {
+        setSalesData(response.data.data); // Set sales data from response
+        setTotalPages(response.data.last_page); // Set the total pages from the API response
+      })
       .catch((error) => console.error("Error fetching sales data:", error));
-  }, [auth?.user?.name]);
+  }, [auth?.user?.name, currentPage]); // Re-fetch when page or user changes
 
+  // Handle page change
+  const handlePageChange = (page: any) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
 
 
@@ -125,25 +143,31 @@ const DailySalesReport: React.FC = () => {
    const fetchRemittances = async () => {
     try {
       const response = await apiService.get("/cash-breakdowns", {
-        params: { branch_id: auth.user.name }, // Send branch_id
+        params: { branch_id: auth.user.name, page: currentPageRemittances }, // Send current page
       });
-  
+
       if (!response.data.success) {
         alert("No remittances found for this branch.");
         return;
       }
-  
-      setRemittances(response.data.data || []); // Ensure data is properly set
+
+      setRemittances(response.data.data || []);
+      setTotalPagesRemittances(response.data.last_page); // Set total pages from response
     } catch (error) {
       console.error("Error fetching remittances:", error);
       alert("Failed to fetch remittances.");
     }
   };
-  
-  // Run fetchRemittances when the component mounts
+
   useEffect(() => {
     fetchRemittances();
-  }, []);
+  }, [currentPageRemittances]); // Fetch data when currentPage changes
+
+  const handlePageChangeRemittance = (page: any) => {
+    if (page > 0 && page <= totalPagesRemittances) {
+      setCurrentPageRemittances(page);
+    }
+  };
   
   
 
@@ -313,32 +337,48 @@ const deleteCashBreakdown = async (id: number) => {
             <title>Sales Orders - ${selectedSalesOrder[0].date}</title>
             <style>
               body { font-family: Arial, sans-serif; padding: 20px; }
-              .receipt { margin-bottom: 20px; border-bottom: 1px solid black; padding-bottom: 10px; }
+              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              th, td { border: 1px solid black; padding: 8px; text-align: left; }
+              th { background-color: #f2f2f2; }
               .grand-total { margin-top: 20px; font-weight: bold; text-align: right; }
-              .border-separation { margin-top: 20px; border-top: 2px solid black; padding-top: 10px; }
             </style>
           </head>
           <body>
             <h2>Sales Orders for ${selectedSalesOrder[0].date}</h2>
-            ${selectedSalesOrder.map(
-              (order, index) => `
-              <div class="receipt">
-                <p><strong>Receipt #${index + 1}:</strong> ${order.receipt_number}</p>
-                <p><strong>Customer:</strong> ${order.customer_name}</p>
-                <p><strong>Total Sales:</strong> $${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
-              </div>
-            `
-            ).join("")}
-            <div class="border-separation grand-total">
-              Grand Total: $
-              ${selectedSalesOrder.reduce(
-                (acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0),
-                0
-              ).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0,
-              })}
-            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Receipt #</th>
+                  <th>Customer</th>
+                  <th>Total Sales ($)</th>
+                  <th>Mode of Payment</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${selectedSalesOrder.map((order, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${order.receipt_number}</td>
+                    <td>${order.customer_name}</td>
+                    <td style="text-align: right;">${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</td>
+                    <td>${order.payment_method}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" style="text-align: right; font-weight: bold;">Grand Total:</td>
+                  <td style="text-align: right; font-weight: bold;">
+                    ${selectedSalesOrder.reduce(
+                      (acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0),
+                      0
+                    ).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
             <script>
               window.onload = function() {
                 window.print();
@@ -351,6 +391,7 @@ const deleteCashBreakdown = async (id: number) => {
       newWindow?.document.close();
     }
   };
+  
 
   const handlePrintMonthlyReport = () => {
     const printContent = document.getElementById("print-section-monthly");
@@ -423,34 +464,60 @@ const deleteCashBreakdown = async (id: number) => {
 
 
        <div className="flex flex-wrap lg:flex-nowrap gap-4 mt-4 w-full">
-  {/* Daily Sales Report Table */}
-  <div className="w-full lg:w-1/2">
-    <h1 className="text-center font-bold">Daily Sales Report</h1>
-    <table className="w-full border border-gray-300">
-      <thead>
-        <tr className="bg-gray-200">
-          <th className="p-2 border">#</th>
-          <th className="p-2 border">Date</th>
-          <th className="p-2 border">Total Sales</th>
-          <th className="p-2 border">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {salesData.map((data, index) => (
-          <tr key={data.id} className="text-center border">
-            <td className="p-2 border">{index + 1}</td>
-            <td className="p-2 border">{data.date}</td>
-            <td className="p-2 border">${data.total_sales.toLocaleString()}</td>
-            <td className="p-2 border">
-              <button onClick={() => handleOpenModal(data.date)} className="mr-2 text-blue-500">
-                View Items
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
+      {/* Daily Sales Report Table */}
+      <div className="w-full lg:w-1/2">
+        <h1 className="text-center font-bold">Daily Sales Report</h1>
+        <table className="w-full border border-gray-300">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="p-2 border">#</th>
+              <th className="p-2 border">Date</th>
+              <th className="p-2 border">Total Sales</th>
+              <th className="p-2 border">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {salesData.map((data, index) => (
+              <tr key={data.date} className="text-center border">
+                <td className="p-2 border">{(currentPage - 1) * 10 + index + 1}</td>
+                <td className="p-2 border">{data.date}</td>
+                <td className="p-2 border">₱{data.total_sales.toLocaleString()}</td>
+                <td className="p-2 border">
+                  <button
+                    onClick={() => handleOpenModal(data.date)}
+                    className="mr-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                  >
+                    View Details
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Pagination Controls */}
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-4 py-2 bg-gray-300 rounded-l hover:bg-gray-400"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2">
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 bg-gray-300 rounded-r hover:bg-gray-400"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+      
+  
 
 
 
@@ -473,7 +540,7 @@ const deleteCashBreakdown = async (id: number) => {
       <tr key={remit.id} className="text-center border">
         <td className="p-2 border">{remit.date_start}</td>
         <td className="p-2 border">{remit.date_end}</td>
-        <td className="p-2 border">{remit.total_sales}</td>
+        <td className="p-2 border">₱{remit.total_sales}</td>
         <td className="p-2 border">
           {remit.status ? (
             <span className="text-green-600 font-semibold">Received</span>
@@ -509,6 +576,27 @@ const deleteCashBreakdown = async (id: number) => {
   )}
 </tbody>
       </table>
+      {/* Pagination Controls */}
+      <div className="flex justify-center mt-4">
+          <button
+            onClick={() => handlePageChangeRemittance(currentPageRemittances - 1)}
+            disabled={currentPageRemittances === 1}
+            className="px-4 py-2 bg-gray-300 rounded-l hover:bg-gray-400"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2">
+            {currentPageRemittances} / {totalPagesRemittances}
+          </span>
+          <button
+            onClick={() => handlePageChangeRemittance(currentPageRemittances + 1)}
+            disabled={currentPageRemittances === totalPagesRemittances}
+            className="px-4 py-2 bg-gray-300 rounded-r hover:bg-gray-400"
+          >
+            Next
+          </button>
+        </div>
+      
 
       {/* MODAL */}
       {isRemittanceModalOpen && selectedRemittance && (
@@ -635,20 +723,44 @@ const deleteCashBreakdown = async (id: number) => {
                 <p>Loading...</p>
               ) : (
                 <div id="print-section-all">
-                  {selectedSalesOrder.map((order, index) => (
-                    <div key={order.id} className="mb-4 border-b pb-4">
-                      <p>{index + 1}</p>
-                      <p><strong>Receipt #:</strong> {order.receipt_number}</p>
-                      <p><strong>Customer:</strong> {order.customer_name}</p>
-                      <p><strong>Total Sales:</strong> ${order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}</p>
-                      <p><strong>Mode of Payment:</strong> {order.payment_option}</p>
-                    </div>
-                  ))}
-                  <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
-                    Grand Total: $
-                    {selectedSalesOrder.reduce((acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0), 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                  </div>
-                </div>
+                <table className="w-full border-collapse border border-gray-300 text-sm">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="border border-gray-300 px-2 py-1">#</th>
+                      <th className="border border-gray-300 px-2 py-1">Receipt #</th>
+                      <th className="border border-gray-300 px-2 py-1">Customer</th>
+                      <th className="border border-gray-300 px-2 py-1">Total Sales (₱)</th>
+                      <th className="border border-gray-300 px-2 py-1">Mode of Payment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedSalesOrder.map((order, index) => (
+                      <tr key={order.id} className="border border-gray-300">
+                        <td className="border border-gray-300 px-2 py-1 text-center">{index + 1}</td>
+                        <td className="border border-gray-300 px-2 py-1">{order.receipt_number}</td>
+                        <td className="border border-gray-300 px-2 py-1">{order.customer_name}</td>
+                        <td className="border border-gray-300 px-2 py-1 text-right">
+                          {order.items.reduce((acc, item) => acc + item.price * item.quantity, 0).toFixed(2)}
+                        </td>
+                        <td className="border border-gray-300 px-2 py-1">{order.payment_method}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-gray-100 font-bold">
+                      <td colSpan={3} className="border border-gray-300 px-2 py-1 text-right">Grand Total:</td>
+                      <td className="border border-gray-300 px-2 py-1 text-right">₱
+                        {selectedSalesOrder.reduce(
+                          (acc, order) => acc + order.items.reduce((orderAcc, item) => orderAcc + item.price * item.quantity, 0),
+                          0
+                        ).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </td>
+                      <td className="border border-gray-300 px-2 py-1"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
               )}
 
               <button onClick={() => setIsModalOpen(false)} className="mt-4 px-4 py-2 bg-red-500 text-white rounded w-full">
@@ -705,7 +817,7 @@ const deleteCashBreakdown = async (id: number) => {
                         <tr key={product.product_code} className="border-b hover:bg-gray-200">
                           <td className="py-2 px-4">{product.product_name}</td>
                           <td className="py-2 px-4 text-green-600">{product.total_quantity_sold.toLocaleString()}</td>
-                          <td className="py-2 px-4 text-green-600">${product.total_sales.toLocaleString()}</td>
+                          <td className="py-2 px-4 text-green-600">₱{product.total_sales.toLocaleString()}</td>
                         </tr>
                       ))
                     ) : (
@@ -716,7 +828,7 @@ const deleteCashBreakdown = async (id: number) => {
                   </tbody>
                 </table>
                 <div className="mt-4 p-4 bg-gray-100 font-bold text-right border-t">
-                  Grand Total: ${grandTotal.toLocaleString()}
+                  Grand Total: ₱{grandTotal.toLocaleString()}
                 </div>
               </div>
               <button

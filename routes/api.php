@@ -30,14 +30,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get("/fetch-products-by-branch", [ProductsApiController::class, "fetchProductsByBranch"]);
     Route::put("/edit-products/{id}", [ProductsApiController::class, "updateProduct"]);
     Route::delete("/delete-products/{id}", [ProductsApiController::class, "deleteProduct"]);
-    
-    Route::post('/add-quantity', [ProductsApiController::class, 'AddQuantity']);
-    Route::post('/deduct-quantity', [ProductsApiController::class, 'deductQuantity']);
     Route::get('/search-products', [ProductsApiController::class, 'search']);
     Route::get('/get-total-products', [ProductsApiController::class, 'getTotalProducts']);
 
     // For Sales Order
-    Route::post('/add-sales-order', [SalesOrderApiController::class, 'addSalesOrder']);
+    Route::post('/add-sales-order', [SalesOrderApiController::class, 'addSalesOrderWithStockDeduction']);
     Route::get('/fetch-sales-orders', [SalesOrderApiController::class, 'getSalesOrders']);
     Route::get('/get-monthly-sales', [SalesOrderApiController::class, 'getMonthlySales']);
     Route::get('/get-total-clients', [SalesOrderApiController::class, 'getTotalClients']);
@@ -45,7 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-total-daily-sales', [SalesOrderApiController::class, 'getDailySales']);
 
     // Delivery Receipt
-    Route::post('/add-delivery-receipt', [DeliveryReceiptsApiController::class, 'addDeliveryReceipt']);
+    Route::post('/add-delivery-receipt', [DeliveryReceiptsApiController::class, 'addDeliveryReceiptWithStockUpdate']);
     Route::get('/fetch-delivery-receipts', [DeliveryReceiptsApiController::class, 'getDeliveryReceipts']);
 
     // Customer Order

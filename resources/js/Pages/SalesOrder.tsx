@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import Receipt from './Props/Receipt';
+import axios from 'axios';
 
 // Interfaces
 interface InventoryItem {
@@ -144,7 +145,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
 };
 
 
- const submitSalesOrder = async () => {
+const submitSalesOrder = async () => {
   try {
     if (
       !client || 
@@ -160,7 +161,7 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
     setIsSubmitting(true);
 
     const itemsPayload = receiptItems.map(item => ({
-      id: item.id, // Include product ID
+      id: item.id,
       product_code: item.product_code,
       product_name: item.name,
       price: item.price,
@@ -168,55 +169,36 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
       total: item.price * item.quantity,
     }));
 
-    // Submit the sales order first
-    let salesOrderResponse;
-    try {
-      salesOrderResponse = await apiService.post('/add-sales-order', {
-        customer_name: client,
-        receipt_number: receiptNumber,
-        date,
-        payment_option: paymentOption,
-        items: itemsPayload,
-        branch_id: auth.user.name,
-      });
+    // Call backend
+    const response = await apiService.post('/add-sales-order', {
+      customer_name: client,
+      receipt_number: receiptNumber,
+      date,
+      payment_option: paymentOption,
+      items: itemsPayload,
+      branch_id: auth.user.name,
+    });
 
-      if (!salesOrderResponse.data.success) {
-        alert('Error submitting the sales order.');
-        return; // Stop execution if sales order fails
-      }
-    } catch (error: unknown) {
-      console.error('Error submitting sales order:', error);
-      alert('Error submitting the sales order.');
-      return; // Stop execution if sales order fails
-    }
-
-    // Deduct stock for each item only if sales order succeeds
-    for (const item of itemsPayload) {
-      try {
-        await apiService.post('/deduct-quantity', {
-          id: item.id,
-          product_code: item.product_code,
-          quantity: item.quantity,
-          name: client,
-          receipt_number: receiptNumber,
-          date: date,
-        });
-      } catch (error: unknown) {
-        if (error instanceof Error && 'response' in error && (error as any).response?.status === 400) {
-          alert((error as any).response.data.message);
-        } else {
-          alert('An error occurred while validating stock.');
-        }
-        setIsSubmitting(false);
-        return; // Stop execution if stock validation fails
-      }
+    if (!response.data.success) {
+      throw new Error(response.data.message);
     }
 
     alert('Sales order submitted successfully!');
     closeReceiptModal();
+
   } catch (error: unknown) {
-    console.error('Unexpected error:', error);
-    alert('An unexpected error occurred.');
+    console.error('Error:', error);
+
+    if (axios.isAxiosError(error)) {
+      // Handle backend error messages properly
+      const errorMessage = error.response?.data?.message || "An unexpected error occurred.";
+      alert(errorMessage);
+    } else if (error instanceof Error) {
+      alert(error.message);
+    } else {
+      alert('An unexpected error occurred.');
+    }
+
   } finally {
     setIsSubmitting(false);
     fetchSalesReceipts();

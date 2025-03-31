@@ -14,53 +14,94 @@ use App\Models\Products;
 use App\Models\StockHistory;
 
 
+
 class SalesOrderApiController extends Controller
 {
-  public function addSalesOrder(Request $request)
+    public function addSalesOrderWithStockDeduction(Request $request)
 {
-    // Validate the request input with custom rule for product_name existence
-    $request->validate([
-        'receipt_number' => 'required|string|max:255',
-        'customer_name' => 'required|string|max:255',
-        'date' => 'required|date',
-        'branch_id' => 'required|string|max:255', // Ensure branch_id is required
-        'payment_option' => 'required|string|max:255', 
-        'items' => 'required|array',
-        'items.*.product_code' => 'required|string|max:255',
-        'items.*.product_name' => 'required|string|max:255',
-        'items.*.quantity' => 'required|integer|min:1',
-        'items.*.price' => 'required|numeric|min:0',
-        'items.*.total' => 'required|numeric|min:0',
-    ]);
+    DB::beginTransaction(); // Start transaction
 
-    // Create a new SalesOrder instance
-    $salesOrder = new SalesOrder();
-    $salesOrder->receipt_number = $request->receipt_number;
-    $salesOrder->customer_name = $request->customer_name;
-    $salesOrder->date = $request->date;
-    $salesOrder->branch_id = $request->branch_id;
-    $salesOrder->payment_method = $request->payment_option; // Assign payment option
-    $salesOrder->save();
+    try {
+        // Validate request
+        $validatedData = $request->validate([
+            'receipt_number' => 'required|string|max:255',
+            'customer_name' => 'required|string|max:255',
+            'date' => 'required|date',
+            'branch_id' => 'required|string|max:255',
+            'payment_option' => 'required|string|max:255',
+            'items' => 'required|array',
+            'items.*.id' => 'required|integer|exists:products,id', // Ensure product exists
+            'items.*.product_code' => 'required|string|max:255',
+            'items.*.product_name' => 'required|string|max:255',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.price' => 'required|numeric|min:0',
+            'items.*.total' => 'required|numeric|min:0',
+        ]);
 
-    // Save the individual items
-    foreach ($request->items as $item) {
-        $salesOrderItem = new SalesOrderItems();
-        $salesOrderItem->sales_order_id = $salesOrder->id; // FK to SalesOrder
-        $salesOrderItem->product_code = $item['product_code'];
-        $salesOrderItem->product_name = $item['product_name'];
-        $salesOrderItem->quantity = $item['quantity'];
-        $salesOrderItem->price = $item['price'];
-        $salesOrderItem->total = $item['total'];
-        $salesOrderItem->save();
+        // Create sales order
+        $salesOrder = SalesOrder::create([
+            'receipt_number' => $validatedData['receipt_number'],
+            'customer_name' => $validatedData['customer_name'],
+            'date' => $validatedData['date'],
+            'branch_id' => $validatedData['branch_id'],
+            'payment_method' => $validatedData['payment_option'],
+        ]);
+
+        // Process each item
+        foreach ($validatedData['items'] as $item) {
+            $product = Products::find($item['id']);
+
+            // Check stock before deducting
+            if ($item['quantity'] > $product->quantity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Error: Not enough stock for {$item['product_name']}. Available: {$product->quantity}",
+                ], 400);
+            }
+
+            // Deduct stock
+            $product->decrement('quantity', $item['quantity']);
+
+            // Log stock history
+            StockHistory::create([
+                'product_id' => $product->id,
+                'product_code' => $product->product_code,
+                'name' => $validatedData['customer_name'],
+                'receipt_number' => $validatedData['receipt_number'],
+                'date' => $validatedData['date'],
+                'quantity_changed' => -$item['quantity'],
+                'remaining_stock' => $product->quantity,
+                'action' => 'deducted',
+            ]);
+
+            // Create sales order item
+            SalesOrderItems::create([
+                'sales_order_id' => $salesOrder->id,
+                'product_code' => $item['product_code'],
+                'product_name' => $item['product_name'],
+                'quantity' => $item['quantity'],
+                'price' => $item['price'],
+                'total' => $item['total'],
+            ]);
+        }
+
+        DB::commit(); // Commit the transaction if everything is successful
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sales order created and stock deducted successfully.',
+            'salesOrder' => $salesOrder
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack(); // Rollback everything if an error occurs
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 400);
     }
-
-    // Return a success response
-    return response()->json([
-        'success' => true,
-        'message' => 'Sales Order created successfully',
-        'salesOrder' => $salesOrder
-    ]);
 }
+
 
 
 

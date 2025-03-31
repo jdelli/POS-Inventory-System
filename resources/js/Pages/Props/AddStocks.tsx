@@ -38,6 +38,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   const [deliveredBy, setDeliveredBy] = useState('');
   const [date, setDate] = useState('');
   const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -81,59 +82,46 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   };
 
   const submitAddStocks = async () => {
-  const itemsPayload = receiptItems.map((item) => ({
-    id: item.id, // Use product_id
-    product_name: item.name,
-    price: item.price,
-    quantity: item.quantity,
-    product_code: item.product_code,
-  }));
-
-  const payload = {
-    delivery_number: deliveryNumber,
-    delivered_by: deliveredBy,
-    date,
-    items: itemsPayload,
-    branch_id: selectedBranchName, // Ensure this matches the backend expectations
+    try {
+      if (!deliveryNumber || !deliveredBy || !date || receiptItems.length === 0) {
+        alert("Please fill in all required fields.");
+        return;
+      }
+  
+      setIsSubmitting(true);
+  
+      const itemsPayload = receiptItems.map(item => ({
+        id: item.id, // Ensure product ID is sent
+        product_code: item.product_code,
+        product_name: item.name,
+        quantity: item.quantity,
+      }));
+  
+      // Call backend with combined request
+      const response = await apiService.post('/add-delivery-receipt', {
+        delivered_by: deliveredBy,
+        delivery_number: deliveryNumber,
+        date,
+        branch_id: selectedBranchName,
+        items: itemsPayload,
+      });
+  
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Error adding delivery receipt.');
+      }
+  
+      alert('Stocks added successfully!');
+      closeAddStocksModal();
+      onSuccess(); // Refresh data after success
+  
+    } catch (error: unknown) {
+      console.error('Error submitting stocks:', error);
+      alert(error instanceof Error ? error.message : 'An unknown error occurred.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  try {
-    // First API request: Add quantity for each item in parallel
-    const quantityResponses = await Promise.all(
-      itemsPayload.map((item) =>
-        apiService.post('/add-quantity', {
-          id: item.id,
-          product_code: item.product_code,
-          quantity: item.quantity,
-          name: deliveredBy,
-          receipt_number: deliveryNumber,
-          date: date,
-        })
-      )
-    );
-
-
-    // Second API request: Add delivery receipt only if quantity update succeeds
-    const response = await apiService.post('/add-delivery-receipt', payload);
-
-    if (!response.data.success) {
-      throw new Error('Error adding delivery receipt.');
-    }
-
-    // If everything succeeds
-    alert('Stocks added successfully!');
-    closeAddStocksModal();
-    onSuccess(); // Ensure this is called after everything is successful
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error('Error submitting stocks:', error.message);
-      alert('An error occurred while submitting the stocks: ' + error.message);
-    } else {
-      console.error('An unknown error occurred.');
-      alert('An unknown error occurred.');
-    }
-  }
-};
+  
 
 
 

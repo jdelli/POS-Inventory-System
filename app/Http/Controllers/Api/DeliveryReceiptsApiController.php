@@ -12,7 +12,9 @@ use App\Models\StockHistory;
 
 class DeliveryReceiptsApiController extends Controller
 {
-    public function addDeliveryReceipt(Request $request) {
+    public function addDeliveryReceiptWithStockUpdate(Request $request)
+{
+    // Validate the incoming request
     $request->validate([
         'branch_id' => 'required|string|max:255',
         'delivery_number' => 'required|string|max:255',
@@ -20,10 +22,11 @@ class DeliveryReceiptsApiController extends Controller
         'date' => 'required|date',
         'items' => 'required|array',
         'items.*.product_name' => 'required|string|max:255',
-        'items.*.product_code' => 'required|string|max:255', // Updated to string
+        'items.*.product_code' => 'required|string|max:255',
         'items.*.quantity' => 'required|integer|min:1',
     ]);
 
+    // Create a new delivery receipt
     $deliveryReceipt = new DeliveryReceipt();
     $deliveryReceipt->delivery_number = $request->delivery_number;
     $deliveryReceipt->delivered_by = $request->delivered_by;
@@ -31,15 +34,40 @@ class DeliveryReceiptsApiController extends Controller
     $deliveryReceipt->branch_id = $request->branch_id;
     $deliveryReceipt->save();
 
+    // Process each item in the delivery
     foreach ($request->items as $item) {
+        // Add the item to the DeliveryItems table
         $deliveryItems = new DeliveryItems();
         $deliveryItems->delivery_receipt_id = $deliveryReceipt->id; // FK to DeliveryReceipt
         $deliveryItems->product_code = $item['product_code'];
         $deliveryItems->product_name = $item['product_name'];
         $deliveryItems->quantity = $item['quantity'];
         $deliveryItems->save();
+
+        // Update the product stock
+        $product = Products::where('product_code', $item['product_code'])->first();
+
+        if ($product) {
+            // Increase the product quantity
+            $product->quantity += $item['quantity'];
+            $product->save();
+
+            // Log the stock change in the StockHistory table
+            StockHistory::create([
+                'product_id' => $product->id,
+                'name' => $item['product_name'],
+                'receipt_number' => $request->delivery_number,
+                'date' => $request->date,
+                'quantity_changed' => $item['quantity'],
+                'remaining_stock' => $product->quantity,
+                'action' => 'added',
+            ]);
+        } else {
+            return response()->json(['message' => 'Product with code ' . $item['product_code'] . ' not found'], 404);
+        }
     }
 
+    // Return the response with the created delivery receipt
     return response()->json([
         'success' => true,
         'deliveryReceipt' => $deliveryReceipt
