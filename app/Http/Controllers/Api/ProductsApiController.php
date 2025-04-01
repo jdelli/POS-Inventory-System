@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\DB;
 
 
 
+
 class ProductsApiController extends Controller
 {
     public function addProduct(Request $request)
@@ -102,16 +103,25 @@ class ProductsApiController extends Controller
 
 public function fetchProductsByBranch(Request $request)
 {
-    // Get the user name from the request
     $userName = $request->query('user_name');
     $page = $request->query('page', 1);
     $limit = $request->query('limit', 20);
 
-    // Fetch products where branch_id matches the user name
+    // Fetch products with full image URL
     $products = Products::where('branch_id', $userName)
-                        ->paginate($limit, ['*'], 'page', $page);
+                        ->paginate($limit)
+                        ->through(function ($product) {
+                            return [
+                                'id' => $product->id,
+                                'product_code' => $product->product_code,
+                                'name' => $product->name,
+                                'category' => $product->category,
+                                'price' => $product->price,
+                                'quantity' => $product->quantity,
+                                'image_url' => asset('storage/products/' . basename($product->image)), // Correct URL
+                            ];
+                        });
 
-    // Return the products as a JSON response
     return response()->json($products);
 }
 

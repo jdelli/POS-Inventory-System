@@ -18,6 +18,7 @@ interface Product {
   category: string;
   price: number;
   quantity: number;
+  image_url: string;
 }
 
 const categoryOptions = [
@@ -149,9 +150,10 @@ const ProductTable: React.FC = () => {
           <p className="text-center py-4">Loading products...</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white shadow-md rounded-lg">
+           <table className="min-w-full bg-white shadow-md rounded-lg">
               <thead>
                 <tr>
+                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Image</th>
                   <th className="py-2 px-4 bg-gray-300 font-medium text-left">Product Code</th>
                   <th className="py-2 px-4 bg-gray-300 font-medium text-left">Product Name</th>
                   <th className="py-2 px-4 bg-gray-300 font-medium text-left">Category</th>
@@ -163,6 +165,13 @@ const ProductTable: React.FC = () => {
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
                     <tr key={product.id} className="border-b hover:bg-gray-200">
+                      <td className="py-2 px-4">
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name} 
+                          className="w-12 h-12 object-cover rounded-md"
+                        />
+                      </td>
                       <td className="py-2 px-4">{product.product_code}</td>
                       <td className="py-2 px-4">{product.name}</td>
                       <td className="py-2 px-4">{product.category}</td>
@@ -172,11 +181,12 @@ const ProductTable: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="text-center py-4">No products found.</td>
+                    <td colSpan={6} className="text-center py-4">No products found.</td>
                   </tr>
                 )}
               </tbody>
             </table>
+
           </div>
         )}
 
