@@ -251,6 +251,27 @@ public function store(Request $request)
             'message' => 'Cash breakdown deleted successfully.'
         ]);
     }
+
+
+
+
+    public function updateStatus(Request $request, $id)
+    {
+        $request->validate([
+            'status' => 'required|string|in:Pending,Received,Rejected', // Ensures valid status values
+        ]);
+    
+        $remittance = Remittance::findOrFail($id);
+        
+        // Update the status based on the request
+        $remittance->status = $request->status;
+        $remittance->save();
+    
+        return response()->json([
+            'message' => 'Status updated successfully',
+            'remittance' => $remittance
+        ]);
+    }
     
 
 

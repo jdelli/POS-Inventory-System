@@ -87,7 +87,7 @@ Route::middleware(['checkrole:admin'])->group(function () {
     })->name('admin-stocks-request');
 
     Route::get('/admin-reports', function () {
-        return Inertia::render('AdminRoutePage/AdminReports');
+        return Inertia::render('AdminRoutePage/AdminReport');
     })->name('admin-reports');
 });
 

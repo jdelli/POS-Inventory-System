@@ -61,6 +61,14 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                                 </Dropdown.Link>
                             </Dropdown.Content>
                         </Dropdown>
+
+                        <NavLink
+                            href={route('admin-reports')}
+                            active={route().current('admin-reports')}
+                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
+                        >
+                            Reports
+                        </NavLink>
                     </nav>
                 </div>
             </aside>

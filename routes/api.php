@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales-orders-by-date', [SalesReportController::class, 'getSalesOrdersByDate']);
     Route::get('/fetch-monthly-sales', [SalesReportController::class, 'fetchMonthlySales']);
     Route::get('/sales-total', [SalesReportController::class, 'getTotalSales']);
+    Route::put('/remittance/{id}/update-status', [SalesReportController::class, 'updateStatus']);
     Route::prefix('cash-breakdowns')->group(function () {
         Route::post('/', [SalesReportController::class, 'store']); // Create
         Route::get('/', [SalesReportController::class, 'index']); // List all

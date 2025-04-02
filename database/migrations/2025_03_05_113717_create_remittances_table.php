@@ -23,7 +23,7 @@ return new class extends Migration
             $table->json('expenses'); // Stores expenses as JSON
             $table->decimal('total_expenses', 15, 2)->default(0);
             $table->decimal('remaining_cash', 15, 2)->default(0);
-            $table->boolean('status')->default(false); // false = Pending, true = Received
+            $table->string('status')->default('Pending'); // Changed from boolean to string
             $table->timestamps();
         });
     }

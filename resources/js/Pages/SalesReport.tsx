@@ -51,7 +51,7 @@ interface Remittance {
   remaining_cash: number;
   cash_breakdown: string; // Assuming JSON string
   expenses?: { particular: string; amount: number }[];
-  status: boolean;
+  status: 'Pending' | 'Received' | 'Rejected';  
   online_payments: number;
 }
 
@@ -516,65 +516,64 @@ const deleteCashBreakdown = async (id: number) => {
           </button>
         </div>
       </div>
-      
-  
 
+      {/* Remittance Table */}
+          <div className="w-full lg:w-1/2 lg:border-l border-gray-600 pl-4">
+              <h1 className="text-center font-bold">Remittance</h1>
+              <table className="w-full border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="p-2 border">Date Start</th>
+                    <th className="p-2 border">Date End</th>
+                    <th className="p-2 border">Total Sales</th>
+                    <th className="p-2 border">Status</th>
+                    <th className="p-2 border">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+          {remittances.length > 0 ? (
+            remittances.map((remit: Remittance) => (
+              <tr key={remit.id} className="text-center border">
+                <td className="p-2 border">{remit.date_start}</td>
+                <td className="p-2 border">{remit.date_end}</td>
+                <td className="p-2 border">₱{remit.total_sales}</td>
+                <td className="p-2 border font-semibold">
+                  {remit.status === 'Received' ? (
+                    <span className="text-green-600">Received</span>
+                  ) : remit.status === 'Rejected' ? (
+                    <span className="text-red-600">Rejected</span>
+                  ) : (
+                    <span className="text-yellow-500">Pending</span>
+                  )}
+                </td>
+                <td className="p-2 border">
+                  <div className="flex justify-center gap-2">
+                    <button
+                      onClick={() => handleViewDetails(remit.id)}
+                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      onClick={() => deleteCashBreakdown(remit.id)}
+                      disabled={remit.status === 'Received'} // Disable if status is 'Received'
+                      className={`px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 ${remit.status === 'Received' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </td>
 
-
-
-  <div className="w-full lg:w-1/2 lg:border-l border-gray-600 pl-4">
-      <h1 className="text-center font-bold">Remittance</h1>
-      <table className="w-full border border-gray-300">
-        <thead>
-          <tr className="bg-gray-200">
-            <th className="p-2 border">Date Start</th>
-            <th className="p-2 border">Date End</th>
-            <th className="p-2 border">Total Sales</th>
-            <th className="p-2 border">Status</th>
-            <th className="p-2 border">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-  {remittances.length > 0 ? (
-    remittances.map((remit: Remittance) => (
-      <tr key={remit.id} className="text-center border">
-        <td className="p-2 border">{remit.date_start}</td>
-        <td className="p-2 border">{remit.date_end}</td>
-        <td className="p-2 border">₱{remit.total_sales}</td>
-        <td className="p-2 border">
-          {remit.status ? (
-            <span className="text-green-600 font-semibold">Received</span>
+              </tr>
+            ))
           ) : (
-            <span className="text-yellow-500 font-semibold">Pending</span>
+            <tr>
+              <td colSpan={5} className="p-4 text-center text-gray-500">
+                No remittance records found.
+              </td>
+            </tr>
           )}
-        </td>
-        <td className="p-2 border">
-          <div className="flex justify-center gap-2">
-            <button
-              onClick={() => handleViewDetails(remit.id)}
-              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              View Details
-            </button>
-            <button
-              onClick={() => deleteCashBreakdown(remit.id)}
-              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-            >
-              Cancel
-            </button>
-          </div>
-        </td>
-
-      </tr>
-    ))
-  ) : (
-    <tr>
-      <td colSpan={5} className="p-4 text-center text-gray-500">
-        No remittance records found.
-      </td>
-    </tr>
-  )}
-</tbody>
+        </tbody>
       </table>
       {/* Pagination Controls */}
       <div className="flex justify-center mt-4">
@@ -1005,12 +1004,6 @@ const deleteCashBreakdown = async (id: number) => {
     </div>
   </div>
 )}
-
-
-
-
-
-
       </div>
     </AuthenticatedLayout>
   );
