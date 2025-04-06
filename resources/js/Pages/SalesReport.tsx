@@ -12,6 +12,19 @@ import {
 } from 'recharts';
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import apiService from './Services/ApiService';
+import {
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableContainer,
+  Paper,
+  Button,
+  Pagination,
+  Stack,
+  Typography,
+} from '@mui/material';
 
 interface SalesOrderItem {
   product_code: string;
@@ -467,134 +480,153 @@ const deleteCashBreakdown = async (id: number) => {
       {/* Daily Sales Report Table */}
       <div className="w-full lg:w-1/2">
         <h1 className="text-center font-bold">Daily Sales Report</h1>
-        <table className="w-full border border-gray-300">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="p-2 border">#</th>
-              <th className="p-2 border">Date</th>
-              <th className="p-2 border">Total Sales</th>
-              <th className="p-2 border">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salesData.map((data, index) => (
-              <tr key={data.date} className="text-center border">
-                <td className="p-2 border">{(currentPage - 1) * 10 + index + 1}</td>
-                <td className="p-2 border">{data.date}</td>
-                <td className="p-2 border">₱{data.total_sales.toLocaleString()}</td>
-                <td className="p-2 border">
-                  <button
-                    onClick={() => handleOpenModal(data.date)}
-                    className="mr-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                  >
-                    View Details
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <TableContainer component={Paper} elevation={3}>
+                <Table className="w-full" aria-label="sales data table">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: '#e0e0e0' }}>
+                      <TableCell align="center" className="font-semibold">#</TableCell>
+                      <TableCell align="center" className="font-semibold">Date</TableCell>
+                      <TableCell align="center" className="font-semibold">Total Sales</TableCell>
+                      <TableCell align="center" className="font-semibold">Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {salesData.length > 0 ? (
+                      salesData.map((data, index) => (
+                        <TableRow key={data.date} hover className="text-center">
+                          <TableCell align="center">{(currentPage - 1) * 10 + index + 1}</TableCell>
+                          <TableCell align="center">{data.date}</TableCell>
+                          <TableCell align="center">₱{data.total_sales.toLocaleString()}</TableCell>
+                          <TableCell align="center">
+                            <Button
+                              onClick={() => handleOpenModal(data.date)}
+                              variant="contained"
+                              color="primary"
+                              size="small"
+                            >
+                              View Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                          No Daily Sales records found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-        {/* Pagination Controls */}
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="px-4 py-2 bg-gray-300 rounded-l hover:bg-gray-400"
-          >
-            Previous
-          </button>
-          <span className="px-4 py-2">
-            {currentPage} / {totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-gray-300 rounded-r hover:bg-gray-400"
-          >
-            Next
-          </button>
+                  {/* Pagination Controls */}
+                  <div className="flex justify-center mt-4">
+                  <Stack direction="row" justifyContent="center" mt={4}>
+            <Pagination
+              count={totalPages}
+              page={currentPage}
+              onChange={(_, value) => handlePageChange(value)}
+              color="primary"
+              shape="rounded"
+              showFirstButton
+              showLastButton
+            />
+          </Stack>
         </div>
-      </div>
+     </div>
 
       {/* Remittance Table */}
           <div className="w-full lg:w-1/2 lg:border-l border-gray-600 pl-4">
               <h1 className="text-center font-bold">Remittance</h1>
-              <table className="w-full border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-200">
-                    <th className="p-2 border">Date Start</th>
-                    <th className="p-2 border">Date End</th>
-                    <th className="p-2 border">Total Sales</th>
-                    <th className="p-2 border">Status</th>
-                    <th className="p-2 border">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-          {remittances.length > 0 ? (
-            remittances.map((remit: Remittance) => (
-              <tr key={remit.id} className="text-center border">
-                <td className="p-2 border">{remit.date_start}</td>
-                <td className="p-2 border">{remit.date_end}</td>
-                <td className="p-2 border">₱{remit.total_sales}</td>
-                <td className="p-2 border font-semibold">
-                  {remit.status === 'Received' ? (
-                    <span className="text-green-600">Received</span>
-                  ) : remit.status === 'Rejected' ? (
-                    <span className="text-red-600">Rejected</span>
-                  ) : (
-                    <span className="text-yellow-500">Pending</span>
-                  )}
-                </td>
-                <td className="p-2 border">
-                  <div className="flex justify-center gap-2">
-                    <button
-                      onClick={() => handleViewDetails(remit.id)}
-                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                    >
-                      View Details
-                    </button>
-                    <button
-                      onClick={() => deleteCashBreakdown(remit.id)}
-                      disabled={remit.status === 'Received'} // Disable if status is 'Received'
-                      className={`px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 ${remit.status === 'Received' ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </td>
+              <TableContainer component={Paper} elevation={2}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: '#e0e0e0' }}>
+                    <TableCell>Date Start</TableCell>
+                    <TableCell>Date End</TableCell>
+                    <TableCell>Total Sales</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
 
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={5} className="p-4 text-center text-gray-500">
-                No remittance records found.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      {/* Pagination Controls */}
-      <div className="flex justify-center mt-4">
-          <button
-            onClick={() => handlePageChangeRemittance(currentPageRemittances - 1)}
-            disabled={currentPageRemittances === 1}
-            className="px-4 py-2 bg-gray-300 rounded-l hover:bg-gray-400"
-          >
-            Previous
-          </button>
-          <span className="px-4 py-2">
-            {currentPageRemittances} / {totalPagesRemittances}
-          </span>
-          <button
-            onClick={() => handlePageChangeRemittance(currentPageRemittances + 1)}
-            disabled={currentPageRemittances === totalPagesRemittances}
-            className="px-4 py-2 bg-gray-300 rounded-r hover:bg-gray-400"
-          >
-            Next
-          </button>
-        </div>
+                <TableBody>
+                  {remittances.length > 0 ? (
+                    remittances.map((remit: Remittance) => (
+                      <TableRow key={remit.id} hover>
+                        <TableCell>{remit.date_start}</TableCell>
+                        <TableCell>{remit.date_end}</TableCell>
+                        <TableCell>₱{remit.total_sales.toLocaleString()}</TableCell>
+                        <TableCell>
+                        <Typography
+                          fontWeight={600}
+                          color={
+                            remit.status === 'Received'
+                              ? 'green'
+                              : remit.status === 'Rejected'
+                              ? 'red'
+                              : 'Orange'
+                          }
+                        >
+                          {remit.status === 'Received' ? (
+                            <span style={{ color: 'green' }}>Received</span>
+                          ) : remit.status === 'Rejected' ? (
+                            <span style={{ color: 'red' }}>Rejected</span>
+                          ) : (
+                            <span style={{ color: 'Orange' }}>Pending</span>
+                          )}
+                        </Typography>
+                      </TableCell>
+                        <TableCell align="center">
+                          <Stack direction="row" spacing={1} justifyContent="center">
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="small"
+                              onClick={() => handleViewDetails(remit.id)}
+                            >
+                              View Details
+                            </Button>
+
+                            <Button
+                              variant="contained"
+                              color="error"
+                              size="small"
+                              onClick={() => deleteCashBreakdown(remit.id)}
+                              disabled={remit.status === 'Received'}
+                            >
+                              Cancel
+                            </Button>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                        No remittance records found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+                  {/* Pagination Controls */}
+                  <div className="flex justify-center mt-4">
+                  <Stack direction="row" justifyContent="center" alignItems="center" mt={3}>
+                    <Pagination
+                      count={totalPagesRemittances}
+                      page={currentPageRemittances}
+                      onChange={(_, value) => handlePageChangeRemittance(value)}
+                      color="primary"
+                      shape="rounded"
+                      size="medium"
+                      showFirstButton
+                      showLastButton
+                    />
+                  </Stack>
+                </div>
       
 
       {/* MODAL */}
@@ -772,7 +804,7 @@ const deleteCashBreakdown = async (id: number) => {
         {/* Monthly Sales Modal */}
         {isSalesModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-3/4">
+            <div className="bg-white p-6 rounded-lg shadow-lg w-2/3">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-bold">Monthly Sales Report</h2>
                 <button onClick={handlePrintMonthlyReport} className="px-4 py-2 bg-blue-500 text-white rounded">

@@ -3,122 +3,147 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import { Link, usePage } from '@inertiajs/react';
+import {
+    AppBar,
+    Toolbar,
+    Typography,
+    Button,
+    Drawer,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemIcon,
+    Collapse,
+    Divider,
+    IconButton,
+    Box,
+} from '@mui/material';
+import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu } from '@mui/icons-material';
 
 export default function Authenticated({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(true);
+
+    const handleNavigationDropdownClick = () => {
+        setShowingNavigationDropdown(!showingNavigationDropdown);
+    };
 
     return (
-        <div className="flex min-h-screen bg-gray-200">
-            {/* Sidebar */}
-            <aside className="w-56 bg-gray-600 text-white shadow-md flex flex-col justify-between sticky top-0 h-screen">
-                <div>
-                    <div className="flex items-center justify-center h-16">
-                        <Link href="/">
-                            <ApplicationLogo className="h-9 w-auto" />
-                        </Link>
-                    </div>
-                    <nav className="mt-6 flex flex-col space-y-2">
-                        <NavLink
-                            href={route('user-dashboard')}
-                            active={route().current('user-dashboard')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Dashboard
+        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f4f4' }}>
+            {/* AppBar */}
+            <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+                <Toolbar>
+                    <Typography variant="h6" noWrap component="div">
+                        {header || 'User Dashboard'}
+                    </Typography>
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Dropdown>
+                        <Dropdown.Trigger>
+                            <Button color="inherit">{user.name}</Button>
+                        </Dropdown.Trigger>
+                        <Dropdown.Content>
+                            <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
+                            <Dropdown.Link href={route('logout')} method="post" as="button">
+                                Log Out
+                            </Dropdown.Link>
+                        </Dropdown.Content>
+                    </Dropdown>
+                </Toolbar>
+            </AppBar>
+
+            {/* Drawer */}
+            <Drawer
+                variant="permanent"
+                open={drawerOpen}
+                sx={{
+                    width: drawerOpen ? 240 : 0,
+                    flexShrink: 0,
+                    [`& .MuiDrawer-paper`]: {
+                        width: 240,
+                        boxSizing: 'border-box',
+                        transition: (theme) => theme.transitions.create('width', {
+                            easing: theme.transitions.easing.sharp,
+                            duration: theme.transitions.duration.enteringScreen,
+                        }),
+                        overflowX: 'hidden',
+                    },
+                }}
+            >
+                <Toolbar />
+                <Box sx={{ overflow: 'auto' }}>
+                    <List>
+                        <Divider />
+                        <NavLink href={route('user-dashboard')} active={route().current('user-dashboard')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <Dashboard />
+                                </ListItemIcon>
+                                <ListItemText primary="Dashboard" />
+                            </ListItem>
                         </NavLink>
-                        <NavLink
-                            href={route('user-sales')}
-                            active={route().current('user-sales')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Sales Order
+                        <NavLink href={route('user-sales')} active={route().current('user-sales')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <Receipt />
+                                </ListItemIcon>
+                                <ListItemText primary="Sales Order" />
+                            </ListItem>
                         </NavLink>
-                    
-                        
-                        {/* Manage Stocks with Dropdown */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowingNavigationDropdown(!showingNavigationDropdown)}
-                                className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white w-full"
-                            >
-                                 Stocks
-                            </button>
-                            {showingNavigationDropdown && (
-                                <div className="ml-4 mt-1 bg-gray-700 rounded-md shadow-lg">
-                                    <NavLink
-                                        href={route('user-stocks')}
-                                        active={route().current('user-stocks')}
-                                        className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                                    >
-                                        Stock Overview
-                                    </NavLink>
-                                    <NavLink
-                                        href={route('user-stocksentries')}
-                                        active={route().current('user-stocksentries')}
-                                        className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                                    >
-                                        Stock Entries
-                                    </NavLink>
-                                </div>
-                            )}
-                                </div>
-                                <NavLink
-                                    href={route('user-quotation')}
-                                    active={route().current('user-quotation')}
-                                    className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                                >
-                                    Quotations
+                        <ListItem component="button" onClick={handleNavigationDropdownClick}>
+                            <ListItemIcon>
+                                <Store />
+                            </ListItemIcon>
+                            <ListItemText primary="Stocks" />
+                            {showingNavigationDropdown ? <ExpandLess /> : <ExpandMore />}
+                        </ListItem>
+                        <Collapse in={showingNavigationDropdown} timeout="auto" unmountOnExit>
+                            <List component="div" disablePadding>
+                                <NavLink href={route('user-stocks')} active={route().current('user-stocks')} className="hover:bg-gray-600">
+                                    <ListItem>
+                                        <ListItemText primary="Stock Overview" />
+                                    </ListItem>
                                 </NavLink>
-                                <NavLink
-                                        href={route('user-customers')}
-                                        active={route().current('user-customers')}
-                                        className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                                    >
-                                        Customer Orders
+                                <NavLink href={route('user-stocksentries')} active={route().current('user-stocksentries')} className="hover:bg-gray-600">
+                                    <ListItem>
+                                        <ListItemText primary="Stock Entries" />
+                                    </ListItem>
                                 </NavLink>
-                                <NavLink
-                                        href={route('user-reports')}
-                                        active={route().current('user-reports')}
-                                        className="hover:bg-gray-800 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                                    >
-                                        Reports
-                                </NavLink>
-                    </nav>
-                </div>
-            </aside>
+                            </List>
+                        </Collapse>
+                        <NavLink href={route('user-quotation')} active={route().current('user-quotation')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <Receipt />
+                                </ListItemIcon>
+                                <ListItemText primary="Quotation" />
+                            </ListItem>
+                        </NavLink>
+                        <NavLink href={route('user-customers')} active={route().current('user-customers')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <People />
+                                </ListItemIcon>
+                                <ListItemText primary="Customer Orders" />
+                            </ListItem>
+                        </NavLink>
+                        <NavLink href={route('user-reports')} active={route().current('user-reports')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <Report />
+                                </ListItemIcon>
+                                <ListItemText primary="Reports" />
+                            </ListItem>
+                        </NavLink>
+                    </List>
+                </Box>
+            </Drawer>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col">
-                {/* Header */}
-                <header className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-                        <h1 className="text-xl font-semibold">{header}</h1>
-
-                        {/* Profile and dropdown on the right */}
-                        <div className="relative">
-                            <div className="flex items-center">
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <button className="text-gray-600 hover:bg-gray-200 px-4 py-2 rounded-md transition">
-                                            {user.name}
-                                        </button>
-                                    </Dropdown.Trigger>
-                                    <Dropdown.Content>
-                                        {/* <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link> */}
-                                        <Dropdown.Link href={route('logout')} method="post" as="button">
-                                            Log Out
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                <main className="flex-1 p-6 bg-gray-100">
-                    {children}
-                </main>
-            </div>
-        </div>
+            <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+                <Toolbar />
+                {children}
+            </Box>
+        </Box>
     );
 }

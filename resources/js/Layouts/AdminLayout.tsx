@@ -1,110 +1,146 @@
-import { useState, PropsWithChildren, ReactNode } from 'react';
+import React, { useState, PropsWithChildren, ReactNode } from 'react';
+import { Link, usePage } from '@inertiajs/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
-import { Link, usePage } from '@inertiajs/react';
+import {
+    AppBar,
+    Toolbar,
+    Typography,
+    Button,
+    Drawer,
+    List,
+    ListItem,
+    ListItemText,
+    ListItemIcon,
+    Collapse,
+    Divider,
+    IconButton,
+    Box,
+} from '@mui/material';
+import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu } from '@mui/icons-material';
 
 export default function AdminLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
-    const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+    const [openBranchManagement, setOpenBranchManagement] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(true);
+
+    const handleBranchManagementClick = () => {
+        setOpenBranchManagement(!openBranchManagement);
+    };
+
+   
 
     return (
-        <div className="flex min-h-screen bg-gray-200">
-            {/* Sidebar */}
-            <aside className="w-56 bg-gray-600 text-white shadow-md flex flex-col justify-between sticky top-0 h-screen">
-                <div>
-                    <div className="flex items-center justify-center h-16">
-                        <Link href="/">
-                            <ApplicationLogo className="h-9 w-auto" />
-                        </Link>
-                    </div>
-                    <nav className="mt-6 flex flex-col space-y-2">
-                        <NavLink
-                            href={route('admin-dashboard')}
-                            active={route().current('admin-dashboard')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Dashboard
-                        </NavLink>
+        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f4f4' }}>
+            {/* AppBar */}
+            <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+                <Toolbar>
+                    <Typography variant="h6" noWrap component="div">
+                        {header || 'Admin Dashboard'}
+                    </Typography>
+                    <Box sx={{ flexGrow: 1 }} />
+                    <Dropdown>
+                        <Dropdown.Trigger>
+                            <Button color="inherit">{user.name}</Button>
+                        </Dropdown.Trigger>
+                        <Dropdown.Content>
+                            <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
+                            <Dropdown.Link href={route('logout')} method="post" as="button">
+                                Log Out
+                            </Dropdown.Link>
+                        </Dropdown.Content>
+                    </Dropdown>
+                </Toolbar>
+            </AppBar>
 
-                        {/* Dropdown for Branch Stocks, Branch Stocks Entries, Branch Sales Orders */}
-                        <Dropdown>
-                            <Dropdown.Trigger>
-                                <button className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white w-full text-left">
-                                    Branch Management
-                                </button>
-                            </Dropdown.Trigger>
-                            <Dropdown.Content>
-                                <Dropdown.Link
-                                    href={route('admin-stocks')}
-                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
-                                >
-                                    Stocks
-                                </Dropdown.Link>
-                                <Dropdown.Link
-                                    href={route('admin-entries')}
-                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
-                                >
-                                     Stocks Entries
-                                </Dropdown.Link>
-                                <Dropdown.Link
-                                    href={route('admin-sales')}
-                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
-                                >
-                                     Sales Orders
-                                </Dropdown.Link>
-                                <Dropdown.Link
-                                    href={route('admin-stocks-request')}
-                                    className="hover:bg-gray-600 px-4 py-2 rounded-md transition flex items-center justify-start text-black"
-                                >
-                                     Stock Requests
-                                </Dropdown.Link>
-                            </Dropdown.Content>
-                        </Dropdown>
-
-                        <NavLink
-                            href={route('admin-reports')}
-                            active={route().current('admin-reports')}
-                            className="hover:bg-gray-700 px-4 py-2 rounded-md transition flex items-center justify-start text-white"
-                        >
-                            Reports
+            {/* Drawer */}
+            <Drawer
+                variant="permanent"
+                open={drawerOpen}
+                sx={{
+                    width: drawerOpen ? 240 : 0,
+                    flexShrink: 0,
+                    [`& .MuiDrawer-paper`]: {
+                        width: 240,
+                        boxSizing: 'border-box',
+                        transition: (theme) => theme.transitions.create('width', {
+                            easing: theme.transitions.easing.sharp,
+                            duration: theme.transitions.duration.enteringScreen,
+                        }),
+                        overflowX: 'hidden',
+                    },
+                }}
+            >
+                <Toolbar />
+                <Box sx={{ overflow: 'auto' }}>
+                    <List>
+                        <Divider />
+                        <NavLink href={route('admin-dashboard')} active={route().current('admin-dashboard')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <Dashboard />
+                                </ListItemIcon>
+                                <ListItemText primary="Dashboard" />
+                            </ListItem>
                         </NavLink>
-                    </nav>
-                </div>
-            </aside>
+                        <ListItem component="button" onClick={handleBranchManagementClick}>
+                            <ListItemIcon>
+                                <Store />
+                            </ListItemIcon>
+                            <ListItemText primary="Branch Management" />
+                            {openBranchManagement ? <ExpandLess /> : <ExpandMore />}
+                        </ListItem>
+
+                        <Collapse in={openBranchManagement} timeout="auto" unmountOnExit>
+                            <List component="div" disablePadding>
+                                <Dropdown.Link href={route('admin-stocks')} className="hover:bg-gray-600">
+                                    <ListItem>
+                                        <ListItemText primary="Stocks" />
+                                    </ListItem>
+                                </Dropdown.Link>
+                                <Dropdown.Link href={route('admin-entries')} className="hover:bg-gray-600">
+                                    <ListItem>
+                                        <ListItemText primary="Stocks Entries" />
+                                    </ListItem>
+                                </Dropdown.Link>
+                                <Dropdown.Link href={route('admin-sales')} className="hover:bg-gray-600">
+                                    <ListItem>
+                                        <ListItemText primary="Sales Orders" />
+                                    </ListItem>
+                                </Dropdown.Link>
+                                <Dropdown.Link href={route('admin-stocks-request')} className="hover:bg-gray-600">
+                                    <ListItem>
+                                        <ListItemText primary="Stock Requests" />
+                                    </ListItem>
+                                </Dropdown.Link>
+                            </List>
+                        </Collapse>
+                        <NavLink href={route('admin-reports')} active={route().current('admin-reports')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <Report />
+                                </ListItemIcon>
+                                <ListItemText primary="Reports" />
+                            </ListItem>
+                        </NavLink>
+                        <NavLink href={route('admin-supplier')} active={route().current('admin-supplier')} className="hover:bg-gray-700">
+                            <ListItem >
+                                <ListItemIcon>
+                                    <People />
+                                </ListItemIcon>
+                                <ListItemText primary="Supplier" />
+                            </ListItem>
+                        </NavLink>
+                    </List>
+                </Box>
+            </Drawer>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col">
-                {/* Header */}
-                <header className="bg-white border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-                        <h1 className="text-2xl font-bold text-gray-800">{header || 'Admin Dashboard'}</h1>
-
-                        {/* Profile and dropdown on the right */}
-                        <div className="relative">
-                            <div className="flex items-center">
-                                <Dropdown>
-                                    <Dropdown.Trigger>
-                                        <button className="text-gray-600 hover:bg-gray-200 px-4 py-2 rounded-md transition">
-                                            {user.name}
-                                        </button>
-                                    </Dropdown.Trigger>
-                                    <Dropdown.Content>
-                                        <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
-                                        <Dropdown.Link href={route('logout')} method="post" as="button">
-                                            Log Out
-                                        </Dropdown.Link>
-                                    </Dropdown.Content>
-                                </Dropdown>
-                            </div>
-                        </div>
-                    </div>
-                </header>
-
-                <main className="flex-1 p-6 bg-gray-100">
-                    {children}
-                </main>
-            </div>
-        </div>
+            <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+                <Toolbar />
+                {children}
+            </Box>
+        </Box>
     );
 }

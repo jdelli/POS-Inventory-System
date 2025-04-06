@@ -6,6 +6,34 @@ import EditProductModal from '../Props/Edit';
 import AddProductModal from '../Props/Add';
 import StockHistoryModal from '../Props/StockHistoryModal';
 
+import {
+  Button,
+  CircularProgress,
+  Container,
+  Grid,
+  Paper,
+  Tab,
+  Tabs,
+  Typography,
+  Box,
+  Card,
+  CardContent,
+  CardMedia,
+  Pagination,
+  Alert,
+  Select,
+  MenuItem,
+  TextField,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TableContainer,
+  IconButton,
+} from '@mui/material';
+import { Edit, Delete, History } from '@mui/icons-material';
+
 interface User {
   id: number;
   name: string;
@@ -132,148 +160,142 @@ const ProductTable: React.FC = () => {
   );
 
   return (
-    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Manage Stocks</h2>}>
+    <AdminLayout header={<Typography variant="h6">Manage Stocks</Typography>}>
       <Head title="Manage Stocks" />
-      <div className="container mx-auto p-6 space-y-4">
+      <Container maxWidth="xl" sx={{ mx: 'auto' }}>
         {/* Branch Selector */}
-        <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2">
-          <select
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Select
             value={selectedBranchName || ''}
             onChange={(e) => {
-              setSelectedBranchName(e.target.value);
+              setSelectedBranchName(e.target.value as string);
               setCurrentPage(1); // Reset to first page when branch changes
             }}
-            className="border rounded-md py-2 px-3 w-full md:w-auto"
+            displayEmpty
+            variant="outlined"
+            fullWidth
+            style={{ marginRight: '8px' }}
             aria-label="Select Branch"
           >
-            <option value="" disabled>
+            <MenuItem value="" disabled>
               Select Branch
-            </option>
+            </MenuItem>
             {branches.map((branch) => (
-              <option key={branch.id} value={branch.name}>
+              <MenuItem key={branch.id} value={branch.name}>
                 {branch.name}
-              </option>
+              </MenuItem>
             ))}
-          </select>
-          <input
-            type="text"
+          </Select>
+          <TextField
             placeholder="Search by name"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="border rounded-md py-2 px-3 w-full md:w-auto bg-white text-gray-700"
+            variant="outlined"
+            fullWidth
+            style={{ marginRight: '8px' }}
             aria-label="Search Products by Name"
           />
-          <select
+          <Select
             value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="border rounded-md py-2 px-3 w-full md:w-auto bg-white text-gray-700"
+            onChange={(e) => setFilterCategory(e.target.value as string)}
+            displayEmpty
+            variant="outlined"
+            fullWidth
+            style={{ marginRight: '8px' }}
             aria-label="Filter by Category"
           >
-            <option value="">All Categories</option>
+            <MenuItem value="">All Categories</MenuItem>
             {categoryOptions.map((option) => (
-              <option key={option} value={option}>
+              <MenuItem key={option} value={option}>
                 {option}
-              </option>
+              </MenuItem>
             ))}
-          </select>
-          <button
+          </Select>
+          <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+            variant="contained"
+            color="primary"
           >
-            Add Product
-          </button>
-        </div>
+            Add
+          </Button>
+        </Box>
 
         {/* Product Table */}
         {loading ? (
-          <div className="flex justify-center items-center py-4">
-            <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 rounded-full text-blue-500" role="status"></div>
-            <span className="ml-2">Loading products...</span>
-          </div>
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white shadow-md rounded-lg">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Product Code</th>
-                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Product Name</th>
-                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Category</th>
-                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Price</th>
-                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Quantity</th>
-                  <th className="py-2 px-4 bg-gray-200 font-medium text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Product Code</TableCell>
+                  <TableCell>Product Name</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Price</TableCell>
+                  <TableCell>Quantity</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody >
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b hover:bg-gray-100">
-                      <td className="py-2 px-4">{product.product_code}</td>
-                      <td className="py-2 px-4">{product.name}</td>
-                      <td className="py-2 px-4">{product.category}</td>
-                      <td className="py-2 px-4">₱{product.price.toLocaleString()}</td>
-                      <td className="py-2 px-4">{product.quantity}</td>
-                      <td className="py-2 px-4 flex space-x-2">
-                        <button
-                          className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors"
+                    <TableRow key={product.id}>
+                      <TableCell>{product.product_code}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>₱{product.price.toLocaleString()}</TableCell>
+                      <TableCell>{product.quantity}</TableCell>
+                      <TableCell>
+                        <IconButton
+                          color="primary"
                           onClick={() => handleEdit(product)}
                         >
-                          Edit
-                        </button>
-                        <button
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors"
+                          <Edit />
+                        </IconButton>
+                        <IconButton
+                          color="secondary"
                           onClick={() => handleDelete(product.id)}
                         >
-                          Delete
-                        </button>
-                        <button
-                          className="bg-gray-500 text-white px-2 py-1 rounded hover:bg-gray-600 transition-colors"
+                          <Delete />
+                        </IconButton>
+                        <IconButton
+                          color="default"
                           onClick={() => {
                             setSelectedProduct(product); // Set the selected product
                             fetchStockHistory(product.id); // Fetch stock history for the selected product
                           }}
                         >
-                          View History
-                        </button>
-                      </td>
-                    </tr>
+                          <History />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
                   ))
                 ) : (
-                  <tr>
-                    <td colSpan={5} className="text-center py-4">
+                  <TableRow>
+                    <TableCell colSpan={6} align="center">
                       No products found.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
-          </div>
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
 
         {/* Pagination Controls */}
         {products.length > 0 && (
-          <div className="flex justify-center mt-4 space-x-2">
-            <button
-              className={`px-3 py-2 rounded-md ${
-                currentPage === 1 ? 'bg-gray-200' : 'bg-gray-300 hover:bg-gray-400 transition-colors'
-              }`}
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              Previous
-            </button>
-            <span className="px-4 py-2 font-medium">
-              Page {currentPage} of {lastPage}
-            </span>
-            <button
-              className={`px-3 py-2 rounded-md ${
-                currentPage === lastPage ? 'bg-gray-200' : 'bg-gray-300 hover:bg-gray-400 transition-colors'
-              }`}
-              disabled={currentPage === lastPage}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-            </button>
-          </div>
+          <Box display="flex" justifyContent="center" mt={4}>
+            <Pagination
+              count={lastPage}
+              page={currentPage}
+              onChange={(e, page) => setCurrentPage(page)}
+              color="primary"
+              variant="outlined"
+              shape="rounded"
+            />
+          </Box>
         )}
 
         {/* Modals */}
@@ -295,7 +317,7 @@ const ProductTable: React.FC = () => {
           history={stockHistory}
           productName={selectedProduct?.name || ''}
         />
-      </div>
+      </Container>
     </AdminLayout>
   );
 };

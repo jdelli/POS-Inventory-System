@@ -3,6 +3,9 @@ import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
 import apiService from '../Services/ApiService';
 import Receipt from '../Props/Receipt';
+import { Select, MenuItem, InputLabel, FormControl } from '@mui/material';
+import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Tooltip } from '@mui/material';
+import { Visibility, Delete } from '@mui/icons-material'
 
 // Interfaces
 interface InventoryItem {
@@ -32,6 +35,7 @@ interface SalesOrder {
   receipt_number: string;
   date: string;
   items: SalesOrderItem[];
+  payment_method: string;
 }
 
 interface Auth {
@@ -132,115 +136,119 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Order</h2>}>
       <Head title="Inventory" />
-      <div className="p-4">
-        <div className="mb-4 flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4">
-          <select
-            value={selectedBranchName || ''}
-            onChange={(e) => {
-              setSelectedBranchName(e.target.value);
-              setCurrentPage(1); // Reset to first page when branch changes
-            }}
-            className="border rounded-md py-2 px-3 w-full md:w-auto"
-            aria-label="Select Branch"
-          >
-            <option value="" disabled>
-              Select Branch
-            </option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.name}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
+      <div className="p-4" style={{ overflowX: 'auto' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="w-full">
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Select Branch</InputLabel>
+              <Select
+                value={selectedBranchName || ''}
+                onChange={(e) => {
+                  setSelectedBranchName(e.target.value);
+                  setCurrentPage(1); // Reset to first page when branch changes
+                }}
+                label="Select Branch"
+                fullWidth
+              >
+                <MenuItem value="" disabled>Select Branch</MenuItem>
+                {branches.map((branch) => (
+                  <MenuItem key={branch.id} value={branch.name}>
+                    {branch.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </div>
 
           {/* Date Range Filters */}
-          <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4">
-            <div>
-              <label className="text-gray-700">Filter by Month</label>
-              <select
+          <div className="w-full">
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Filter by Month</InputLabel>
+              <Select
                 value={selectedMonth ?? ''}
-                onChange={(e) => {
-                  setSelectedMonth(Number(e.target.value));
-                }}
-                className="border rounded-md py-2 px-3 w-full md:w-auto"
-                aria-label="Select Month"
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                label="Select Month"
+                fullWidth
               >
-                <option value="" disabled>
-                  Select Month
-                </option>
+                <MenuItem value="" disabled>Select Month</MenuItem>
                 {[...Array(12).keys()].map((month) => (
-                  <option key={month} value={month + 1}>
+                  <MenuItem key={month} value={month + 1}>
                     {new Date(2025, month).toLocaleString('default', { month: 'long' })}
-                  </option>
+                  </MenuItem>
                 ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-gray-700">Filter by Year</label>
-              <select
+              </Select>
+            </FormControl>
+          </div>
+
+          <div className="w-full">
+            <FormControl fullWidth variant="outlined">
+              <InputLabel>Filter by Year</InputLabel>
+              <Select
                 value={selectedYear ?? ''}
-                onChange={(e) => {
-                  setSelectedYear(Number(e.target.value));
-                }}
-                className="border rounded-md py-2 px-3 w-full md:w-auto"
-                aria-label="Select Year"
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                label="Select Year"
+                fullWidth
               >
-                <option value="" disabled>
-                  Select Year
-                </option>
+                <MenuItem value="" disabled>Select Year</MenuItem>
                 {[2022, 2023, 2024, 2025].map((year) => (
-                  <option key={year} value={year}>
+                  <MenuItem key={year} value={year}>
                     {year}
-                  </option>
+                  </MenuItem>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </FormControl>
           </div>
         </div>
 
         {/* Render orders */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="py-2 px-4 text-left border">Receipt Number</th>
-                <th className="py-2 px-4 text-left border">Customer</th>
-                <th className="py-2 px-4 text-left border">Date</th>
-                <th className="py-2 px-4 text-left border">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="py-2 px-4 border">{order.receipt_number}</td>
-                  <td className="py-2 px-4 border">{order.customer_name}</td>
-                  <td className="py-2 px-4 border">{formatDate(order.date)}</td>
-                  <td className="py-2 px-4 border flex space-x-2">
-                    <button 
-                      onClick={() => viewOrderReceipt(order)} 
-                      className="text-blue-500 hover:underline"
-                    >
-                      View Receipt
-                    </button>
-                    <button 
-                      onClick={() => handleDeleteReceipt(order.id)} 
-                      className="text-red-500 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="overflow-x-auto mt-4">
+  <TableContainer component={Paper}>
+    <Table className="min-w-full" aria-label="receipt table">
+      <TableHead>
+        <TableRow className="bg-gray-100">
+          <TableCell className="py-2 px-4 text-left">Receipt Number</TableCell>
+          <TableCell className="py-2 px-4 text-left">Customer</TableCell>
+          <TableCell className="py-2 px-4 text-left">Date</TableCell>
+          <TableCell className="py-2 px-4 text-left">Actions</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {filteredOrders.map((order) => (
+          <TableRow key={order.id} className="hover:bg-gray-50">
+            <TableCell className="py-2 px-4">{order.receipt_number}</TableCell>
+            <TableCell className="py-2 px-4">{order.customer_name}</TableCell>
+            <TableCell className="py-2 px-4">{formatDate(order.date)}</TableCell>
+            <TableCell className="py-2 px-4 flex space-x-2">
+              <Tooltip title="View Receipt">
+                <Button
+                  color="primary"
+                  size="small"
+                  startIcon={<Visibility />}
+                  onClick={() => viewOrderReceipt(order)}
+                />
+              </Tooltip>
+              <Tooltip title="Delete Receipt">
+                <Button
+                  color="secondary"
+                  size="small"
+                  startIcon={<Delete />}
+                  onClick={() => handleDeleteReceipt(order.id)}
+                />
+              </Tooltip>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  </TableContainer>
+</div>
 
         {/* Receipt Modal */}
         {selectedOrder && (
-          <Receipt 
-            isOpen={isReceiptModalOpen} 
-            onClose={closeReceiptModal} 
-            selectedOrder={selectedOrder} 
+          <Receipt
+            isOpen={isReceiptModalOpen}
+            onClose={closeReceiptModal}
+            selectedOrder={selectedOrder}
           />
         )}
       </div>

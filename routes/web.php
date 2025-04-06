@@ -89,6 +89,10 @@ Route::middleware(['checkrole:admin'])->group(function () {
     Route::get('/admin-reports', function () {
         return Inertia::render('AdminRoutePage/AdminReport');
     })->name('admin-reports');
+
+    Route::get('/admin-supplier', function () {
+        return Inertia::render('AdminRoutePage/Supplier');
+    })->name('admin-supplier');
 });
 
 

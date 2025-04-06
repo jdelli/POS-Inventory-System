@@ -5,6 +5,14 @@ import apiService from './Services/ApiService';
 import ViewItemsModal from './Props/ViewDelivery';
 import AddStocks from './Props/AddStocks';
 import RequestStocks from './Props/RequestStocks';
+import { Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow, TablePagination, 
+  } from '@mui/material';
 
 interface DeliveryItem {
   id: number;
@@ -118,88 +126,81 @@ if (selectedMonth !== null) {
         </div>
       </div>
 
-        {/* Add Stocks Button
-        <div className="mb-4 flex justify-end">
-          <button 
-            onClick={() => setIsAddStocksModalOpen(true)} 
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            Add Stocks
-          </button>
-        </div> */}
-        {/* Request Stock Button */}
-<div className="mb-4 flex justify-end">
-  <button 
-    onClick={() => setIsRequestStockModalOpen(true)} 
-    className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-  >
-    Request Stock
-  </button>
-</div>
+ {/* Request Stock Button */}
+ <div className="mb-4 flex justify-end">
+      <Button
+        variant="contained"
+        color="success"
+        onClick={() => setIsRequestStockModalOpen(true)}
+      >
+        Request Stock
+      </Button>
+    </div>
 
+    {/* Stock Entries Table */}
+    <TableContainer className="bg-white shadow-md rounded-lg">
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Delivery Receipt No.</TableCell>
+            <TableCell>Delivered By</TableCell>
+            <TableCell>Date</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-4">
+                Loading...
+              </TableCell>
+            </TableRow>
+          ) : stockEntries.length > 0 ? (
+            stockEntries.map((entry) => (
+              <TableRow key={entry.id} hover>
+                <TableCell>{entry.delivery_number}</TableCell>
+                <TableCell>{entry.delivered_by}</TableCell>
+                <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    onClick={() => openModal(entry.items)}
+                  >
+                    View Items
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-4">
+                No records found.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
 
-        {/* Stock Entries Table */}
-        <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-          <table className="min-w-full table-auto border border-gray-200">
-            <thead className="bg-gray-300 text-gray-600 uppercase text-sm leading-normal">
-              <tr>
-                <th className="py-3 px-6 text-left">Delivery Receipt No.</th>
-                <th className="py-3 px-6 text-left">Delivered By</th>
-                <th className="py-3 px-6 text-left">Date</th>
-                <th className="py-3 px-6 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700 text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-4">Loading...</td>
-                </tr>
-              ) : stockEntries.length > 0 ? (
-                stockEntries.map((entry) => (
-                  <tr key={entry.id} className="border-b hover:bg-gray-200">
-                    <td className="py-3 px-6">{entry.delivery_number}</td>
-                    <td className="py-3 px-6">{entry.delivered_by}</td>
-                    <td className="py-3 px-6">{new Date(entry.date).toLocaleDateString()}</td>
-                    <td className="py-3 px-6">
-                      <button
-                        className="bg-blue-500 text-white px-2 py-1 rounded"
-                        onClick={() => openModal(entry.items)}
-                      >
-                        View Items
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="text-center py-4">No records found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination Controls */}
-        <div className="flex justify-between items-center mt-4">
-          <button
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page === 1}
-            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <span className="text-sm">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => handlePageChange(page + 1)}
-            disabled={page === totalPages}
-            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+    {/* Pagination Controls */}
+    <div className="mt-4">
+      <TablePagination
+        component="div"
+        count={totalPages * 10} // Adjust based on total number of records
+        page={page - 1} // Material UI uses zero-based index
+        onPageChange={(e, newPage) => handlePageChange(newPage + 1)} // Zero-based index for pagination
+        rowsPerPage={10}
+        rowsPerPageOptions={[10]}
+        nextIconButtonProps={{
+          disabled: page === totalPages,
+        }}
+        backIconButtonProps={{
+          disabled: page === 1,
+        }}
+      />
+    </div>
+  </div>
 
       {/* Modal for Viewing Items */}
       <ViewItemsModal

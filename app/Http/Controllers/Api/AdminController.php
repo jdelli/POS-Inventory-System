@@ -108,31 +108,38 @@ public function getAllBranches()
 
 
     public function AdminfetchDeliveryReceiptsByBranch(Request $request)
-{
-    $branchName = $request->query('branch_name');
-    $page = $request->query('page', 1);
-    $limit = $request->query('limit', 20);
-
-    // Start the query with necessary eager loading
-    $query = DeliveryReceipt::with('items');
-
-    // Apply the branch filter if branchName is provided
-    if ($branchName) {
-        $query->where('branch_id', $branchName);
+    {
+        $branchName = $request->query('branch_name');
+        $page = $request->query('page', 1);
+        $limit = $request->query('limit', 20);
+        $month = $request->query('month');  // Get the month parameter
+    
+        // Start the query with necessary eager loading
+        $query = DeliveryReceipt::with('items');
+    
+        // Apply the branch filter if branchName is provided
+        if ($branchName) {
+            $query->where('branch_id', $branchName);
+        }
+    
+        // Apply the month filter if the month is provided
+        if ($month) {
+            $query->whereMonth('date', $month); // Filter by month
+        }
+    
+        // Paginate the results
+        $deliveryReceipts = $query->paginate($limit, ['*'], 'page', $page);
+    
+        // Return the paginated results as JSON
+        return response()->json([
+            'data' => $deliveryReceipts->items(),
+            'current_page' => $deliveryReceipts->currentPage(),
+            'per_page' => $deliveryReceipts->perPage(),
+            'total' => $deliveryReceipts->total(),
+            'last_page' => $deliveryReceipts->lastPage(),
+        ]);
     }
-
-    // Paginate the results
-    $deliveryReceipts = $query->paginate($limit, ['*'], 'page', $page);
-
-    // Return the paginated results as JSON
-    return response()->json([
-        'data' => $deliveryReceipts->items(),
-        'current_page' => $deliveryReceipts->currentPage(),
-        'per_page' => $deliveryReceipts->perPage(),
-        'total' => $deliveryReceipts->total(),
-        'last_page' => $deliveryReceipts->lastPage(),
-    ]);
-}
+    
 
 
 

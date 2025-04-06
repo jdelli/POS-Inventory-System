@@ -4,6 +4,9 @@ import apiService from './Services/ApiService';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import EditProductModal from './Props/Edit';
 import AddProductModal from './Props/Add';
+import { Grid, TextField, InputLabel, MenuItem, Select, FormControl, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Typography } from '@mui/material';
+
+
 
 interface User {
   id: number;
@@ -89,13 +92,11 @@ const PaginationControls: React.FC<{
 
 const ProductTable: React.FC = () => {
   const { auth } = usePage().props as { auth: { user: User } }; // Cast auth prop with the updated User type
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [products, setProducts] = useState<Product[]>([]); // Initialize as an empty array
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const fetchProducts = async (userName: string, page: number = 1, limit: number = 20) => {
@@ -134,74 +135,70 @@ const ProductTable: React.FC = () => {
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Manage Stocks</h2>}>
       <Head title="Manage Stocks" />
       <div className="container mx-auto p-6 space-y-4">
-        <div className="flex justify-between items-center">
-          <SearchFilter
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            filterCategory={filterCategory}
-            setFilterCategory={setFilterCategory}
-          />
-          {/* <button onClick={() => setIsAddModalOpen(true)} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-            Add Product
-          </button> */}
-        </div>
+      <div className="flex justify-between items-center">
+  <SearchFilter
+    searchTerm={searchTerm}
+    setSearchTerm={setSearchTerm}
+    filterCategory={filterCategory}
+    setFilterCategory={setFilterCategory}
+  />
+</div>
 
-        {loading ? (
-          <p className="text-center py-4">Loading products...</p>
+{loading ? (
+  <div className="flex justify-center py-4">
+    <CircularProgress />
+    <Typography variant="body1" sx={{ marginLeft: 2 }}>Loading products...</Typography>
+  </div>
+) : (
+  <TableContainer sx={{ maxHeight: 400 }}>
+    <Table stickyHeader className="min-w-full bg-white shadow-md rounded-lg">
+      <TableHead>
+        <TableRow>
+          <TableCell align="left" className="font-medium">Image</TableCell>
+          <TableCell align="left" className="font-medium">Product Code</TableCell>
+          <TableCell align="left" className="font-medium">Product Name</TableCell>
+          <TableCell align="left" className="font-medium">Category</TableCell>
+          <TableCell align="left" className="font-medium">Price</TableCell>
+          <TableCell align="left" className="font-medium">Quantity</TableCell>
+        </TableRow>
+      </TableHead>
+      <TableBody>
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map((product) => (
+            <TableRow key={product.id} hover>
+              <TableCell>
+                <img 
+                  src={product.image_url} 
+                  alt={product.name} 
+                  className="w-12 h-12 object-cover rounded-md"
+                />
+              </TableCell>
+              <TableCell>{product.product_code}</TableCell>
+              <TableCell>{product.name}</TableCell>
+              <TableCell>{product.category}</TableCell>
+              <TableCell>₱{product.price.toLocaleString()}</TableCell>
+              <TableCell className="text-red-500">{product.quantity}</TableCell>
+            </TableRow>
+          ))
         ) : (
-          <div className="overflow-x-auto">
-           <table className="min-w-full bg-white shadow-md rounded-lg">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Image</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Product Code</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Product Name</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Category</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Price</th>
-                  <th className="py-2 px-4 bg-gray-300 font-medium text-left">Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProducts.length > 0 ? (
-                  filteredProducts.map((product) => (
-                    <tr key={product.id} className="border-b hover:bg-gray-200">
-                      <td className="py-2 px-4">
-                        <img 
-                          src={product.image_url} 
-                          alt={product.name} 
-                          className="w-12 h-12 object-cover rounded-md"
-                        />
-                      </td>
-                      <td className="py-2 px-4">{product.product_code}</td>
-                      <td className="py-2 px-4">{product.name}</td>
-                      <td className="py-2 px-4">{product.category}</td>
-                      <td className="py-2 px-4">₱{product.price.toLocaleString()}</td>
-                      <td className="py-2 px-4 text-red-500">{product.quantity}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="text-center py-4">No products found.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-
-          </div>
+          <TableRow>
+            <TableCell colSpan={6} align="center">
+              <Typography variant="body2" color="textSecondary">No products found.</Typography>
+            </TableCell>
+          </TableRow>
         )}
+      </TableBody>
+    </Table>
+  </TableContainer>
+)}
 
-        <PaginationControls
-          currentPage={currentPage}
-          lastPage={lastPage}
-          onPageChange={(page) => fetchProducts(auth.user.name, page)}
-        />
+<PaginationControls
+  currentPage={currentPage}
+  lastPage={lastPage}
+  onPageChange={(page) => fetchProducts(auth.user.name, page)}
+  
+/>
         
-        <AddProductModal
-          showModal={isAddModalOpen}
-          closeModal={() => setIsAddModalOpen(false)}
-          refreshProducts={() => fetchProducts(auth.user.name, currentPage)}
-          auth={auth.user}
-        />
       </div>
     </AuthenticatedLayout>
   );

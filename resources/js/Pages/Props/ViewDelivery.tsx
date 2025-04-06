@@ -10,6 +10,8 @@ interface ViewItemsModalProps {
   isOpen: boolean;
   onClose: () => void;
   items: DeliveryItem[];
+  onDelete: (id: number) => Promise<void>;   
+  onDeleteAll: () => Promise<void>;           
 }
 
 const ViewItemsModal: React.FC<ViewItemsModalProps> = ({ isOpen, onClose, items = [] }) => {

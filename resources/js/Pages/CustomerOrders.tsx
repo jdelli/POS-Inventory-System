@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import apiService from './Services/ApiService';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
+import { Button, Card, CardContent, Typography, Box,
+  Dialog,
+   DialogActions,
+    DialogContent,
+     DialogTitle,
+     Table, TableBody,
+      TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, FormControl, InputLabel
+ } from '@mui/material';
 
 interface Order {
   id: number;
@@ -39,7 +47,6 @@ interface InventoryManagementProps {
   auth: Auth;
 }
 
-const branches = ['Cainta', 'Makati', 'Quezon City', 'Taguig', 'Pasig', 'Manila', 'San Mateo'];
 
 const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -129,13 +136,8 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
     setSelectedCustomer(null);
   };
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="loader border-t-4 border-blue-500 rounded-full w-16 h-16 animate-spin"></div>
-      </div>
-    );
 
+  
   if (error)
     return (
       <div className="flex flex-col items-center p-6">
@@ -158,126 +160,159 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
       }
     >
       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {customers.length > 0 ? (
-          customers.map((customer) => (
-            <div
-              key={customer.id}
-              className={`bg-white shadow-lg rounded-lg p-4 border ${
-                doneCustomers.includes(customer.id) ? 'border-green-500' : 'border-gray-200'
-              } hover:shadow-xl transition-shadow`}
-            >
-              <div className="mb-4">
-                <h3 className="text-lg font-bold">{customer.name}</h3>
-                <p><strong>Phone:</strong> {customer.phone}</p>
-                <p><strong>Address:</strong> {customer.address}</p>
-              </div>
-              <button
-                onClick={() => openModal(customer)}
-                className="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+      <Box>
+          {customers.length > 0 ? (
+            customers.map((customer) => (
+              <Card
+                key={customer.id}
+                sx={{
+                  backgroundColor: 'white',
+                  boxShadow: 3,
+                  borderRadius: 2,
+                  mb: 2,
+                  border: doneCustomers.includes(customer.id) ? '2px solid green' : '1px solid #e0e0e0',
+                  '&:hover': { boxShadow: 6 },
+                  transition: 'box-shadow 0.3s',
+                }}
               >
-                View Orders
-              </button>
-            </div>
-          ))
-        ) : (
-          <div>No customers found.</div>
-        )}
+                <CardContent>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    {customer.name}
+                  </Typography>
+                  <Typography variant="body1" color="textSecondary" mb={1}>
+                    <strong>Phone:</strong> {customer.phone}
+                  </Typography>
+                  <Typography variant="body1" color="textSecondary">
+                    <strong>Address:</strong> {customer.address}
+                  </Typography>
+
+                  <Button
+                    onClick={() => openModal(customer)}
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    sx={{ mt: 2 }}
+                  >
+                    View Orders
+                  </Button>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <Typography variant="body1" color="textSecondary">
+              No customers found.
+            </Typography>
+          )}
+        </Box>
+
 
         {isModalOpen && selectedCustomer && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-3xl">
-              <div className="flex justify-between mb-4">
-                <h3 className="text-xl font-bold">
-                  Orders for {selectedCustomer.name}
-                </h3>
-                <button onClick={closeModal} className="text-red-500 text-xl">
-                  &times;
-                </button>
-              </div>
-              {selectedCustomer.orders.length > 0 ? (
-                <table className="w-full border-collapse border border-gray-200 mb-4">
-                  <thead className="bg-gray-100 sticky top-0">
-                    <tr>
-                      <th className="border px-4 py-2 text-left">Product Name</th>
-                      <th className="border px-4 py-2 text-left">Quantity</th>
-                      <th className="border px-4 py-2 text-left">Price</th>
-                      <th className="border px-4 py-2 text-left">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedCustomer.orders.map((order) => (
-                      <tr key={order.id}>
-                        <td className="border px-4 py-2">{order.product_name}</td>
-                        <td className="border px-4 py-2">{order.quantity}</td>
-                        <td className="border px-4 py-2">{order.price}</td>
-                        <td className="border px-4 py-2">{order.total}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <p>No orders found for this customer.</p>
-              )}
-              <div className="flex justify-between font-bold text-lg mb-4">
-                <span>Total:</span>
-                <span>
-                  {selectedCustomer.orders
-                    .reduce((sum, order) => sum + (Number(order.total) || 0), 0)
-                    .toFixed(2)}
-                </span>
-              </div>
-              <div className="mt-5">
-              <select
-            value={selectedBranch|| ''}
-            onChange={(e) => {
-              setSelectedBranch(e.target.value);
-             
-            }}
-            className="border rounded-md py-2 px-3 w-full sm:w-auto"
-          >
-            <option value="" disabled>
-              Forward to
-            </option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.name}>
-                {branch.name}
-              </option>
-            ))}
-          </select>
-                <div className="mt-4">
-                  <button
-                    onClick={() => {
-                      if (selectedBranch) {
-                        updateBranch(selectedCustomer.id, selectedBranch);
-                        setIsModalOpen(false);
-                      } else {
-                        alert('Please select a valid branch before updating.');
-                      }
-                    }}
-                    className="w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors"
-                  >
-                    Update Branch
-                  </button>
-                </div>
-              </div>
+  <Dialog open={isModalOpen} onClose={closeModal} maxWidth="lg" fullWidth>
+    <DialogTitle>
+      Orders for {selectedCustomer.name}
+      <Button
+        onClick={closeModal}
+        sx={{
+          position: 'absolute',
+          top: 8,
+          right: 8,
+          color: 'red',
+        }}
+      >
+        &times;
+      </Button>
+    </DialogTitle>
+    <DialogContent>
+      {selectedCustomer.orders.length > 0 ? (
+        <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Product Name</TableCell>
+                <TableCell>Quantity</TableCell>
+                <TableCell>Price</TableCell>
+                <TableCell>Total</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {selectedCustomer.orders.map((order) => (
+                <TableRow key={order.id}>
+                  <TableCell>{order.product_name}</TableCell>
+                  <TableCell>{order.quantity}</TableCell>
+                  <TableCell>{order.price}</TableCell>
+                  <TableCell>{order.total}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      ) : (
+        <Typography variant="body1" color="textSecondary">
+          No orders found for this customer.
+        </Typography>
+      )}
 
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => markAsDone(selectedCustomer.id)}
-                  className="bg-green-500 text-white px-4 py-2 rounded-md"
-                >
-                  Done
-                </button>
-                <button
-                  onClick={closeModal}
-                  className="bg-gray-500 text-white px-4 py-2 rounded-md"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
+        <Typography variant="h6" fontWeight="bold">
+          Total:
+        </Typography>
+        <Typography variant="h6" fontWeight="bold">
+          {selectedCustomer.orders
+            .reduce((sum, order) => sum + (Number(order.total) || 0), 0)
+            .toFixed(2)}
+        </Typography>
+      </div>
+
+      <FormControl variant="outlined" sx={{ marginTop: 2 }}>
+        <InputLabel>Forward to</InputLabel>
+        <Select
+          value={selectedBranch || ''}
+          onChange={(e) => setSelectedBranch(e.target.value)}
+          label="Forward to"
+        >
+          <MenuItem value="" disabled>
+            Forward to
+          </MenuItem>
+          {branches.map((branch) => (
+            <MenuItem key={branch.id} value={branch.name}>
+              {branch.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Button
+        onClick={() => {
+          if (selectedBranch) {
+            updateBranch(selectedCustomer.id, selectedBranch);
+            setIsModalOpen(false);
+          } else {
+            alert('Please select a valid branch before updating.');
+          }
+        }}
+        
+        variant="contained"
+        color="primary"
+        sx={{ marginTop: 3 }}
+      >
+        Update Branch
+      </Button>
+    </DialogContent>
+
+    <DialogActions>
+      <Button
+        onClick={() => markAsDone(selectedCustomer.id)}
+        variant="contained"
+        color="success"
+      >
+        Done
+      </Button>
+      <Button onClick={closeModal} variant="contained">
+        Close
+      </Button>
+    </DialogActions>
+  </Dialog>
+)}
       </div>
     </AuthenticatedLayout>
   );

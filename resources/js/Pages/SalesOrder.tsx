@@ -4,6 +4,16 @@ import { Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import Receipt from './Props/Receipt';
 import axios from 'axios';
+import {
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TableContainer,
+  Paper,
+  Button,
+} from '@mui/material';
 
 // Interfaces
 interface InventoryItem {
@@ -322,50 +332,63 @@ const submitSalesOrder = async () => {
 
         {/* Sales Order Table */}
         <div className="overflow-x-auto">
-          <table className="min-w-full table-auto">
-            <thead>
-              <tr>
-                <th className="px-4 py-2 bg-gray-300">Date</th>
-                <th className="px-4 py-2 bg-gray-300">Receipt Number</th>
-                <th className="px-4 py-2 bg-gray-300">Customer</th>
-                <th className="px-4 py-2 bg-gray-300">Number of Items</th>
-                <th className="px-4 py-2 bg-gray-300">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700 text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="text-center py-4">Loading...</td>
-                </tr>
-              ) : filteredOrders.length > 0 ? (
-                filteredOrders.map((entry) => (
-                  <tr key={entry.id} className='hover:bg-slate-300'>
-                    <td className="border p-2">{formatDate(entry.date)}</td>
-                    <td className="border p-2">{entry.receipt_number}</td>
-                    <td className="border p-2">{entry.customer_name}</td>
-                    <td className="border p-2">{entry.items.length}</td>
-                    <td className="border p-2">
-                      <button
-                        onClick={() => viewOrderDetails(entry)}
-                        className="bg-blue-500 text-white p-1 rounded"
-                      >
-                        View Items
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={5} className="text-center py-4">No records found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <TableContainer component={Paper}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ backgroundColor: 'grey.300' }}>Date</TableCell>
+                      <TableCell sx={{ backgroundColor: 'grey.300' }}>Receipt Number</TableCell>
+                      <TableCell sx={{ backgroundColor: 'grey.300' }}>Customer</TableCell>
+                      <TableCell sx={{ backgroundColor: 'grey.300' }}>Number of Items</TableCell>
+                      <TableCell sx={{ backgroundColor: 'grey.300' }}>Actions</TableCell>
+                    </TableRow>
+                  </TableHead>
+
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          Loading...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredOrders.length > 0 ? (
+                      filteredOrders.map((entry) => (
+                        <TableRow
+                          key={entry.id}
+                          hover
+                          sx={{ '&:hover': { backgroundColor: 'grey.200' } }}
+                        >
+                          <TableCell>{formatDate(entry.date)}</TableCell>
+                          <TableCell>{entry.receipt_number}</TableCell>
+                          <TableCell>{entry.customer_name}</TableCell>
+                          <TableCell>{entry.items.length}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="contained"
+                              color="primary"
+                              size="small"
+                              onClick={() => viewOrderDetails(entry)}
+                            >
+                              View Items
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          No records found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
           {/* Receipt Modal */}
           {isReceiptModalOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
-              <div className="bg-white p-6 rounded-lg shadow-lg max-w-3x2 relative">
+              <div className="bg-white p-6 rounded-lg shadow-lg max-w-5xl relative">
                 <h2 className="text-lg font-bold mb-4">New Sales Order</h2>
                 <form onSubmit={(e) => { e.preventDefault(); submitSalesOrder(); }}>
                   <div className="grid grid-cols-1 gap-4 mb-4">

@@ -4,6 +4,26 @@ import { Head } from '@inertiajs/react';
 import apiService from '../Services/ApiService';
 import ViewItemsModal from '../Props/ViewDelivery';
 import AddStocks from '../Props/AddStocks';
+import {
+  Button,
+  CircularProgress,
+  Container,
+  MenuItem,
+  Select,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+  Box,
+  Paper,
+} from '@mui/material';
+import { Tooltip, IconButton } from '@mui/material';
+import { Visibility, Delete } from '@mui/icons-material';
+import { Fab } from '@mui/material';
+
 
 interface DeliveryItem {
   id: number;
@@ -33,11 +53,11 @@ interface InventoryManagementProps {
 
 const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
-  const [loading, setLoading] = useState<boolean>(false); // Initially set loading to false
+  const [loading, setLoading] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(''); // Ensure this is a string or null
   const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState<boolean>(false);
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
@@ -59,8 +79,8 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
   }, []);
 
   const fetchDeliveryReceipts = async () => {
-    if (!selectedBranchName) return; // Do not fetch if no branch is selected
-    
+    if (!selectedBranchName) return;
+
     setLoading(true);
     try {
       const response = await apiService.get('/admin-fetch-delivery-receipts-by-branch', {
@@ -68,7 +88,7 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
           branch_name: selectedBranchName,
           page,
           limit,
-          month: selectedMonth,
+          month: selectedMonth ? parseInt(selectedMonth) : undefined, // Ensure proper parsing
         },
       });
       setStockEntries(response.data.data);
@@ -122,149 +142,157 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
   };
 
   return (
-    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stock Entries (Admin)</h2>}>
+    <AdminLayout header={<Typography variant="h6">Stock Entries</Typography>}>
       <Head title="Stock Entries (Admin)" />
-      <div className="p-4">
+      <Container maxWidth="xl" sx={{ mx: 'auto' }}>
         {/* Controls */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-4 space-y-2 md:space-y-0 md:space-x-4">
-          {/* Branch Selector and Month Filter */}
-          <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-4 w-full md:w-auto">
-            {/* Branch Selector */}
-            <select
-              value={selectedBranchName || ''}
-              onChange={(e) => {
-                setSelectedBranchName(e.target.value);
-                setCurrentPage(1); // Reset to first page when branch changes
-              }}
-              className="border rounded-md py-2 px-3 w-full md:w-auto"
-              aria-label="Select Branch"
-            >
-              <option value="" disabled>
-                Select Branch
-              </option>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.name}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+          <Select
+            value={selectedBranchName || ''}
+            onChange={(e) => {
+              setSelectedBranchName(e.target.value as string);
+              setCurrentPage(1);
+            }}
+            displayEmpty
+            fullWidth
+            variant="outlined"
+            style={{ marginRight: '8px' }}
+            aria-label="Select Branch"
+          >
+            <MenuItem value="" disabled>
+              Select Branch
+            </MenuItem>
+            {branches.map((branch) => (
+              <MenuItem key={branch.id} value={branch.name}>
+                {branch.name}
+              </MenuItem>
+            ))}
+          </Select>
 
-            {/* Month Filter */}
-            <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2">
-              <label className="text-gray-700 md:mr-2">Filter by Month</label>
-              <select
-                value={selectedMonth ?? ''}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-                className="border rounded-md py-2 px-3 w-full md:w-auto"
-                aria-label="Filter by Month"
-              >
-                <option value="">All</option>
-                {[...Array(12).keys()].map((month) => (
-                  <option key={month} value={month + 1}>
-                    {new Date(0, month).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <Select
+            value={selectedMonth ?? ''}
+            onChange={(e) => setSelectedMonth(e.target.value || '')} // Ensure the value is a string
+            displayEmpty
+            fullWidth
+            variant="outlined"
+            style={{ marginRight: '8px' }}
+            aria-label="Filter by Month"
+          >
+            <MenuItem value="">All</MenuItem>
+            {[...Array(12).keys()].map((month) => (
+              <MenuItem key={month} value={(month + 1).toString()}> {/* Ensure the value is a string */}
+                {new Date(0, month).toLocaleString('default', { month: 'long' })}
+              </MenuItem>
+            ))}
+          </Select>
 
-          {/* Add Stocks Button */}
-          <button 
-            onClick={() => setIsAddStocksModalOpen(true)} 
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            aria-label="Add Stocks"
+          <Button
+            onClick={() => setIsAddStocksModalOpen(true)}
+            variant="contained"
+            color="primary"
           >
             Add Stocks
-          </button>
-        </div>
+          </Button>
+        </Box>
 
         {/* Stock Entries Table */}
-        <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-          <table className="min-w-full table-auto border border-gray-200">
-            <thead className="bg-gray-300 text-gray-600 uppercase text-sm leading-normal">
-              <tr>
-                <th className="py-3 px-6 text-left">Delivery Receipt No.</th>
-                <th className="py-3 px-6 text-left">Delivered By</th>
-                <th className="py-3 px-6 text-left">Date</th>
-                <th className="py-3 px-6 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="text-gray-700 text-sm">
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="text-center py-4">
-                    <div className="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto"></div>
-                  </td>
-                </tr>
-              ) : stockEntries.length > 0 ? (
-                stockEntries.map((entry) => (
-                  <tr key={entry.id} className="border-b hover:bg-gray-200">
-                    <td className="py-3 px-6">{entry.delivery_number}</td>
-                    <td className="py-3 px-6">{entry.delivered_by}</td>
-                    <td className="py-3 px-6">{new Date(entry.date).toLocaleDateString()}</td>
-                    <td className="py-3 px-6 space-x-2 flex">
-                      <button
-                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        onClick={() => {
-                          setSelectedItems(entry.items || []); // Ensure items is an array
-                          setModalOpen(true);
-                        }}
-                        aria-label="View Items"
-                      >
-                        View Items
-                      </button>
-                      <button
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-400"
-                        onClick={() => handleDeleteReceipt(entry.id)}
-                        aria-label="Delete Receipt"
-                      >
-                        Delete Receipt
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="text-center py-4">No records found.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <Box display="flex" justifyContent="center" py={4}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Delivery Receipt No.</TableCell>
+                  <TableCell>Delivered By</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {stockEntries.length > 0 ? (
+                  stockEntries.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell>{entry.delivery_number}</TableCell>
+                      <TableCell>{entry.delivered_by}</TableCell>
+                      <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Tooltip title="View Items">
+                          <IconButton
+                            color="primary"
+                            size="small"
+                            onClick={() => {
+                              setSelectedItems(entry.items || []);
+                              setModalOpen(true);
+                            }}
+                          >
+                            <Visibility />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Delete Receipt">
+                          <IconButton
+                            color="secondary"
+                            size="small"
+                            onClick={() => handleDeleteReceipt(entry.id)}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      No records found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
 
         {/* Pagination */}
-        <div className="flex justify-between items-center mt-4">
-          <button
+        <Box display="flex" justifyContent="center" mt={4}>
+          <Button
             onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
             disabled={page === 1}
-            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
-            aria-label="Previous Page"
+            variant="outlined"
           >
             Previous
-          </button>
-          <span className="text-sm">
+          </Button>
+          <Typography variant="body2" style={{ margin: '0 16px' }}>
             Page {page} of {totalPages}
-          </span>
-          <button
+          </Typography>
+          <Button
             onClick={() => setPage((prev) => (prev < totalPages ? prev + 1 : prev))}
             disabled={page === totalPages}
-            className="bg-gray-300 px-4 py-2 rounded disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
-            aria-label="Next Page"
+            variant="outlined"
           >
             Next
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Box>
 
-      {/* Modals */}
-      <ViewItemsModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} items={selectedItems} onDelete={handleDeleteItem} onDeleteAll={handleDeleteAllItems} />
-      
-      {/* Modal for Adding Stocks */}
-      <AddStocks
-        showModal={isAddStocksModalOpen}
-        closeModal={() => setIsAddStocksModalOpen(false)}
-        onSuccess={handleAddStocksSuccess}
-      />
+        {/* Modals */}
+        <ViewItemsModal
+          isOpen={isModalOpen}
+          onClose={() => setModalOpen(false)}
+          items={selectedItems}
+          onDelete={handleDeleteItem}
+          onDeleteAll={handleDeleteAllItems}
+        />
+
+        {/* Modal for Adding Stocks */}
+        <AddStocks
+          showModal={isAddStocksModalOpen}
+          closeModal={() => setIsAddStocksModalOpen(false)}
+          onSuccess={handleAddStocksSuccess}
+        />
+      </Container>
     </AdminLayout>
   );
 };

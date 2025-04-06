@@ -2,6 +2,25 @@ import React, { useRef } from 'react';
 import jsPDF from 'jspdf';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
+import {
+  Typography,
+  TextField,
+  IconButton,
+  Box,
+  Button,
+  Divider,
+  
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+ 
+
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 interface Product {
   name: string;
@@ -120,100 +139,138 @@ const SalesInvoice: React.FC = () => {
       <Head title="Generate Quotation" />
 
       <div className="p-8 bg-gray-100 min-h-screen">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-5xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6 text-center text-blue-600">Sales Quotation</h1>
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-8xl mx-auto">
+        <Box textAlign="center" mb={4}>
+            <Typography variant="h3" fontWeight="bold" color="primary">
+              Generate Sales Quotation
+            </Typography>
+          </Box>
 
-          <label className="block text-lg font-medium mb-2" htmlFor="customer-name">Client:</label>
-          <input
-            type="text"
-            id="customer-name"
+          <Typography variant="h6" mb={1}>
+            Client:
+          </Typography>
+
+          <TextField
+            fullWidth
+            variant="outlined"
+            label="Enter client name"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            className="mb-6 p-3 border border-gray-300 rounded shadow-md w-full focus:outline-none focus:border-blue-500"
-            placeholder="Enter client name"
-            aria-label="Customer Name"
+            sx={{ mb: 4 }}
           />
 
-          <h2 className="text-xl font-semibold mb-4">Products</h2>
+          <Typography variant="h5" fontWeight="bold" mb={2}>
+            Products
+          </Typography>
 
           {products.map((product, index) => (
-            <div key={index} className="grid grid-cols-5 gap-6 mb-6 items-center">
-              <input
-                type="text"
-                placeholder="Product Name"
+            <Box
+              key={index}
+              display="flex"
+              flexWrap="wrap"
+              gap={2}
+              alignItems="center"
+              mb={3}
+            >
+              <TextField
+                label="Product Name"
+                variant="outlined"
                 value={product.name}
                 onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                className="p-3 border border-gray-300 rounded shadow-sm w-full focus:outline-none focus:border-blue-500"
-                aria-label={`Product ${index + 1} Name`}
+                sx={{ flex: 1, minWidth: '150px' }}
               />
-              
-              <input
+
+              <TextField
+                label="Quantity"
+                variant="outlined"
                 type="number"
-                placeholder="Quantity"
                 value={product.quantity || ""}
-                onChange={(e) => handleProductChange(index, 'quantity', e.target.value.replace(/[^0-9]/g, ''))}
-                className="p-3 border border-gray-300 rounded shadow-sm w-full focus:outline-none focus:border-blue-500"
-                aria-label={`Product ${index + 1} Quantity`}
+                onChange={(e) =>
+                  handleProductChange(index, 'quantity', e.target.value.replace(/[^0-9]/g, ''))
+                }
+                sx={{ width: '120px' }}
               />
 
-              <input
+              <TextField
+                label="Price"
+                variant="outlined"
                 type="number"
-                placeholder="Price"
                 value={product.price || ""}
-                onChange={(e) => handleProductChange(index, 'price', e.target.value.replace(/[^0-9.]/g, ''))}
-                className="p-3 border border-gray-300 rounded shadow-sm w-full focus:outline-none focus:border-blue-500"
-                aria-label={`Product ${index + 1} Price`}
+                onChange={(e) =>
+                  handleProductChange(index, 'price', e.target.value.replace(/[^0-9.]/g, ''))
+                }
+                sx={{ width: '150px' }}
               />
 
-              <p className="text-lg font-semibold text-gray-800">
-                Total: ₱{(product.quantity * product.price).toLocaleString()}
-              </p>
+              <Typography fontWeight="bold" color="text.secondary">
+                ₱{(product.quantity * product.price).toLocaleString()}
+              </Typography>
 
-              <button
-                type="button"
+              <IconButton
+                color="error"
                 onClick={() => removeItem(index)}
-                className="text-red-500 hover:text-red-700 ml-1 font-bold"
                 aria-label="Remove Item"
               >
-                &times;
-              </button>
-            </div>
+                <DeleteIcon />
+              </IconButton>
+            </Box>
           ))}
 
-          <button
-            onClick={addProduct}
-            className="bg-blue-500 text-white py-3 px-6 rounded mb-6 w-full font-semibold hover:bg-blue-600 shadow-md focus:outline-none"
-            aria-label="Add Product"
-          >
-            Add Product
-          </button>
+          <Divider sx={{ my: 3 }} />
 
-          <div ref={invoiceRef} className="border-t-2 pt-6 mt-6 bg-gray-50">
-            <h3 className="text-lg font-semibold text-blue-600 mb-4">Client: {customerName}</h3>
-            <table className="w-full mt-4 table-auto border-collapse">
-              <thead>
-                <tr className="text-left bg-gray-200 text-gray-700">
-                  <th className="py-3 px-6 border border-gray-300">Product Name</th>
-                  <th className="py-3 px-6 border border-gray-300">Quantity</th>
-                  <th className="py-3 px-6 border border-gray-300">Price per unit</th>
-                  <th className="py-3 px-6 border border-gray-300">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product, index) => (
-                  <tr key={index} className="hover:bg-gray-100">
-                    <td className="py-3 px-6 border border-gray-300">{product.name}</td>
-                    <td className="py-3 px-6 border border-gray-300">{product.quantity}</td>
-                    <td className="py-3 px-6 border border-gray-300">₱  {product.price.toLocaleString()}</td>
-                    <td className="py-3 px-6 border border-gray-300">₱  {(product.quantity * product.price).toLocaleString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="text-right mt-6 text-2xl font-bold text-blue-700">
-              Grand Total: ₱ {calculateTotal().toLocaleString()}
-            </div>
-          </div>
+          <Button variant="contained" color="primary" onClick={addProduct}>
+            Add Product
+          </Button>
+
+      
+
+          <Box
+            ref={invoiceRef}
+            sx={{
+              borderTop: 2,
+              pt: 4,
+              mt: 4,
+              backgroundColor: 'grey.100',
+              px: 2,
+              pb: 4,
+              borderColor: 'divider',
+            }}
+          >
+            <Typography variant="h6" fontWeight="bold" color="primary" mb={2}>
+              Client: {customerName}
+            </Typography>
+
+            <TableContainer component={Paper} elevation={0}>
+              <Table>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: 'grey.200' }}>
+                    <TableCell>Product Name</TableCell>
+                    <TableCell>Quantity</TableCell>
+                    <TableCell>Price per unit</TableCell>
+                    <TableCell>Total</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {products.map((product, index) => (
+                    <TableRow key={index} hover>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.quantity}</TableCell>
+                      <TableCell>₱ {product.price.toLocaleString()}</TableCell>
+                      <TableCell>₱ {(product.quantity * product.price).toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+
+            <Divider sx={{ my: 4 }} />
+
+            <Box textAlign="right">
+              <Typography variant="h5" fontWeight="bold" color="primary">
+                Grand Total: ₱ {calculateTotal().toLocaleString()}
+              </Typography>
+            </Box>
+          </Box>
 
           <div className="flex gap-6 mt-8 justify-center">
             <button
