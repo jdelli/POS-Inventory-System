@@ -109,7 +109,10 @@ const ProductTable: React.FC = () => {
           limit,
         },
       });
-      setProducts(response.data.data || []); // Ensure products are set as an array
+
+      const branchData = response.data.branch;
+      setProducts(Array.isArray(branchData.data) ? branchData.data : []);
+
       setCurrentPage(response.data.current_page);
       setLastPage(response.data.last_page);
     } catch (err) {

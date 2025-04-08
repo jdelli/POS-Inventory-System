@@ -18,7 +18,7 @@ import {
     IconButton,
     Box,
 } from '@mui/material';
-import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu } from '@mui/icons-material';
+import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, BackupTable } from '@mui/icons-material';
 
 export default function AdminLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
@@ -86,7 +86,7 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                         </NavLink>
                         <ListItem component="button" onClick={handleBranchManagementClick}>
                             <ListItemIcon>
-                                <Store />
+                                <BackupTable />
                             </ListItemIcon>
                             <ListItemText primary="Branch Management" />
                             {openBranchManagement ? <ExpandLess /> : <ExpandMore />}
@@ -123,13 +123,21 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                                 </ListItemIcon>
                                 <ListItemText primary="Reports" />
                             </ListItem>
-                        </NavLink>
+                        </NavLink> 
                         <NavLink href={route('admin-supplier')} active={route().current('admin-supplier')} className="hover:bg-gray-700">
                             <ListItem >
                                 <ListItemIcon>
                                     <People />
                                 </ListItemIcon>
                                 <ListItemText primary="Supplier" />
+                            </ListItem>
+                        </NavLink>
+                        <NavLink href={route('admin-products')} active={route().current('admin-products')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <Store />
+                                </ListItemIcon>
+                                <ListItemText primary="Warehouse Stocks" />
                             </ListItem>
                         </NavLink>
                     </List>

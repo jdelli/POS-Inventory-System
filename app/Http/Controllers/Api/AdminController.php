@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\Products;
 use App\Models\StockHistory;
 use App\Models\DeliveryReceipt;
+use App\Models\Supplier;
+use App\Models\SupplierStocks;
+use Illuminate\Support\Facades\Log;
 
 class AdminController extends Controller
 {
@@ -199,6 +202,91 @@ public function dailySalesReportAllBranch(Request $request)
 
     return response()->json($history);
 }
+
+
+
+
+public function addSupplierStocks(Request $request)
+{
+    $request->validate([
+        'supplier_name' => 'required|string|max:255',
+        'delivery_number' => 'required|string|max:255',
+        'date' => 'required|date',
+        'product_category' => 'required|string|max:255',
+        'items' => 'required|array',
+        'items.*.product_code' => 'required|string|max:255',
+        'items.*.product_name' => 'required|string|max:255',
+        'items.*.quantity' => 'required|integer',
+        'items.*.price' => 'required|numeric',
+    ]);
+
+    // Create the supplier
+    $supplier = Supplier::create([
+        'supplier_name' => $request->supplier_name,
+        'delivery_number' => $request->delivery_number,
+        'product_category' => $request->product_category,
+        'date' => $request->date,
+    ]);
+
+    // Loop through each item
+    foreach ($request->items as $item) {
+
+        // Find product in warehouse
+        $product = Products::where('product_code', $item['product_code'])
+            ->where('branch_id', 'warehouse')
+            ->first();
+
+        if (!$product) {
+            return response()->json(['message' => 'Product with code ' . $item['product_code'] . ' not found in warehouse.'], 404);
+        }
+
+        // Update product quantity
+        $product->quantity += $item['quantity'];
+        $product->save();
+
+        // Create supplier stock
+        SupplierStocks::create([
+            'supplier_id' => $supplier->id,
+            'product_code' => $item['product_code'],
+            'product_name' => $item['product_name'],
+            'quantity' => $item['quantity'],
+            'price' => $item['price'],
+        ]);
+
+        // Create stock history
+        StockHistory::create([
+            'product_id' => $product->id,
+            'name' =>  $request->supplier_name,
+            'receipt_number' => $request->delivery_number,
+            'date' => $request->date,
+            'quantity_changed' => $item['quantity'],
+            'remaining_stock' => $product->quantity,
+            'action' => 'added',
+        ]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Supplier and items added successfully!',
+        'data' => $supplier->load('supplierStocks'),
+    ], 201);
+}
+
+
+
+public function getAllSuppliers()
+{
+    $suppliers = Supplier::with('supplierStocks')->get();
+
+    // Log the fetched suppliers for debugging
+    Log::info('Fetched Suppliers: ', $suppliers->toArray());
+
+    return response()->json([
+        'success' => true,
+        'data' => $suppliers
+    ]);
+}
+
 
 
 }

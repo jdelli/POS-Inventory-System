@@ -29,7 +29,6 @@ class ProductsApiController extends Controller
         'name' => 'required|string|max:255',
         'description' => 'required|string|max:1000',
         'price' => 'required|numeric|min:0',
-        'quantity' => 'required|integer|min:0',
         'category' => 'required|string|max:255',
         'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
     ]);
@@ -41,7 +40,6 @@ class ProductsApiController extends Controller
     $product->name = $request->name;
     $product->description = $request->description;
     $product->price = $request->price;
-    $product->quantity = $request->quantity;
     $product->category = $request->category;
 
     // Store the image and save its path
@@ -121,8 +119,26 @@ public function fetchProductsByBranch(Request $request)
                                 'image_url' => asset('storage/products/' . basename($product->image)), // Correct URL
                             ];
                         });
+                        
+    // Fetch warehouse products
+    $warehouse = Products::where('branch_id', 'warehouse')
+                        ->paginate($limit)
+                        ->through(function ($product) {
+                            return [
+                                'id' => $product->id,
+                                'product_code' => $product->product_code,
+                                'name' => $product->name,
+                                'category' => $product->category,
+                                'price' => $product->price,
+                                'quantity' => $product->quantity,
+                                'image_url' => asset('storage/products/' . basename($product->image)), // Correct URL
+                            ];
+                        });
 
-    return response()->json($products);
+            return response()->json([
+                'branch' => $products,
+                'warehouse' => $warehouse,
+            ]);
 }
 
 

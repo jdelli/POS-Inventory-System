@@ -1,148 +1,203 @@
-import React, { useEffect, useState } from 'react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { useState, useEffect } from "react";
+import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
-import apiService from '../Services/ApiService';
+import apiService from "../Services/ApiService";
+import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper, Pagination, CircularProgress, Typography, Button } from "@mui/material";
+import AddProductModal from "../Props/Add";
+import StockHistoryModal from "../Props/StockHistoryModal"; // Import the StockHistoryModal
 
-interface Product {
+interface WarehouseProduct {
   id: number;
+  product_code: string;
   name: string;
-  description: string;
+  category: string;
   price: number;
   quantity: number;
-  image: string;
-  category: string;
+  image_url: string;
 }
 
-const Products: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+const categoryOptions = [
+  'Analog/IP Cameras',
+  'WIFI Cameras',
+  'DVR/NVR',
+  'HDD',
+  'Home Alarms',
+  'Accessories',
+  'Radios',
+  'Biometrics',
+];
+
+const SearchFilter: React.FC<{
+  searchTerm: string;
+  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
+  filterCategory: string;
+  setFilterCategory: React.Dispatch<React.SetStateAction<string>>;
+}> = ({ searchTerm, setSearchTerm, filterCategory, setFilterCategory }) => (
+  <div className="flex flex-1 space-x-2">
+    <input
+      type="text"
+      placeholder="Search by name"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="border rounded-md py-2 px-3 w-full sm:w-auto"
+    />
+    <select
+      value={filterCategory}
+      onChange={(e) => setFilterCategory(e.target.value)}
+      className="border rounded-md py-2 px-3 w-full sm:w-auto"
+    >
+      <option value="">All Categories</option>
+      {categoryOptions.map((option) => (
+        <option key={option} value={option}>
+          {option}
+        </option>
+      ))}
+    </select>
+  </div>
+);
+
+const Products = () => {
+  const [warehouseProducts, setWarehouseProducts] = useState<WarehouseProduct[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [warehousePage, setWarehousePage] = useState(1);
+  const [totalWarehousePages, setTotalWarehousePages] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('Analog/IP Cameras');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);  // State for history modal
+  const [stockHistory, setStockHistory] = useState<any[]>([]); // State for stock history
+  const [selectedProductName, setSelectedProductName] = useState<string>(''); // Store the product name for history
 
-  const categoryOptions = [
-    'Analog/IP Cameras',
-    'WIFI Cameras',
-    'DVR/NVR',
-    'HDD',
-    'Home Alarms',
-    'Accessories',
-    'Radios',
-    'Biometrics',
-  ];
+  useEffect(() => {
+    fetchWarehouseProducts(warehousePage);
+  }, [warehousePage]);
 
-  const fetchProductsByCategory = async (category: string, page: number = 1, limit: number = 20) => {
+  const fetchWarehouseProducts = async (page: number) => {
     setLoading(true);
-    setError(null);
     try {
-      const response = await apiService.get(
-        `/fetch-products?category=${encodeURIComponent(category)}&page=${page}&per_page=${limit}`
-      );
-      if (response?.data?.success) {
-        setProducts(response.data.data);
-        setCurrentPage(response.data.current_page);
-        setLastPage(response.data.last_page);
-      } else {
-        throw new Error(response.data.message || 'Failed to fetch products');
-      }
-    } catch (err) {
-      setError('Failed to load products.');
+      const response = await apiService.get(`/fetch-products-by-branch?user_name=branch1&page=${page}`);
+      setWarehouseProducts(response.data.warehouse.data);
+      setTotalWarehousePages(response.data.warehouse.last_page);
+    } catch (error) {
+      console.error("Error fetching warehouse products:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchProductsByCategory(activeTab);
-  }, [activeTab]);
-
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-    fetchProductsByCategory(activeTab, newPage);
+  const handleViewHistory = async (productId: number, productName: string) => {
+    setSelectedProductName(productName);
+    try {
+      const response = await apiService.get(`/stock-history/${productId}`);
+      setStockHistory(response.data);  // Set the stock history data
+      setShowHistoryModal(true);  // Show the history modal
+    } catch (error) {
+      console.error("Error fetching stock history:", error);
+    }
   };
 
+  const filteredProducts = warehouseProducts.filter(
+    (product) =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (filterCategory ? product.category === filterCategory : true)
+  );
+
+  const handleOpenAddProductModal = () => setShowAddProductModal(true);  // Open modal
+  const handleCloseAddProductModal = () => setShowAddProductModal(false);  // Close modal
+  const handleCloseHistoryModal = () => setShowHistoryModal(false);  // Close stock history modal
+
   return (
-    <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Products</h2>}>
-      <Head title="Products" />
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight"> Warehouse Stocks</h2>}>
+      <Head title=" Warehouse Stocks" />
 
-      <div>
-        {/* Tab Navigation */}
-        <div className="flex border-b border-gray-300">
-          {categoryOptions.map((option) => (
-            <button
-              key={option}
-              onClick={() => setActiveTab(option)}
-              className={`px-4 py-2 text-sm font-medium transition-all ${
-                activeTab === option
-                  ? 'border-b-2 border-blue-500 text-blue-500'
-                  : 'text-gray-500 hover:text-blue-500'
-              }`}
-            >
-              {option}
-            </button>
-          ))}
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <SearchFilter
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filterCategory={filterCategory}
+            setFilterCategory={setFilterCategory}
+          />
+          <Button variant="contained" color="primary" onClick={handleOpenAddProductModal}>
+            Add Product
+          </Button>
         </div>
 
-        <div className="mt-6">
-          {loading ? (
-            <div className="flex justify-center py-10">
-              <div className="spinner border-t-2 border-blue-500 border-solid rounded-full w-8 h-8 animate-spin"></div>
-            </div>
-          ) : error ? (
-            <p className="text-center text-red-500 font-medium py-4">{error}</p>
-          ) : products.length === 0 ? (
-            <p className="text-center text-gray-500 py-4">No products available in this category.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-4">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white border rounded-lg shadow hover:shadow-lg transition-shadow duration-200 p-4"
-                >
-                  <img
-                    src={product.image ? `/storage/${product.image}` : 'default-image-url.jpg'}
-                    alt={product.name}
-                    className="w-full h-40 object-cover rounded-md mb-4"
-                  />
-                  <h3 className="text-lg font-semibold text-gray-800 truncate">{product.name}</h3>
-                  <p className="text-gray-600 text-sm mt-2 mb-4 truncate">{product.description}</p>
-                  <p className="text-xl font-bold text-blue-600">₱{(Number(product.price) || 0).toFixed(2)}</p>
-                  <p className="text-sm text-gray-500">Quantity: {product.quantity}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Pagination Controls */}
-        {products.length > 0 && (
-          <div className="flex justify-center items-center mt-6 space-x-4">
-            <button
-              className={`px-4 py-2 text-sm font-medium border rounded-md ${
-                currentPage === 1 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white'
-              }`}
-              disabled={currentPage === 1}
-              onClick={() => handlePageChange(currentPage - 1)}
-            >
-              Previous
-            </button>
-            <p className="text-sm">
-              Page {currentPage} of {lastPage}
-            </p>
-            <button
-              className={`px-4 py-2 text-sm font-medium border rounded-md ${
-                currentPage === lastPage ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-500 text-white'
-              }`}
-              disabled={currentPage === lastPage}
-              onClick={() => handlePageChange(currentPage + 1)}
-            >
-              Next
-            </button>
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <CircularProgress />
+            <Typography variant="body1" sx={{ marginLeft: 2 }}>Loading products...</Typography>
           </div>
+        ) : (
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Image</TableCell>
+                  <TableCell>Product Code</TableCell>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Price</TableCell>
+                  <TableCell>Quantity</TableCell>
+                  <TableCell>Actions</TableCell> {/* Added column for actions */}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <img src={product.image_url} alt={product.name} width={50} height={50} />
+                      </TableCell>
+                      <TableCell>{product.product_code}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.category}</TableCell>
+                      <TableCell>₱{product.price}</TableCell>
+                      <TableCell>{product.quantity}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          onClick={() => handleViewHistory(product.id, product.name)}
+                        >
+                          View History
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center">
+                      <Typography variant="body2" color="textSecondary">No products found.</Typography>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         )}
+
+        <div className="flex justify-center mt-4">
+          <Pagination
+            count={totalWarehousePages}
+            page={warehousePage}
+            onChange={(e, page) => setWarehousePage(page)}
+            color="primary"
+          />
+        </div>
       </div>
-    </AuthenticatedLayout>
+
+      {/* Add Product Modal */}
+      <AddProductModal showModal={showAddProductModal} closeModal={handleCloseAddProductModal} />
+
+      {/* Stock History Modal */}
+      <StockHistoryModal
+        showModal={showHistoryModal}
+        closeModal={handleCloseHistoryModal}
+        history={stockHistory}
+        productName={selectedProductName}
+      />
+    </AdminLayout>
   );
 };
 

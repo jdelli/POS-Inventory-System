@@ -18,7 +18,7 @@ import {
     IconButton,
     Box,
 } from '@mui/material';
-import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu } from '@mui/icons-material';
+import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, ShoppingCart, ShoppingCartCheckout } from '@mui/icons-material';
 
 export default function Authenticated({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
@@ -122,7 +122,7 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                         <NavLink href={route('user-customers')} active={route().current('user-customers')} className="hover:bg-gray-700">
                             <ListItem>
                                 <ListItemIcon>
-                                    <People />
+                                    <ShoppingCartCheckout />
                                 </ListItemIcon>
                                 <ListItemText primary="Customer Orders" />
                             </ListItem>

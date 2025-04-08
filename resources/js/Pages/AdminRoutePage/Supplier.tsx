@@ -1,174 +1,140 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import apiService from '../Services/ApiService';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  CircularProgress,
+  Typography,
+  Button
+} from '@mui/material';
+import SupplierStocksModal from '../Props/SupplierDetails';
+import AddSupplierModal from '../Props/AddSupplierStocks';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
-import apiService from "../Services/ApiService";
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, Tabs, Tab, Box } from "@mui/material";
-import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper } from "@mui/material";
 
 interface Supplier {
   id: number;
-  name: string;
-  contact: string;
-  address: string;
+  supplier_name: string;
+  delivery_number: string;
+  product_category: string;
+  date: string;
+  supplier_stocks?: SupplierStock[];
 }
 
-interface WarehouseStock {
+interface SupplierStock {
   id: number;
-  product: string;
+  supplier_id: number;
+  product_code: string;
+  product_name: string;
   quantity: number;
-  location: string;
+  price: number;
 }
 
-const SalesSupplier = () => {
+
+
+
+
+const SupplierData: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [warehouseStocks, setWarehouseStocks] = useState<WarehouseStock[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newSupplier, setNewSupplier] = useState({ name: "", contact: "", address: "" });
-  const [tabIndex, setTabIndex] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedStocks, setSelectedStocks] = useState<SupplierStock[]>([]);
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
+  const [addModalOpen, setAddModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
+    const fetchSuppliers = async () => {
+      try {
+        const response = await apiService.get('/get-supplier');
+        // Log the response data for debugging
+        console.log('Fetched Suppliers:', response.data.data);
+        setSuppliers(response.data.data);
+       
+      } catch (err) {
+        setError('Failed to fetch suppliers');
+       
+      }
+    };
+
     fetchSuppliers();
-    fetchWarehouseStocks();
   }, []);
 
-  const fetchSuppliers = async () => {
-    try {
-      const response = await apiService.get("/suppliers");
-      setSuppliers(response.data);
-    } catch (error) {
-      console.error("Error fetching suppliers:", error);
-    }
+  const handleOpenStocksModal = (stocks: SupplierStock[] = []) => {
+    setSelectedStocks(stocks);
+    setModalOpen(true);
   };
 
-  const fetchWarehouseStocks = async () => {
-    try {
-      const response = await apiService.get("/warehouse-stocks");
-      setWarehouseStocks(response.data);
-    } catch (error) {
-      console.error("Error fetching warehouse stocks:", error);
-    }
+  const handleCloseStocksModal = () => {
+    setModalOpen(false);
+    setSelectedStocks([]);
   };
 
-  const handleAddSupplier = async () => {
-    try {
-      await apiService.post("/suppliers", newSupplier);
-      fetchSuppliers();
-      setIsModalOpen(false);
-      setNewSupplier({ name: "", contact: "", address: "" });
-    } catch (error) {
-      console.error("Error adding supplier:", error);
-    }
+  const handleOpenAddModal = () => {
+    setAddModalOpen(true);
   };
 
-  const handleTabChange = (event: React.ChangeEvent<{}>, newValue: number) => {
-    setTabIndex(newValue);
+  const handleCloseAddModal = () => {
+    setAddModalOpen(false);
   };
+
+  const handleSuccess = () => {
+    setAddModalOpen(false);
+  };
+
+
+
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
 
   return (
-    <AdminLayout header={<Typography variant="h6">Supplier</Typography>}>
-      <Head title="Supplier" />
-      <Box p={3}>
-      
-        <Tabs value={tabIndex} onChange={handleTabChange} aria-label="basic tabs example" sx={{ mb: 3 }}>
-          <Tab label="Sales Suppliers" />
-          <Tab label="Warehouse Stocks" />
-              <Button variant="contained" color="primary" onClick={() => setIsModalOpen(true)} className="align-self-end">
-                Add Supplier
-              </Button>
-        </Tabs>
-        {tabIndex === 0 && (
-          <Box>
-            
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Name</TableCell>
-                    <TableCell>Contact</TableCell>
-                    <TableCell>Address</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {suppliers.map((supplier) => (
-                    <TableRow key={supplier.id}>
-                      <TableCell>{supplier.name}</TableCell>
-                      <TableCell>{supplier.contact}</TableCell>
-                      <TableCell>{supplier.address}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} fullWidth maxWidth="sm">
-              <DialogTitle>Add Supplier</DialogTitle>
-              <DialogContent>
-                <Box mb={2}>
-                  <TextField
-                    label="Name"
-                    fullWidth
-                    margin="normal"
-                    value={newSupplier.name}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
-                  />
-                </Box>
-                <Box mb={2}>
-                  <TextField
-                    label="Contact"
-                    fullWidth
-                    margin="normal"
-                    value={newSupplier.contact}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })}
-                  />
-                </Box>
-                <Box mb={2}>
-                  <TextField
-                    label="Address"
-                    fullWidth
-                    margin="normal"
-                    value={newSupplier.address}
-                    onChange={(e) => setNewSupplier({ ...newSupplier, address: e.target.value })}
-                  />
-                </Box>
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={() => setIsModalOpen(false)} color="secondary">
-                  Cancel
-                </Button>
-                <Button onClick={handleAddSupplier} color="primary">
-                  Save
-                </Button>
-              </DialogActions>
-            </Dialog>
-          </Box>
-        )}
-        {tabIndex === 1 && (
-          <Box>
-            <TableContainer component={Paper}>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Product</TableCell>
-                    <TableCell>Quantity</TableCell>
-                    <TableCell>Location</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {warehouseStocks.map((stock) => (
-                    <TableRow key={stock.id}>
-                      <TableCell>{stock.product}</TableCell>
-                      <TableCell>{stock.quantity}</TableCell>
-                      <TableCell>{stock.location}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
-        )}
-      </Box>
+    <AdminLayout header={<Typography variant="h6">Stock Entries</Typography>}>
+      <Head title="Stock Entries (Admin)" />
+      <div>
+        <Button variant="outlined" onClick={handleOpenAddModal}>
+          Add Supplier
+        </Button>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Supplier Name</TableCell>
+                <TableCell>Delivery Number</TableCell>
+                <TableCell>Product Category</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Supplier Stocks</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {suppliers.map((supplier) => (
+                <TableRow key={supplier.id}>
+                  <TableCell>{supplier.supplier_name}</TableCell>
+                  <TableCell>{supplier.delivery_number}</TableCell>
+                  <TableCell>{supplier.product_category}</TableCell>
+                  <TableCell>{supplier.date}</TableCell>
+                  <TableCell>
+                    {supplier.supplier_stocks && supplier.supplier_stocks.length > 0 ? (
+                      <Button variant="outlined" onClick={() => handleOpenStocksModal(supplier.supplier_stocks)}>
+                        View Stocks
+                      </Button>
+                    ) : (
+                      <Typography>No supplier stocks available</Typography>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <SupplierStocksModal open={modalOpen} onClose={handleCloseStocksModal} stocks={selectedStocks} />
+          <AddSupplierModal showModal={addModalOpen} closeModal={handleCloseAddModal} onSuccess={handleSuccess} onSubmit={() => {}} />
+        </TableContainer>
+      </div>
     </AdminLayout>
   );
 };
 
-export default SalesSupplier;
+export default SupplierData;

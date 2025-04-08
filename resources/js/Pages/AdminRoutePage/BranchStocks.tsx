@@ -52,6 +52,7 @@ interface Product {
   category: string;
   price: number;
   quantity: number;
+  image_url: string;
 }
 
 const categoryOptions = [
@@ -230,6 +231,7 @@ const ProductTable: React.FC = () => {
             <Table>
               <TableHead>
                 <TableRow>
+                  <TableCell>Image</TableCell>
                   <TableCell>Product Code</TableCell>
                   <TableCell>Product Name</TableCell>
                   <TableCell>Category</TableCell>
@@ -242,6 +244,13 @@ const ProductTable: React.FC = () => {
                 {filteredProducts.length > 0 ? (
                   filteredProducts.map((product) => (
                     <TableRow key={product.id}>
+                      <TableCell>
+                          <img 
+                            src={product.image_url} 
+                            alt={product.name} 
+                            className="w-12 h-12 object-cover rounded-md"
+                          />
+                        </TableCell>
                       <TableCell>{product.product_code}</TableCell>
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>

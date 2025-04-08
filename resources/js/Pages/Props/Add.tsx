@@ -1,19 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Modal, Box, Typography, TextField, Button, MenuItem, Select, FormControl, InputLabel, CircularProgress, IconButton } from '@mui/material';
+import { Close as CloseIcon } from '@mui/icons-material';
 import apiService from '../Services/ApiService';
 
-interface Product {
-  id: number;
-  name: string;
-  category: string;
-  price: number;
-  quantity: number;
-}
 
 interface AddProductModalProps {
   showModal: boolean;
   closeModal: () => void;
-  refreshProducts: () => void;
-  auth: { name: string };  // Ensure this matches your auth structure
 }
 
 const categoryOptions = [
@@ -27,7 +20,7 @@ const categoryOptions = [
   'Biometrics',
 ];
 
-const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal, refreshProducts, auth }) => {
+const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -73,7 +66,7 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
     setLoading(true);
     setError(null);
 
-    if (Number(price) <= 0 || Number(quantity) <= 0) {
+    if (Number(price) <= 0) {
       setError('Price and quantity must be greater than 0.');
       setLoading(false);
       return;
@@ -90,10 +83,9 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
     formData.append('name', name);
     formData.append('description', description);
     formData.append('price', price.toString());
-    formData.append('quantity', quantity.toString());
     formData.append('category', category);
     formData.append('image', image);
-    formData.append('branch_id', selectedBranchName);  // Ensure this matches the backend expectations
+    formData.append('branch_id', "warehouse");  // Ensure this matches the backend expectations
 
     try {
       // Add new product
@@ -102,7 +94,6 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
       });
       resetForm();
       closeModal();
-      refreshProducts();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Unexpected error occurred.');
     } finally {
@@ -122,114 +113,91 @@ const AddProductModal: React.FC<AddProductModalProps> = ({ showModal, closeModal
   };
 
   return (
-    showModal ? (
-      <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
-        <div className="bg-white rounded-lg p-6 w-96 max-h-screen overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">Add Product</h2>
-          <form onSubmit={handleSubmit}>
-            {error && <p className="text-red-500">{error}</p>}
-            <div className="mb-4">
-              <label className="block mb-1">Branch</label>
-              <select
-                value={selectedBranchName || ''}
-                onChange={(e) => setSelectedBranchName(e.target.value)}
-                className="border rounded-md py-2 px-3 w-full md:w-auto focus:outline-none focus:ring-2 focus:ring-blue-400"
-                aria-label="Select Branch"
-              >
-                <option value="" disabled>
-                  Select Branch
-                </option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.name}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">Product Code</label>
-              <input
-                type="text"
-                value={productCode}
-                onChange={(e) => setProductCode(e.target.value)}
-                className="border rounded w-full p-2"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="border rounded w-full p-2"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">Description</label>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="border rounded w-full p-2"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="border rounded w-full p-2"
-              >
-                <option value="">Select a category</option>
-                {categoryOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">Price</label>
-              <input
-                type="number"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="border rounded w-full p-2"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">Quantity</label>
-              <input
-                type="number"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className="border rounded w-full p-2"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block mb-1">Image</label>
-              <input type="file" onChange={handleImageChange} className="border rounded w-full p-2" />
-              {imagePreview && <img src={imagePreview} alt="Image Preview" className="mt-2" />}
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="button"
-                className="bg-gray-300 text-gray-700 px-4 py-2 rounded mr-2"
-                onClick={closeModal}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded" disabled={loading}>
-                {loading ? 'Adding...' : 'Add Product'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    ) : null
+    <Modal open={showModal} onClose={closeModal}>
+      <Box sx={{ 
+        position: 'absolute', 
+        top: '50%', 
+        left: '50%', 
+        transform: 'translate(-50%, -50%)', 
+        width: 400, 
+        bgcolor: 'background.paper', 
+        border: '2px solid #000', 
+        boxShadow: 24, 
+        p: 4 
+      }}>
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Typography variant="h6">Add Product</Typography>
+          <IconButton onClick={closeModal}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <form onSubmit={handleSubmit}>
+          {error && <Typography color="error">{error}</Typography>}
+          
+          <TextField
+            label="Product Code"
+            value={productCode}
+            onChange={(e) => setProductCode(e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+          />
+          <TextField
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+          />
+          <TextField
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            fullWidth
+            margin="normal"
+            multiline
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              label="Category"
+            >
+              <MenuItem value="">Select a category</MenuItem>
+              {categoryOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Price"
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+          />
+          <FormControl fullWidth margin="normal">
+            
+            <input type="file" onChange={handleImageChange} />
+            {imagePreview && <img src={imagePreview} alt="Image Preview" style={{ marginTop: '10px', maxHeight: '100px' }} />}
+          </FormControl>
+          <Box display="flex" justifyContent="flex-end" marginTop={2}>
+            <Button onClick={closeModal} color="secondary" sx={{ marginRight: 1 }}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="contained" color="primary" disabled={loading}>
+              {loading ? <CircularProgress size={24} /> : 'Add Product'}
+            </Button>
+          </Box>
+        </form>
+      </Box>
+    </Modal>
   );
 };
 

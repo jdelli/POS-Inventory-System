@@ -90,6 +90,10 @@ Route::middleware(['checkrole:admin'])->group(function () {
         return Inertia::render('AdminRoutePage/AdminReport');
     })->name('admin-reports');
 
+    Route::get('/admin-products', function () {
+        return Inertia::render('AdminRoutePage/Products');
+    })->name('admin-products');
+
     Route::get('/admin-supplier', function () {
         return Inertia::render('AdminRoutePage/Supplier');
     })->name('admin-supplier');

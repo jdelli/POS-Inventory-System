@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import apiService from '../Services/ApiService';
@@ -6,13 +6,30 @@ import apiService from '../Services/ApiService';
 interface StockHistoryProps {
   showModal: boolean;
   closeModal: () => void;
-  history: any[];
   productName: string;
+  history: any[];
 }
 
-const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal, history, productName }) => {
-  const [startDate, setStartDate] = useState<Date | null>(null); // Allow null
-  const [endDate, setEndDate] = useState<Date | null>(null); // Allow null
+const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal, productName, history }) => {
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Pagination Logic
+  const fetchPagedHistory = async () => {
+    try {
+      const response = await apiService.get(`/stock-history?page=${page}`);
+      setTotalPages(response.data.last_page);
+    } catch (error) {
+      console.error('Error fetching paged stock history:', error);
+    }
+  };
+
+  // Whenever page or history changes, fetch paged data
+  useEffect(() => {
+    fetchPagedHistory();
+  }, [page]);
 
   if (!showModal) return null;
 
@@ -24,11 +41,9 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
     return true;
   });
 
-
-
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300 ease-in-out z-50">
-      <div className="relative bg-white p-8 rounded-lg shadow-xl w-full max-w-5xl max-h-screen overflow-y-auto transition-transform duration-300 ease-in-out transform scale-95 sm:scale-100">
+      <div className="relative bg-white p-8 rounded-lg shadow-xl w-full max-w-5xl h-2/3 overflow-y-auto transition-transform duration-300 ease-in-out transform scale-95 sm:scale-100">
         <button
           className="absolute top-4 right-4 text-gray-600 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 rounded-full p-1 transition-colors duration-300"
           onClick={closeModal}
@@ -46,7 +61,7 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
             <label className="block text-gray-700">Start Date</label>
             <DatePicker
               selected={startDate}
-              onChange={(date: Date | null) => setStartDate(date)} // Handle null
+              onChange={(date: Date | null) => setStartDate(date)}
               selectsStart
               startDate={startDate}
               endDate={endDate}
@@ -57,11 +72,11 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
             <label className="block text-gray-700">End Date</label>
             <DatePicker
               selected={endDate}
-              onChange={(date: Date | null) => setEndDate(date)} // Handle null
+              onChange={(date: Date | null) => setEndDate(date)}
               selectsEnd
               startDate={startDate}
               endDate={endDate}
-              minDate={startDate || undefined} // Ensure minDate is Date or undefined
+              minDate={startDate || undefined}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
             />
           </div>
@@ -85,14 +100,33 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
                 </div>
                 <div className="text-sm text-gray-600">Date: {entry.date}</div>
                 <div className="text-sm text-gray-600">Name: {entry.name}</div>
-
-                {/* `onClick` to Pass Correct `product_id` */}
               </li>
             ))}
           </ul>
         ) : (
           <p className="text-gray-600">No history available.</p>
         )}
+
+        {/* Pagination Controls */}
+        <div className="flex justify-between items-center mt-4">
+          <button
+            onClick={() => setPage(page - 1)}
+            disabled={page === 1}
+            className="text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+          >
+            Previous
+          </button>
+          <span className="text-gray-600">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(page + 1)}
+            disabled={page === totalPages}
+            className="text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );
