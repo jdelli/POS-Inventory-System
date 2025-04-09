@@ -109,37 +109,20 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
     fetchDeliveryReceipts();
   };
 
-  const handleDeleteItem = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-    try {
-      await apiService.delete(`/delete-delivery-receipt-item/${id}`);
-      fetchDeliveryReceipts();
-    } catch (error) {
-      console.error('Error deleting item:', error);
-    }
-  };
 
-  const handleDeleteAllItems = async () => {
-    if (!confirm('Are you sure you want to delete all items?')) return;
-    try {
-      const deletePromises = selectedItems.map(item => apiService.delete(`/delete-delivery-receipt-item/${item.id}`));
-      await Promise.all(deletePromises);
-      fetchDeliveryReceipts();
-      setModalOpen(false);
-    } catch (error) {
-      console.error('Error deleting all items:', error);
-    }
-  };
 
   const handleDeleteReceipt = async (id: number) => {
     if (!confirm('Are you sure you want to delete this delivery receipt?')) return;
+    
     try {
-      await apiService.delete(`/delete-delivery-receipt/${id}`);
+      // Pass the `branchId` to the API endpoint
+      await apiService.delete(`/delete-delivery-receipt/${id}`, { params: { branch_id: selectedBranchName } });
       fetchDeliveryReceipts();
     } catch (error) {
       console.error('Error deleting delivery receipt:', error);
     }
   };
+  
 
   return (
     <AdminLayout header={<Typography variant="h6">Stock Entries</Typography>}>
@@ -282,8 +265,6 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
           isOpen={isModalOpen}
           onClose={() => setModalOpen(false)}
           items={selectedItems}
-          onDelete={handleDeleteItem}
-          onDeleteAll={handleDeleteAllItems}
         />
 
         {/* Modal for Adding Stocks */}

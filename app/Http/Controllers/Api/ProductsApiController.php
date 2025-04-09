@@ -14,6 +14,7 @@ use App\Models\DeliveryReceipt;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItems;
 use Illuminate\Support\Facades\DB;
+use App\Models\DeliveryItems;
 
 
 
@@ -222,6 +223,117 @@ public function fetchProductsByBranch(Request $request)
             ], 500);
         }
     }
+
+
+
+
+    public function distributeStocks(Request $request)
+{
+    $request->validate([
+        'product_code' => 'required|string|exists:products,product_code',
+        'delivery_number' => 'required|string|max:255',
+        'delivered_by' => 'required|string|max:255',
+        'date' => 'required|date',
+        'distribution' => 'required|array|min:1',
+        'distribution.*.branch_id' => 'required|string',
+        'distribution.*.quantity' => 'required|integer|min:1',
+    ]);
+
+    $product = Products::where('product_code', $request->product_code)
+        ->where('branch_id', 'warehouse')
+        ->first();
+
+    if (!$product) {
+        return response()->json(['message' => 'Main product stock not found'], 404);
+    }
+
+    $totalDistributeQty = collect($request->distribution)->sum('quantity');
+
+    if ($product->quantity < $totalDistributeQty) {
+        return response()->json(['message' => 'Insufficient stock'], 400);
+    }
+
+    // Retrieve or create the Delivery Receipt
+    $deliveryReceipt = DeliveryReceipt::firstOrCreate(
+        [
+            'delivery_number' => $request->delivery_number,
+            'branch_id' => $request->distribution[0]['branch_id'], // Ensure it's the correct branch
+        ],
+        [
+            'delivered_by' => $request->delivered_by,
+            'date' => $request->date,
+        ]
+    );
+
+    foreach ($request->distribution as $dist) {
+        // Add or update item in DeliveryItems (ensure no duplicates for the same product_code and branch_id)
+        $deliveryItem = DeliveryItems::firstOrNew([
+            'delivery_receipt_id' => $deliveryReceipt->id,
+            'product_code' => $request->product_code,
+        ]);
+
+        $deliveryItem->product_name = $product->name;
+        $deliveryItem->quantity = $deliveryItem->exists 
+            ? $deliveryItem->quantity + $dist['quantity'] 
+            : $dist['quantity']; // Increment quantity if already exists
+        $deliveryItem->save();
+
+        // Deduct stock from warehouse
+        $product->quantity -= $dist['quantity'];
+        $product->save();
+
+        // Stock History for Warehouse (deduct)
+        StockHistory::create([
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'receipt_number' => $request->delivery_number,
+            'date' => $request->date,
+            'quantity_changed' => -$dist['quantity'],
+            'remaining_stock' => $product->quantity,
+            'branch_id' => 'warehouse',
+            'action' => 'deducted',
+        ]);
+
+        // Check if product already exists in destination branch
+        $existing = Products::where('product_code', $request->product_code)
+            ->where('branch_id', $dist['branch_id'])
+            ->first();
+
+        if ($existing) {
+            $existing->quantity += $dist['quantity'];
+            $existing->save();
+        } else {
+            $existing = Products::create([
+                'product_code' => $product->product_code,
+                'branch_id' => $dist['branch_id'],
+                'name' => $product->name,
+                'description' => $product->description,
+                'image' => $product->image,
+                'price' => $product->price,
+                'quantity' => $dist['quantity'],
+                'category' => $product->category,
+            ]);
+        }
+
+        // Stock History for Destination Branch (add)
+        StockHistory::create([
+            'product_id' => $existing->id,
+            'name' => $product->name,
+            'receipt_number' => $request->delivery_number,
+            'date' => $request->date,
+            'quantity_changed' => $dist['quantity'],
+            'remaining_stock' => $existing->quantity,
+            'branch_id' => $dist['branch_id'],
+            'action' => 'added',
+        ]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Products distributed successfully',
+        'delivery_receipt_id' => $deliveryReceipt->id,
+    ]);
+}
 
 
         

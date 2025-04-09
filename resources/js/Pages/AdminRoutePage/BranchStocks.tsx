@@ -75,7 +75,6 @@ const ProductTable: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(false);
@@ -212,13 +211,6 @@ const ProductTable: React.FC = () => {
               </MenuItem>
             ))}
           </Select>
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            variant="contained"
-            color="primary"
-          >
-            Add
-          </Button>
         </Box>
 
         {/* Product Table */}
@@ -314,12 +306,8 @@ const ProductTable: React.FC = () => {
           editProduct={editProduct}
           onUpdate={() => fetchProductsByBranch(selectedBranchName as string, currentPage)}
         />
-        <AddProductModal
-          showModal={isAddModalOpen}
-          closeModal={() => setIsAddModalOpen(false)}
-          refreshProducts={() => fetchProductsByBranch(selectedBranchName as string, currentPage)}
-          auth={auth.user}
-        />
+        
+        
         <StockHistoryModal
           showModal={isHistoryModalOpen}
           closeModal={() => setIsHistoryModalOpen(false)}

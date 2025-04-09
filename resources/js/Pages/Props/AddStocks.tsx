@@ -90,37 +90,39 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
   
       setIsSubmitting(true);
   
-      const itemsPayload = receiptItems.map(item => ({
-        id: item.id, // Ensure product ID is sent
-        product_code: item.product_code,
-        product_name: item.name,
-        quantity: item.quantity,
-      }));
+      for (const item of receiptItems) {
+        const payload = {
+          product_code: item.product_code,
+          delivery_number: deliveryNumber,
+          delivered_by: deliveredBy,
+          date: date,
+          distribution: [
+            {
+              branch_id: selectedBranchName,
+              quantity: item.quantity,
+            },
+          ],
+        };
   
-      // Call backend with combined request
-      const response = await apiService.post('/add-delivery-receipt', {
-        delivered_by: deliveredBy,
-        delivery_number: deliveryNumber,
-        date,
-        branch_id: selectedBranchName,
-        items: itemsPayload,
-      });
+        const response = await apiService.post('/distribute-stocks', payload);
   
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Error adding delivery receipt.');
+        if (response.status !== 200) {
+          throw new Error(response.data.message || 'Error distributing stock.');
+        }
       }
   
-      alert('Stocks added successfully!');
+      alert('Stocks distributed successfully!');
       closeAddStocksModal();
-      onSuccess(); // Refresh data after success
+      onSuccess();
   
-    } catch (error: unknown) {
-      console.error('Error submitting stocks:', error);
+    } catch (error) {
+      console.error('Error distributing stocks:', error);
       alert(error instanceof Error ? error.message : 'An unknown error occurred.');
     } finally {
       setIsSubmitting(false);
     }
   };
+  
   
 
 
@@ -133,7 +135,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
           .get('/search-products', {
             params: {
               q: term, // Search query
-              user_name: selectedBranchName, // Pass the username to the backend
+              user_name: "warehouse", // Pass the username to the backend
             },
           })
           .then((response) => {
@@ -183,7 +185,7 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
       <Head title="Inventory" />
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl h-full flex flex-col">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-2xl h-[80vh] overflow-y-auto flex flex-col">
             <h2 className="text-lg font-bold mb-4">Add Stocks</h2>
 
             {/* Branch Selector */}

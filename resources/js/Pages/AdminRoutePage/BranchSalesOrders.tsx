@@ -120,12 +120,15 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   const handleDeleteReceipt = async (id: number) => {
     if (!confirm('Are you sure you want to delete this sales order?')) return;
     try {
-      await apiService.delete(`/delete-sales-order/${id}`);
-      fetchSalesOrders(selectedBranchName || '', currentPage);
+        // Pass the branch_id as a query parameter
+        await apiService.delete(`/delete-sales-order/${id}`, {
+            params: { branch_id: selectedBranchName }, // Include the branch_id here
+        });
+        fetchSalesOrders(selectedBranchName || '', currentPage);
     } catch (error) {
-      console.error('Error deleting sales order:', error);
+        console.error('Error deleting sales order:', error);
     }
-  };
+};
 
   // Date formatting
   const formatDate = (dateString: string): string => {

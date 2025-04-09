@@ -10,7 +10,9 @@ import {
   Paper,
   CircularProgress,
   Typography,
-  Button
+  Button,
+  TableFooter,
+  TablePagination,
 } from '@mui/material';
 import SupplierStocksModal from '../Props/SupplierDetails';
 import AddSupplierModal from '../Props/AddSupplierStocks';
@@ -35,10 +37,6 @@ interface SupplierStock {
   price: number;
 }
 
-
-
-
-
 const SupplierData: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -46,22 +44,42 @@ const SupplierData: React.FC = () => {
   const [modalOpen, setModalOpen] = useState<boolean>(false);
   const [addModalOpen, setAddModalOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    const fetchSuppliers = async () => {
-      try {
-        const response = await apiService.get('/get-supplier');
-        // Log the response data for debugging
-        console.log('Fetched Suppliers:', response.data.data);
-        setSuppliers(response.data.data);
-       
-      } catch (err) {
-        setError('Failed to fetch suppliers');
-       
-      }
-    };
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [totalItems, setTotalItems] = useState<number>(0);
 
-    fetchSuppliers();
-  }, []);
+  const fetchSuppliers = async (page: number = 1) => {
+   
+    try {
+      const response = await apiService.get('/get-supplier', {
+        params: { page },
+      });
+      console.log('Fetched Suppliers:', response.data.data);
+      setSuppliers(response.data.data);
+      setCurrentPage(response.data.meta.current_page);
+      setTotalPages(response.data.meta.last_page);
+      setTotalItems(response.data.meta.total);
+    } catch (err) {
+      setError('Failed to fetch suppliers');
+    } finally {
+    }
+  };
+
+  useEffect(() => {
+    fetchSuppliers(currentPage);
+  }, [currentPage]);
+
+  const handlePageChange = (_: unknown, newPage: number) => {
+    setCurrentPage(newPage + 1); // Material-UI pages are 0-indexed; backend pages are 1-indexed.
+  };
+
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setCurrentPage(1); // Reset to the first page
+    fetchSuppliers(1);
+  };
 
   const handleOpenStocksModal = (stocks: SupplierStock[] = []) => {
     setSelectedStocks(stocks);
@@ -83,6 +101,7 @@ const SupplierData: React.FC = () => {
 
   const handleSuccess = () => {
     setAddModalOpen(false);
+    fetchSuppliers(currentPage); // Refresh data after adding a supplier
   };
 
 
@@ -128,6 +147,18 @@ const SupplierData: React.FC = () => {
                 </TableRow>
               ))}
             </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TablePagination
+                  rowsPerPageOptions={[10, 25, 50]}
+                  count={totalItems}
+                  rowsPerPage={rowsPerPage}
+                  page={currentPage - 1} // Material-UI uses 0-based indexing
+                  onPageChange={handlePageChange}
+                  onRowsPerPageChange={handleRowsPerPageChange}
+                />
+              </TableRow>
+            </TableFooter>
           </Table>
           <SupplierStocksModal open={modalOpen} onClose={handleCloseStocksModal} stocks={selectedStocks} />
           <AddSupplierModal showModal={addModalOpen} closeModal={handleCloseAddModal} onSuccess={handleSuccess} onSubmit={() => {}} />

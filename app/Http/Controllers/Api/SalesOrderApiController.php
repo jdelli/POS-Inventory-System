@@ -245,19 +245,24 @@ public function getDailySales(Request $request)
 }
 
 
-public function deleteSalesOrder($orderId)
+public function deleteSalesOrder($orderId, Request $request)  // Inject Request here
 {
     DB::beginTransaction();
 
     try {
+        $branchId = $request->query('branch_id'); // Or $request->input('branch_id') if you're sending it in the body
+        
         // Fetch the sales order with its items
         $salesOrder = SalesOrder::with('items')->findOrFail($orderId);
 
         foreach ($salesOrder->items as $item) {
-            $product = Products::where('product_code', $item->product_code)->first();
+            // Ensure you have the product based on product_code and branch_id
+            $product = Products::where('product_code', $item->product_code)
+                ->where('branch_id', $branchId) // Ensure it's the correct branch
+                ->first();
 
             if (!$product) {
-                throw new \Exception("Product not found: " . $item->product_code);
+                throw new \Exception("Product not found in branch: " . $item->product_code);
             }
 
             // Get the exact quantity deducted for this sales order

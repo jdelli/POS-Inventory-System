@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete("/delete-products/{id}", [ProductsApiController::class, "deleteProduct"]);
     Route::get('/search-products', [ProductsApiController::class, 'search']);
     Route::get('/get-total-products', [ProductsApiController::class, 'getTotalProducts']);
+    Route::post('/distribute-stocks', [ProductsApiController::class, 'distributeStocks']);
 
     // For Sales Order
     Route::post('/add-sales-order', [SalesOrderApiController::class, 'addSalesOrderWithStockDeduction']);
@@ -42,7 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/get-total-daily-sales', [SalesOrderApiController::class, 'getDailySales']);
 
     // Delivery Receipt
-    Route::post('/add-delivery-receipt', [DeliveryReceiptsApiController::class, 'addDeliveryReceiptWithStockUpdate']);
+    // Route::post('/add-delivery-receipt', [DeliveryReceiptsApiController::class, 'addDeliveryReceiptWithStockUpdate']);
     Route::get('/fetch-delivery-receipts', [DeliveryReceiptsApiController::class, 'getDeliveryReceipts']);
 
     // Customer Order

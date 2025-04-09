@@ -84,29 +84,35 @@ public function getAllBranches()
 
 
 
-    public function AdminfetchProductsByBranch(Request $request)
-    {
-        $branchName = $request->query('branch_name');
-        $page = $request->query('page', 1);
-        $limit = $request->query('limit', 20);
-    
+public function AdminfetchProductsByBranch(Request $request)
+{
+    $branchName = $request->query('branch_name');
+    $page = $request->query('page', 1);
+    $limit = $request->query('limit', 20);
 
-        $query = Products::query(); // Start a new query
-    
-        if ($branchName) {
-            $query->where('branch_id', $branchName);
-        } 
-    
-        $products = $query->paginate($limit, ['*'], 'page', $page);
-    
-        return response()->json([
-            'data' => $products->items(),
-            'current_page' => $products->currentPage(),
-            'per_page' => $products->perPage(),
-            'total' => $products->total(),
-            'last_page' => $products->lastPage(),
-        ]);
+    $query = Products::query(); // Start a new query
+
+    if ($branchName) {
+        $query->where('branch_id', $branchName);
     }
+
+    $products = $query->paginate($limit, ['*'], 'page', $page);
+
+    // Get the image URL for each product
+    $products->getCollection()->transform(function ($product) {
+        $product->image_url = asset('storage/products/' . basename($product->image)); // Correct URL
+        return $product;
+    });
+
+    return response()->json([
+        'data' => $products->items(),
+        'current_page' => $products->currentPage(),
+        'per_page' => $products->perPage(),
+        'total' => $products->total(),
+        'last_page' => $products->lastPage(),
+    ]);
+}
+
 
 
 
@@ -276,17 +282,22 @@ public function addSupplierStocks(Request $request)
 
 public function getAllSuppliers()
 {
-    $suppliers = Supplier::with('supplierStocks')->get();
+    $suppliers = Supplier::with('supplierStocks')->paginate(10); // You can adjust the number of items per page.
 
     // Log the fetched suppliers for debugging
     Log::info('Fetched Suppliers: ', $suppliers->toArray());
 
     return response()->json([
         'success' => true,
-        'data' => $suppliers
+        'data' => $suppliers->items(), // Current page items
+        'meta' => [
+            'current_page' => $suppliers->currentPage(),
+            'last_page' => $suppliers->lastPage(),
+            'per_page' => $suppliers->perPage(),
+            'total' => $suppliers->total(),
+        ],
     ]);
 }
-
 
 
 }
