@@ -14,6 +14,7 @@ use App\Models\DeliveryReceipt;
 use App\Models\Supplier;
 use App\Models\SupplierStocks;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
@@ -276,6 +277,79 @@ public function addSupplierStocks(Request $request)
         'message' => 'Supplier and items added successfully!',
         'data' => $supplier->load('supplierStocks'),
     ], 201);
+}
+
+
+
+
+public function deleteSupplierStocks($id)
+{
+    // Start a database transaction to ensure atomicity
+    DB::beginTransaction();
+
+    try {
+        // Retrieve the supplier by ID
+        $supplier = Supplier::find($id);
+
+        if (!$supplier) {
+            return response()->json(['message' => 'Supplier not found'], 404);
+        }
+
+        // Retrieve all supplier stock items associated with this supplier
+        $supplierStocks = SupplierStocks::where('supplier_id', $supplier->id)->get();
+
+        if ($supplierStocks->isEmpty()) {
+            return response()->json(['message' => 'No items found for this supplier'], 404);
+        }
+
+        foreach ($supplierStocks as $stockItem) {
+            // Find the product in the warehouse
+            $product = Products::where('product_code', $stockItem->product_code)
+                ->where('branch_id', 'warehouse')
+                ->first();
+
+            if (!$product) {
+                return response()->json(['message' => 'Product with code ' . $stockItem->product_code . ' not found in warehouse.'], 404);
+            }
+
+            // Revert the quantity in the warehouse
+            $product->quantity -= $stockItem->quantity;
+
+            if ($product->quantity < 0) {
+                return response()->json(['message' => 'Negative stock detected for product: ' . $stockItem->product_code], 400);
+            }
+
+            $product->save();
+
+            // Delete stock history entries for this item (action = 'added')
+            StockHistory::where('receipt_number', $supplier->delivery_number)
+                ->where('action', 'added') // Target warehouse actions
+                ->delete();
+        }
+
+        // Delete the supplier stock items
+        SupplierStocks::where('supplier_id', $supplier->id)->delete();
+
+        // Delete the supplier
+        $supplier->delete();
+
+        // Commit the transaction
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Supplier and items deleted successfully!',
+        ]);
+    } catch (\Exception $e) {
+        // Rollback the transaction in case of an error
+        DB::rollBack();
+
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while deleting the supplier',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
 }
 
 

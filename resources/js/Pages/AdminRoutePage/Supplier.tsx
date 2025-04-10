@@ -13,7 +13,9 @@ import {
   Button,
   TableFooter,
   TablePagination,
+  IconButton,
 } from '@mui/material';
+import { Delete, Visibility } from '@mui/icons-material'; // Import icons
 import SupplierStocksModal from '../Props/SupplierDetails';
 import AddSupplierModal from '../Props/AddSupplierStocks';
 import AdminLayout from '@/Layouts/AdminLayout';
@@ -51,7 +53,6 @@ const SupplierData: React.FC = () => {
   const [totalItems, setTotalItems] = useState<number>(0);
 
   const fetchSuppliers = async (page: number = 1) => {
-   
     try {
       const response = await apiService.get('/get-supplier', {
         params: { page },
@@ -63,7 +64,6 @@ const SupplierData: React.FC = () => {
       setTotalItems(response.data.meta.total);
     } catch (err) {
       setError('Failed to fetch suppliers');
-    } finally {
     }
   };
 
@@ -104,7 +104,17 @@ const SupplierData: React.FC = () => {
     fetchSuppliers(currentPage); // Refresh data after adding a supplier
   };
 
+  // Function to handle supplier deletion
+  const handleDeleteSupplier = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this supplier?')) return;
 
+    try {
+      await apiService.delete(`/delete-supplier-stocks/${id}`);
+      fetchSuppliers(currentPage); // Refresh the supplier list after deletion
+    } catch (error) {
+      console.error('Error deleting supplier:', error);
+    }
+  };
 
   if (error) {
     return <Typography color="error">{error}</Typography>;
@@ -114,9 +124,11 @@ const SupplierData: React.FC = () => {
     <AdminLayout header={<Typography variant="h6">Stock Entries</Typography>}>
       <Head title="Stock Entries (Admin)" />
       <div>
-        <Button variant="outlined" onClick={handleOpenAddModal}>
+        <div className='flex justify-end mb-4'>
+          <Button variant="contained" color="primary" onClick={handleOpenAddModal}>
           Add Supplier
-        </Button>
+        </Button></div>
+        
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
@@ -125,7 +137,7 @@ const SupplierData: React.FC = () => {
                 <TableCell>Delivery Number</TableCell>
                 <TableCell>Product Category</TableCell>
                 <TableCell>Date</TableCell>
-                <TableCell>Supplier Stocks</TableCell>
+                <TableCell>Actions</TableCell> {/* Actions column */}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -136,13 +148,28 @@ const SupplierData: React.FC = () => {
                   <TableCell>{supplier.product_category}</TableCell>
                   <TableCell>{supplier.date}</TableCell>
                   <TableCell>
+                    {/* View Stocks Button */}
                     {supplier.supplier_stocks && supplier.supplier_stocks.length > 0 ? (
-                      <Button variant="outlined" onClick={() => handleOpenStocksModal(supplier.supplier_stocks)}>
-                        View Stocks
-                      </Button>
+                      <IconButton
+                        color="primary"
+                        size="small"
+                        onClick={() => handleOpenStocksModal(supplier.supplier_stocks)}
+                        title="View Stocks"
+                      >
+                        <Visibility /> {/* Eye icon */}
+                      </IconButton>
                     ) : (
-                      <Typography>No supplier stocks available</Typography>
+                      <Typography>No stocks</Typography>
                     )}
+                    {/* Delete Button */}
+                    <IconButton
+                      color="secondary"
+                      size="small"
+                      onClick={() => handleDeleteSupplier(supplier.id)}
+                      title="Delete Supplier"
+                    >
+                      <Delete /> {/* Delete icon */}
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}

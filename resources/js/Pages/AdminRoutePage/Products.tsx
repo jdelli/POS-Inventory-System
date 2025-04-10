@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
 import apiService from "../Services/ApiService";
-import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper, Pagination, CircularProgress, Typography, Button } from "@mui/material";
+import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer, Paper, Pagination, CircularProgress, Typography, Button, IconButton } from "@mui/material";
 import AddProductModal from "../Props/Add";
 import StockHistoryModal from "../Props/StockHistoryModal"; // Import the StockHistoryModal
+import EditProductModal from "../Props/Edit"; // Import the EditProductModal
+import { Edit, Delete, History } from "@mui/icons-material";
 
 interface WarehouseProduct {
   id: number;
@@ -67,6 +69,8 @@ const Products = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);  // State for history modal
   const [stockHistory, setStockHistory] = useState<any[]>([]); // State for stock history
   const [selectedProductName, setSelectedProductName] = useState<string>(''); // Store the product name for history
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for edit modal
+  const [editProduct, setEditProduct] = useState<WarehouseProduct | null>(null); // Store the product to edit
 
   useEffect(() => {
     fetchWarehouseProducts(warehousePage);
@@ -96,6 +100,23 @@ const Products = () => {
     }
   };
 
+  const handleEdit = (product: WarehouseProduct) => {
+    setEditProduct(product); // Set the product to edit
+    setIsEditModalOpen(true); // Open the edit modal
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+
+    try {
+      await apiService.delete(`/delete-products/${id}`);
+      // Refresh the product list after deletion
+      fetchWarehouseProducts(warehousePage);
+    } catch (error) {
+      console.error('Error deleting product:', error);
+    }
+  };
+
   const filteredProducts = warehouseProducts.filter(
     (product) =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
@@ -105,12 +126,16 @@ const Products = () => {
   const handleOpenAddProductModal = () => setShowAddProductModal(true);  // Open modal
   const handleCloseAddProductModal = () => setShowAddProductModal(false);  // Close modal
   const handleCloseHistoryModal = () => setShowHistoryModal(false);  // Close stock history modal
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditProduct(null); // Reset the edit product state
+  };
 
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight"> Warehouse Stocks</h2>}>
       <Head title=" Warehouse Stocks" />
 
-      <div className="p-4">
+      <div >
         <div className="flex justify-between items-center mb-4">
           <SearchFilter
             searchTerm={searchTerm}
@@ -155,13 +180,27 @@ const Products = () => {
                       <TableCell>₱{product.price}</TableCell>
                       <TableCell>{product.quantity}</TableCell>
                       <TableCell>
-                        <Button
-                          variant="outlined"
+                        <IconButton
                           color="primary"
-                          onClick={() => handleViewHistory(product.id, product.name)}
+                          onClick={() => handleEdit(product)} // Handle edit
+                          aria-label="Edit Product"
                         >
-                          View History
-                        </Button>
+                          <Edit />
+                        </IconButton>
+                        <IconButton
+                          color="secondary"
+                          onClick={() => handleDelete(product.id)} // Handle delete
+                          aria-label="Delete Product"
+                        >
+                          <Delete />
+                        </IconButton>
+                        <IconButton
+                          color="default"
+                          onClick={() => handleViewHistory(product.id, product.name)} // Handle view history
+                          aria-label="View Stock History"
+                        >
+                          <History />
+                        </IconButton>
                       </TableCell>
                     </TableRow>
                   ))
@@ -196,6 +235,14 @@ const Products = () => {
         closeModal={handleCloseHistoryModal}
         history={stockHistory}
         productName={selectedProductName}
+      />
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        showModal={isEditModalOpen}
+        closeModal={handleCloseEditModal}
+        editProduct={editProduct}
+        onUpdate={() => fetchWarehouseProducts(warehousePage)} // Refresh data after update
       />
     </AdminLayout>
   );

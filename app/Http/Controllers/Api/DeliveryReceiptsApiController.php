@@ -109,73 +109,100 @@ class DeliveryReceiptsApiController extends Controller
         ]);
     }
 
-    public function deleteDeliveryReceipt($id)
+    public function deleteDeliveryReceipt($id, Request $request)
 {
+    // Start a database transaction to ensure atomicity
     DB::beginTransaction();
 
     try {
-        // Fetch the delivery receipt with its items
-        $deliveryReceipt = DeliveryReceipt::with('items')->findOrFail($id);
+        // Retrieve the delivery receipt by ID
+        $deliveryReceipt = DeliveryReceipt::find($id);
 
-        foreach ($deliveryReceipt->items as $item) {
-            $product = Products::where('product_code', $item->product_code)->first();
-
-            if (!$product) {
-                throw new \Exception("Product not found: " . $item->product_code);
-            }
-
-            // Get the exact quantity added from this delivery receipt
-            $quantityToRevert = $item->quantity;
-
-            // Retrieve stock history where stock was added, ordered by newest first
-            $stockHistories = StockHistory::where('product_id', $product->id)
-                ->where('action', 'added')
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            foreach ($stockHistories as $history) {
-                if ($quantityToRevert <= 0) break; // Stop when enough has been reverted
-
-                if ($history->quantity_changed <= $quantityToRevert) {
-                    // If history entry is smaller than or equal to the quantity to revert
-                    $product->quantity -= $history->quantity_changed;
-                    $quantityToRevert -= $history->quantity_changed;
-                    $history->delete(); // Delete only this specific stock history entry
-                } else {
-                    // If history entry is larger than the quantity to revert
-                    $product->quantity -= $quantityToRevert;
-                    $history->quantity_changed -= $quantityToRevert; // Adjust remaining history
-                    $history->save();
-                    $quantityToRevert = 0; // All quantity has been reverted
-                }
-            }
-
-            // Save the updated product quantity
-            $product->save();
+        if (!$deliveryReceipt) {
+            return response()->json(['message' => 'Delivery receipt not found'], 404);
         }
 
-        // Delete the delivery receipt items
-        DeliveryItems::where('delivery_receipt_id', $id)->delete();
+        // Validate the branch_id parameter
+        $branchId = $request->query('branch_id');
+        if (!$branchId) {
+            return response()->json(['message' => 'Branch ID is required'], 400);
+        }
+
+        // Retrieve all delivery items associated with this receipt
+        $deliveryItems = DeliveryItems::where('delivery_receipt_id', $deliveryReceipt->id)->get();
+
+        if ($deliveryItems->isEmpty()) {
+            return response()->json(['message' => 'No items found in the delivery receipt'], 404);
+        }
+
+        foreach ($deliveryItems as $item) {
+            // Find the product in the warehouse
+            $warehouseProduct = Products::where('product_code', $item->product_code)
+                ->where('branch_id', 'warehouse')
+                ->first();
+
+            if (!$warehouseProduct) {
+                return response()->json(['message' => 'Warehouse product not found for code: ' . $item->product_code], 404);
+            }
+
+            // Revert the quantity to the warehouse
+            $warehouseProduct->quantity += $item->quantity;
+            $warehouseProduct->save();
+
+            // Delete stock history entries for the warehouse product (action = 'deducted')
+            StockHistory::where('receipt_number', $deliveryReceipt->delivery_number)
+                ->where('action', 'deducted') // Target warehouse actions
+                ->delete();
+
+            // Find the product in the destination branch (using the provided branch_id)
+            $destinationProduct = Products::where('product_code', $item->product_code)
+                ->where('branch_id', $branchId) // Use the provided branch_id
+                ->first();
+
+            if ($destinationProduct) {
+                // Deduct the quantity from the destination branch
+                $destinationProduct->quantity -= $item->quantity;
+
+                if ($destinationProduct->quantity < 0) {
+                    return response()->json(['message' => 'Negative stock detected in branch: ' . $branchId], 400);
+                }
+
+                $destinationProduct->save();
+            } else {
+                // Log a warning if the product doesn't exist in the destination branch
+                \Log::warning("Destination product not found for code: {$item->product_code} in branch: {$branchId}");
+            }
+
+            // Delete stock history entries for the destination branch product (action = 'added')
+            StockHistory::where('receipt_number', $deliveryReceipt->delivery_number)
+                ->where('action', 'added') // Target destination branch actions
+                ->delete();
+        }
+
+        // Delete the delivery items
+        DeliveryItems::where('delivery_receipt_id', $deliveryReceipt->id)->delete();
 
         // Delete the delivery receipt
         $deliveryReceipt->delete();
 
+        // Commit the transaction
         DB::commit();
 
         return response()->json([
             'success' => true,
-            'message' => 'Delivery receipt deleted successfully'
+            'message' => 'Delivery receipt deleted and stock reverted successfully',
         ]);
     } catch (\Exception $e) {
+        // Rollback the transaction in case of an error
         DB::rollBack();
+
         return response()->json([
             'success' => false,
-            'message' => 'Failed to delete delivery receipt',
-            'error' => $e->getMessage()
+            'message' => 'An error occurred while deleting the receipt',
+            'error' => $e->getMessage(),
         ], 500);
     }
 }
-
 
 
 }

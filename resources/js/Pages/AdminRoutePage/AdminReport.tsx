@@ -700,20 +700,22 @@ const DailySalesReport: React.FC = () => {
               </div>
             )}
             {/* STATUS ACTION BUTTONS */}
-            <div className="flex justify-between mt-4">
+              <div className="flex justify-between mt-4">
+                {/* Checkmark Button */}
                 <button
                   onClick={() => handleUpdateStatus(selectedRemittance.id, 'Received')}
-                  className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                  className="px-4 py-2 bg-white text-green-500 rounded hover:bg-green-600"
                 >
-                 Received
+                  ✅
                 </button>
+                {/* Cross Button */}
                 <button
                   onClick={() => handleUpdateStatus(selectedRemittance.id, 'Rejected')}
-                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  className="px-4 py-2 bg-white text-red-500 rounded hover:bg-red-600"
                 >
-                  Reject
+                  ❌ 
                 </button>
-          </div>
+              </div>
 
 
               {/* CLOSE BUTTON */}

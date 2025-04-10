@@ -108,34 +108,30 @@ if (selectedMonth !== null) {
       
 
        {/* Date Range Filters */}
-      <div className="mb-4 flex space-x-4">
-        <div>
-          <label className="text-gray-700">Filtered by Month</label>
-          <select
-            value={selectedMonth ?? ''}
-            onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-            className="mt-2 p-2 border rounded"
+       <div className="mb-4 flex justify-between items-center"> {/* Flexbox with space-between */}
+          <div>
+            <label className="text-gray-700">Filtered by Month</label>
+            <select
+              value={selectedMonth ?? ''}
+              onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
+              className="mt-2 p-2 border rounded"
+            >
+              <option value="">All</option> {/* Empty value for 'All' */}
+              {[...Array(12).keys()].map((month) => (
+                <option key={month} value={month + 1}>
+                  {new Date(0, month).toLocaleString('default', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() => setIsRequestStockModalOpen(true)}
           >
-            <option value="">All</option> {/* Empty value for 'All' */}
-            {[...Array(12).keys()].map((month) => (
-              <option key={month} value={month + 1}>
-                {new Date(0, month).toLocaleString('default', { month: 'long' })}
-              </option>
-            ))}
-          </select>
+            Request Stock
+          </Button>
         </div>
-      </div>
-
- {/* Request Stock Button */}
- <div className="mb-4 flex justify-end">
-      <Button
-        variant="contained"
-        color="success"
-        onClick={() => setIsRequestStockModalOpen(true)}
-      >
-        Request Stock
-      </Button>
-    </div>
 
     {/* Stock Entries Table */}
     <TableContainer className="bg-white shadow-md rounded-lg">
