@@ -51,12 +51,6 @@ Route::middleware(['checkrole:user'])->group(function () {
 
 
 
-    
-    Route::get('/user-test', function () {
-        return Inertia::render('DailySalesReports');
-    })->name('user-test');
-
-
 
 });
 
@@ -97,6 +91,10 @@ Route::middleware(['checkrole:admin'])->group(function () {
     Route::get('/admin-supplier', function () {
         return Inertia::render('AdminRoutePage/Supplier');
     })->name('admin-supplier');
+
+    Route::get('/admin-sales-stats', function () {
+        return Inertia::render('AdminRoutePage/SalesStatistics');
+    })->name('admin-sales-stats');
 });
 
 

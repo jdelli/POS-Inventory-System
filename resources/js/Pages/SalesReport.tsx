@@ -93,9 +93,7 @@ const DailySalesReport: React.FC = () => {
   const [startDate, setStartDate] = useState(""); // User input for start date
   const [endDate, setEndDate] = useState(""); // User input for end date
   const [totalCash, setTotalCash] = useState(0);
-  const [totalExpenses, setTotalExpenses] = useState(0);
   const [remittances, setRemittances] = useState([]);
-  const [selectedBreakdown, setSelectedBreakdown] = useState(null);
   const [isRemittanceModalOpen, setIsRemittanceModalOpen] = useState(false);
   const [selectedRemittance, setSelectedRemittance] = useState<Remittance | null>(null);
   const [onlinePayments, setOnlinePayments] = useState(0);
@@ -227,7 +225,7 @@ const DailySalesReport: React.FC = () => {
         cash_breakdown: cashBreakdown,
         total_cash: totalSales,
         expenses: expenses,
-        total_expenses: totalExpenses,
+        total_expenses: totalExpensesAmount,
         remaining_cash: remainingCash,
         online_payments: onlinePayments
       });

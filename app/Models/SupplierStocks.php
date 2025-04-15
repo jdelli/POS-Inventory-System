@@ -15,6 +15,7 @@ class SupplierStocks extends Model
         'product_name',
         'quantity',
         'price',
+        'total',
     ];
     
 

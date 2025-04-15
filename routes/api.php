@@ -83,6 +83,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/add-supplier', [AdminController::class, 'addSupplierStocks']);
     Route::get('/get-supplier', [AdminController::class, 'getAllSuppliers']);
     Route::delete('/delete-supplier-stocks/{id}', [AdminController::class, 'deleteSupplierStocks']);
+    Route::get('/sales-statistics', [AdminController::class, 'salesStatistics']);
+    Route::get('/branch-monthly-sales-statistics', [AdminController::class, 'perBranchSalesStatistics']);
 });
 
 

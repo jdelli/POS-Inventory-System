@@ -13,6 +13,7 @@ use App\Models\StockHistory;
 use App\Models\DeliveryReceipt;
 use App\Models\Supplier;
 use App\Models\SupplierStocks;
+use App\Models\Remittance;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -237,7 +238,6 @@ public function addSupplierStocks(Request $request)
 
     // Loop through each item
     foreach ($request->items as $item) {
-
         // Find product in warehouse
         $product = Products::where('product_code', $item['product_code'])
             ->where('branch_id', 'warehouse')
@@ -251,19 +251,23 @@ public function addSupplierStocks(Request $request)
         $product->quantity += $item['quantity'];
         $product->save();
 
-        // Create supplier stock
+        // Calculate total (quantity * price)
+        $total = $item['quantity'] * $item['price'];
+
+        // Create supplier stock with total field
         SupplierStocks::create([
             'supplier_id' => $supplier->id,
             'product_code' => $item['product_code'],
             'product_name' => $item['product_name'],
             'quantity' => $item['quantity'],
             'price' => $item['price'],
+            'total' => $total, // Add the total field
         ]);
 
         // Create stock history
         StockHistory::create([
             'product_id' => $product->id,
-            'name' =>  $request->supplier_name,
+            'name' => $request->supplier_name,
             'receipt_number' => $request->delivery_number,
             'date' => $request->date,
             'quantity_changed' => $item['quantity'],
@@ -370,6 +374,115 @@ public function getAllSuppliers()
             'per_page' => $suppliers->perPage(),
             'total' => $suppliers->total(),
         ],
+    ]);
+}
+
+
+
+
+public function salesStatistics(Request $request)
+{
+    // Get the selected year from the query parameter, default to the current year
+    $selectedYear = $request->query('year', date('Y'));
+
+    // Fetch sales data grouped by branch and month for the selected year
+    $salesData = SalesOrder::select(
+            'branch_id',
+            DB::raw('YEAR(date) as year'),
+            DB::raw('MONTH(date) as month'),
+            DB::raw('SUM(sales_order_items.total) as total_sales')
+        )
+        ->join('sales_order_items', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+        ->whereYear('date', $selectedYear) // Filter by the selected year
+        ->groupBy('branch_id', DB::raw('YEAR(date)'), DB::raw('MONTH(date)'))
+        ->orderBy('year')
+        ->orderBy('month')
+        ->get();
+
+    // Fetch remittance data (expenses) grouped by branch and month
+    $remittanceData = Remittance::select(
+            'branch_id',
+            DB::raw('YEAR(date_start) as year'),
+            DB::raw('MONTH(date_start) as month'),
+            DB::raw('SUM(total_expenses) as total_expenses')
+        )
+        ->whereYear('date_start', $selectedYear)
+        ->groupBy('branch_id', DB::raw('YEAR(date_start)'), DB::raw('MONTH(date_start)'))
+        ->get();
+
+    // Calculate total investment (sum of the 'total' column in supplier_stocks for the selected year)
+    $rawTotalInvestment = SupplierStocks::whereYear('created_at', $selectedYear)->sum('total');
+    $formattedTotalInvestment = number_format($rawTotalInvestment, 0); // Format total investment
+
+    // Transform the data into the desired format
+    $branchSalesData = [];
+    foreach ($salesData as $record) {
+        $branch = $record->branch_id;
+        $year = $record->year;
+        $month = $record->month - 1; // Adjust month index to match JavaScript's 0-based months
+        $totalSales = $record->total_sales;
+
+        if (!isset($branchSalesData[$branch])) {
+            $branchSalesData[$branch] = [
+                'branch' => $branch,
+                'monthlySales' => array_fill(0, 12, 0),
+                'yearlySales' => 0,
+                'monthlyExpenses' => array_fill(0, 12, 0), // Initialize monthly expenses
+                'yearlyExpenses' => 0, // Initialize yearly expenses
+            ];
+        }
+
+        $branchSalesData[$branch]['monthlySales'][$month] += $totalSales;
+        $branchSalesData[$branch]['yearlySales'] += $totalSales;
+    }
+
+    // Add expenses to the branch data
+    foreach ($remittanceData as $record) {
+        $branch = $record->branch_id;
+        $month = $record->month - 1; // Adjust month index
+        $totalExpenses = $record->total_expenses;
+
+        if (isset($branchSalesData[$branch])) {
+            $branchSalesData[$branch]['monthlyExpenses'][$month] += $totalExpenses;
+            $branchSalesData[$branch]['yearlyExpenses'] += $totalExpenses;
+        }
+    }
+
+    // Convert associative array to indexed array
+    $result = array_values($branchSalesData);
+
+    // Include total investment in the response
+    return response()->json([
+        'branchSalesData' => $result,
+        'totalInvestment' => $formattedTotalInvestment, // Add formatted total investment here
+    ]);
+}
+
+public function perBranchSalesStatistics(Request $request)
+{
+    $branchId = $request->query('branch');
+    $year = $request->query('year');
+
+    // Monthly sales data (unchanged)
+    $monthlySales = SalesOrder::select(
+            DB::raw('MONTH(date) as month'),
+            DB::raw('SUM(sales_order_items.total) as sales')
+        )
+        ->join('sales_order_items', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+        ->where('branch_id', $branchId)
+        ->whereYear('date', $year) // Filter by 'date' column for sales
+        ->groupBy(DB::raw('MONTH(date)'))
+        ->orderBy('month')
+        ->get();
+
+    // Total remittance expenses (updated to use 'created_at')
+    $remittanceExpenses = Remittance::where('branch_id', $branchId)
+        ->whereYear('created_at', $year) // Use 'created_at' instead of 'date'
+        ->sum('total_expenses'); // Assuming 'total_expenses' is the column for remittance expenses
+
+    return response()->json([
+        'monthly_sales' => $monthlySales,
+        'total_remittance_expenses' => $remittanceExpenses,
     ]);
 }
 

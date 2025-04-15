@@ -18,6 +18,7 @@ import {
     IconButton,
     Box,
 } from '@mui/material';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, BackupTable } from '@mui/icons-material';
 
 export default function AdminLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
@@ -138,6 +139,14 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                                     <Store />
                                 </ListItemIcon>
                                 <ListItemText primary="Warehouse Stocks" />
+                            </ListItem>
+                        </NavLink>
+                        <NavLink href={route('admin-sales-stats')} active={route().current('admin-sales-stats')} className="hover:bg-gray-700">
+                            <ListItem>
+                                <ListItemIcon>
+                                    <ReceiptLongIcon />
+                                </ListItemIcon>
+                                <ListItemText primary="Sales Statistics" />
                             </ListItem>
                         </NavLink>
                     </List>

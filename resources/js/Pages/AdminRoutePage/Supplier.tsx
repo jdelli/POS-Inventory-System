@@ -37,6 +37,7 @@ interface SupplierStock {
   product_name: string;
   quantity: number;
   price: number;
+  total: number;
 }
 
 const SupplierData: React.FC = () => {

@@ -22,6 +22,7 @@ interface SupplierStock {
   product_name: string;
   quantity: number;
   price: number;
+  total: number;
 }
 
 interface SupplierStocksModalProps {
@@ -46,6 +47,7 @@ const SupplierStocksModal: React.FC<SupplierStocksModalProps> = ({ open, onClose
                 <TableCell>Product Name</TableCell>
                 <TableCell>Quantity</TableCell>
                 <TableCell>Price</TableCell>
+                <TableCell>Total</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -62,6 +64,7 @@ const SupplierStocksModal: React.FC<SupplierStocksModalProps> = ({ open, onClose
                     <TableCell>{stock.product_name}</TableCell>
                     <TableCell>{stock.quantity}</TableCell>
                     <TableCell>{stock.price}</TableCell>
+                    <TableCell>{stock.total}</TableCell>
                   </TableRow>
                 ))
               )}

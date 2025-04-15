@@ -17,6 +17,7 @@ interface Item {
   quantity: number;
   id?: number;
   user_name?: string;
+  total?: number; // Add total field
 }
 
 interface AddSupplierModalProps {
@@ -42,11 +43,17 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const handleItemChange = (index: number, field: string, value: string | number) => {
-    const updatedItems = supplierItems.map((item, i) =>
-      i === index ? { ...item, [field]: field === 'price' || field === 'quantity' ? Number(value) : value } : item
-    );
-    setSupplierItems(updatedItems);
-  };
+  const updatedItems = supplierItems.map((item, i) =>
+    i === index
+      ? {
+          ...item,
+          [field]: field === 'price' || field === 'quantity' ? Number(value) : value,
+          total: field === 'price' || field === 'quantity' ? Number(value) * (field === 'price' ? item.quantity : item.price) : item.total,
+        }
+      : item
+  );
+  setSupplierItems(updatedItems);
+};
 
   const addItem = () => {
     setSupplierItems([...supplierItems, { product_code: '', name: '', price: 0, quantity: 0 }]);
@@ -64,17 +71,15 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
         alert("Please fill in all required fields.");
         return;
       }
-
       setIsSubmitting(true);
-
       const itemsPayload = supplierItems.map((item) => ({
         id: item.id,
         product_code: item.product_code,
         product_name: item.name,
         quantity: item.quantity,
         price: item.price,
+        total: item.total || 0, // Include total in the payload
       }));
-
       const response = await apiService.post('/add-supplier', {
         supplier_name: selectedSupplierName,
         delivery_number: deliveryNumber,
@@ -82,11 +87,9 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
         product_category: productCategory,
         items: itemsPayload,
       });
-
       if (!response.data.success) {
         throw new Error(response.data.message || 'Error adding supplier.');
       }
-
       alert('Supplier added successfully!');
       closeModal();
       onSuccess(); // Refresh data after success
@@ -138,7 +141,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
             ...item,
             id: product.id,
             name: product.name,
-            price: product.price,
+           
             product_code: product.product_code,
           }
         : item
@@ -152,6 +155,11 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
     const updatedSuggestions = [...productSuggestions];
     updatedSuggestions[index] = [];
     setProductSuggestions(updatedSuggestions);
+  };
+
+
+  const calculateGrandTotal = (): number => {
+    return supplierItems.reduce((sum, item) => sum + (item.total || 0), 0);
   };
 
   return (
@@ -210,73 +218,80 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
       
           <div className="max-h-[50vh] overflow-y-auto flex-grow mt-5 mb-1">
             {supplierItems.map((item, index) => (
-              <div key={index} className="flex space-x-4 mb-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-1">Product Code</label>
-                  <input
-                    type="number"
-                    value={item.product_code}
-                    onChange={(e) => handleItemChange(index, 'product_code', e.target.value)}
-                    className="border border-gray-300 p-2 w-full rounded"
-                    placeholder="Product Code"
-                    readOnly
-                  />
-                </div>
-                <div className="flex-1 relative">
-                  <label className="block text-sm font-medium mb-1">Item Name</label>
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => handleSearchTermChange(index, e.target.value)}
-                    className="border border-gray-300 p-2 w-full rounded"
-                    placeholder="Search Item"
-                  />
-                  {productSuggestions[index]?.length > 0 && (
-                    <ul className="absolute z-10 bg-white border border-gray-300 w-full mt-1 max-h-40 overflow-y-auto">
-                      {productSuggestions[index].map((product) => (
-                        <li
-                          key={product.id}
-                          onClick={() => handleSuggestionClick(index, product)}
-                          className="cursor-pointer p-2 hover:bg-gray-100"
-                        >
-                          {product.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-      
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-1">Quantity</label>
-                  <input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                    className="border border-gray-300 p-2 w-full rounded"
-                    placeholder="Quantity"
-                  />
-                </div>
-      
-                <div className="flex-1">
-                  <label className="block text-sm font-medium mb-1">Price</label>
-                  <input
-                    type="number"
-                    value={item.price}
-                    onChange={(e) => handleItemChange(index, 'price', e.target.value)}
-                    className="border border-gray-300 p-2 w-full rounded"
-                    placeholder="Price"
-                  />
-                </div>
-      
-                <button
-                  type="button"
-                  onClick={() => removeItem(index)}
-                  className="text-red-500 hover:text-red-700"
-                  aria-label="Remove Item"
-                >
-                  &times;
-                </button>
+              <div className="flex space-x-4 mb-4">
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Product Code</label>
+                <input
+                  type="number"
+                  value={item.product_code}
+                  onChange={(e) => handleItemChange(index, 'product_code', e.target.value)}
+                  className="border border-gray-300 p-2 w-full rounded"
+                  placeholder="Product Code"
+                  readOnly
+                />
               </div>
+              <div className="flex-1 relative">
+                <label className="block text-sm font-medium mb-1">Item Name</label>
+                <input
+                  type="text"
+                  value={item.name}
+                  onChange={(e) => handleSearchTermChange(index, e.target.value)}
+                  className="border border-gray-300 p-2 w-full rounded"
+                  placeholder="Search Item"
+                />
+                {productSuggestions[index]?.length > 0 && (
+                  <ul className="absolute z-10 bg-white border border-gray-300 w-full mt-1 max-h-40 overflow-y-auto">
+                    {productSuggestions[index].map((product) => (
+                      <li
+                        key={product.id}
+                        onClick={() => handleSuggestionClick(index, product)}
+                        className="cursor-pointer p-2 hover:bg-gray-100"
+                      >
+                        {product.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Quantity</label>
+                <input
+                  type="number"
+                  value={item.quantity}
+                  onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                  className="border border-gray-300 p-2 w-full rounded"
+                  placeholder="Quantity"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Price</label>
+                <input
+                  type="number"
+                  value={item.price}
+                  onChange={(e) => handleItemChange(index, 'price', e.target.value)}
+                  className="border border-gray-300 p-2 w-full rounded"
+                  placeholder="Price"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-sm font-medium mb-1">Total</label>
+                <input
+                  type="text"
+                  value={item.total?.toFixed(2) || '0.00'}
+                  readOnly
+                  className="border border-gray-300 p-2 w-full rounded bg-gray-100"
+                  placeholder="Total"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeItem(index)}
+                className="text-red-500 hover:text-red-700"
+                aria-label="Remove Item"
+              >
+                &times;
+              </button>
+            </div>
             ))}
             <button
               onClick={addItem}
@@ -300,7 +315,11 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
               Cancel
             </button>
           </div>
+          <div className="mt-4">
+  <h3 className="font-bold text-lg">Grand Total: {calculateGrandTotal().toFixed(2)}</h3>
+</div>
         </div>
+        
       </div>
       
       )}
