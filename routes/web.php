@@ -50,7 +50,9 @@ Route::middleware(['checkrole:user'])->group(function () {
     })->name('user-reports');
 
 
-
+    Route::get('/user-chat', function () {
+        return Inertia::render('UserChat');
+    })->name('user-chat');
 
 });
 
@@ -95,6 +97,11 @@ Route::middleware(['checkrole:admin'])->group(function () {
     Route::get('/admin-sales-stats', function () {
         return Inertia::render('AdminRoutePage/SalesStatistics');
     })->name('admin-sales-stats');
+
+
+    Route::get('/admin-chat', function () {
+        return Inertia::render('AdminRoutePage/Chat');
+    })->name('admin-chat');
 });
 
 

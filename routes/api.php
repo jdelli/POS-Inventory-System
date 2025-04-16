@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Api\RequestStocksController;
 use App\Http\Controllers\Api\SalesReportController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\UserController;
 
 
 
@@ -85,6 +87,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/delete-supplier-stocks/{id}', [AdminController::class, 'deleteSupplierStocks']);
     Route::get('/sales-statistics', [AdminController::class, 'salesStatistics']);
     Route::get('/branch-monthly-sales-statistics', [AdminController::class, 'perBranchSalesStatistics']);
+
+    // Chat
+    Route::post('/chat/send', [ChatController::class, 'sendMessage']);
+    Route::get('/chat/{userId}', [ChatController::class, 'getMessages']);
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/current-user', [UserController::class, 'current']);
+    
 });
 
 

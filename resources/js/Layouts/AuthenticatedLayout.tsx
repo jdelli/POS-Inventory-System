@@ -1,4 +1,4 @@
-import { useState, PropsWithChildren, ReactNode } from 'react';
+import React, { useState, PropsWithChildren, ReactNode } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
@@ -17,16 +17,25 @@ import {
     Divider,
     IconButton,
     Box,
+    Dialog,
+    Paper,
 } from '@mui/material';
-import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, ShoppingCart, ShoppingCartCheckout } from '@mui/icons-material';
+import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, ShoppingCart, ShoppingCartCheckout, Chat } from '@mui/icons-material';
+
+import Draggable from 'react-draggable';
 
 export default function Authenticated({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(true);
+    const [chatOpen, setChatOpen] = useState(false); // State for chat modal
 
     const handleNavigationDropdownClick = () => {
         setShowingNavigationDropdown(!showingNavigationDropdown);
+    };
+
+    const toggleChat = () => {
+        setChatOpen(!chatOpen); // Toggle chat modal visibility
     };
 
     return (
@@ -38,6 +47,10 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                         {header || 'User Dashboard'}
                     </Typography>
                     <Box sx={{ flexGrow: 1 }} />
+                    {/* Chat Button in AppBar */}
+                    <Button color="inherit" startIcon={<Chat />} onClick={toggleChat}>
+                    
+                    </Button>
                     <Dropdown>
                         <Dropdown.Trigger>
                             <Button color="inherit">{user.name}</Button>
@@ -144,6 +157,52 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                 <Toolbar />
                 {children}
             </Box>
+
+            {/* Movable Chat Dialog */}
+            <Dialog
+                open={chatOpen}
+                onClose={toggleChat}
+                PaperComponent={(props) => (
+                    <Draggable handle="#chat-dialog-title" cancel={'[class*="MuiDialogContent-root"]'}>
+                        <Paper
+                            {...props}
+                            sx={{
+                                width: '100%', // Adjusted width for larger modal
+                                maxWidth: '900px', // Maximum width
+                                height: '60%', // Adjusted height for larger modal
+                                maxHeight: '700px', // Maximum height
+                                position: 'absolute',
+                            }}
+                        />
+                    </Draggable>
+                )}
+                aria-labelledby="chat-dialog-title"
+            >
+                <Box>
+                    {/* Draggable Title Bar */}
+                    <Box
+                        id="chat-dialog-title"
+                        sx={{
+                            cursor: 'move',
+                            backgroundColor: '#1976d2',
+                            color: '#fff',
+                            px: 2,
+                            py: 1,
+                        }}
+                    >
+                        <Typography variant="h6">Chat</Typography>
+                    </Box>
+                    {/* Chat Content */}
+                    <Box sx={{ p: 2 }}>
+                        <iframe
+                            src={route('user-chat')} // Replace with your user-chat route
+                            width="100%"
+                            height="500px" // Adjusted iframe height for more content visibility
+                            style={{ border: 'none' }}
+                        ></iframe>
+                    </Box>
+                </Box>
+            </Dialog>
         </Box>
     );
 }
