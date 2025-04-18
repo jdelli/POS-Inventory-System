@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Events\UserStatusUpdated;
 
 class AuthenticatedSessionController extends Controller
 {
@@ -28,45 +29,57 @@ class AuthenticatedSessionController extends Controller
      * Handle an incoming authentication request.
      */
     public function store(LoginRequest $request): RedirectResponse
-    {
-        $request->authenticate();
+{
+    $request->authenticate();
 
-        $user = Auth::user();
-        $token = $request->user()->createToken('token-name')->plainTextToken;
-        
-        $authUser=[
-            'user' => $user,
-            'token' => $token
-        ];
+    $user = Auth::user();
+    $user->is_online = true; // ✅
+    $user->save();
 
-        $request->session()->regenerate();
+    $token = $request->user()->createToken('token-name')->plainTextToken;
 
-        if ($request->user()->usertype === 'admin') {
-            return redirect()->intended(route('admin-dashboard'));
-        }
+    $authUser = [
+        'user' => $user,
+        'token' => $token
+    ];
 
-        return redirect()->intended(route('user-dashboard'));
+    $request->session()->regenerate();
+
+    broadcast(new UserStatusUpdated($user->id, true)); // ✅
+
+    if ($user->usertype === 'admin') {
+        return redirect()->intended(route('admin-dashboard'));
     }
+
+    return redirect()->intended(route('user-dashboard'));
+}
+
 
     /**
      * Destroy an authenticated session.
      */
 
 
-public function destroy(Request $request): RedirectResponse
-{
-    $user = Auth::guard('sanctum')->user();
-
-    if ($user) {
-        $user->tokens()->delete(); // Delete all tokens
-    }
-
-    Auth::guard('web')->logout();
-
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-
-    return redirect('/');
-}
+     public function destroy(Request $request): RedirectResponse
+     {
+         $user = Auth::guard('web')->user();
+     
+         if ($user) {
+            $user->is_online = false; // ✅ set offline
+            $user->save();
+        
+            broadcast(new UserStatusUpdated($user->id, false)); // ✅ broadcast as offline
+        
+            $user->tokens()->delete(); // Delete all tokens
+        }
+        
+     
+         Auth::guard('web')->logout();
+     
+         $request->session()->invalidate();
+         $request->session()->regenerateToken();
+     
+         return redirect('/');
+     }
 
 }

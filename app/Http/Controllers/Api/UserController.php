@@ -11,12 +11,13 @@ use Illuminate\Support\Facades\Broadcast;
 class UserController extends Controller
 {
     public function index(): JsonResponse
-    {
-        // Fetch all users except the current authenticated user
-        $users = User::where('id', '!=', auth()->id())->get(['id', 'name', 'usertype']);
+{
+    $users = User::where('id', '!=', auth()->id())
+        ->get(['id', 'name', 'usertype', 'is_online']);
 
-        return response()->json($users);
-    }
+    return response()->json($users);
+}
+
 
 
     public function current(Request $request): JsonResponse
