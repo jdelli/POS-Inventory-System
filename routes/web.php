@@ -103,6 +103,10 @@ Route::middleware(['checkrole:admin'])->group(function () {
         return Inertia::render('AdminRoutePage/Chat');
     })->name('admin-chat');
 
+    Route::get('/admin-announcements', function () {
+        return Inertia::render('AdminRoutePage/Announcements');
+    })->name('admin-announcements');
+
 });
 
 

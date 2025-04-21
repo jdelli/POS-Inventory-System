@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\RequestStocksController;
 use App\Http\Controllers\Api\SalesReportController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\AnnouncementsController;
 
 
 
@@ -93,6 +94,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chat/{userId}', [ChatController::class, 'getMessages']);
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/current-user', [UserController::class, 'current']);
+
+
+    // Announcements
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::get('/announcements', [AnnouncementsController::class, 'index']);
+        Route::post('/announcements', [AnnouncementsController::class, 'store']);
+        Route::get('/announcements/unread', [AnnouncementsController::class, 'unread']);
+        Route::patch('/announcements/{id}/read', [AnnouncementsController::class, 'markAsRead']);
+    });
+    
+
     
 });
 

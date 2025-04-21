@@ -1,4 +1,4 @@
-import React, { useState, PropsWithChildren, ReactNode } from 'react';
+import React, { useState, PropsWithChildren, ReactNode, useEffect } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
@@ -21,14 +21,57 @@ import {
     Paper,
 } from '@mui/material';
 import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, ShoppingCart, ShoppingCartCheckout, Chat } from '@mui/icons-material';
-
+import Echo from 'laravel-echo';
+import axios from 'axios';
 import Draggable from 'react-draggable';
+import AnnouncementModal from '@/Pages/Props/AnnouncementsModal';
 
 export default function Authenticated({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(true);
     const [chatOpen, setChatOpen] = useState(false); // State for chat modal
+    const [unreadCount, setUnreadCount] = useState(0);
+    
+
+    const fetchUnreadCount = async () => {
+        try {
+            const response = await axios.get('/api/announcements/unread');
+            setUnreadCount(response.data.length);
+        } catch (error) {
+            console.error('Error fetching unread count:', error);
+        }
+    };
+    
+    
+    useEffect(() => {
+        fetchUnreadCount();
+    }, []);
+
+    useEffect(() => {
+        const echo = new Echo({
+            broadcaster: 'pusher',
+            key: import.meta.env.VITE_REVERB_APP_KEY,
+            wsHost: import.meta.env.VITE_REVERB_HOST,
+            wsPort: Number(import.meta.env.VITE_REVERB_PORT),
+            forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https',
+            disableStats: true,
+            enabledTransports: ['ws'],
+            cluster: 'mt1',
+        });
+    
+        echo.channel('announcements').listen('.new-announcement', (e: any) => {
+            console.log('📢 New announcement received');
+            fetchUnreadCount(); // Refresh badge in real-time
+        });
+    
+        return () => {
+            echo.leave('announcements');
+            echo.disconnect();
+        };
+    }, []);
+    
+
 
     const handleNavigationDropdownClick = () => {
         setShowingNavigationDropdown(!showingNavigationDropdown);
@@ -47,9 +90,10 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                         {header || 'User Dashboard'}
                     </Typography>
                     <Box sx={{ flexGrow: 1 }} />
+                    {/* Announcement Button in AppBar */}
+                    <AnnouncementModal unreadCount={unreadCount} onNewAnnouncement={fetchUnreadCount} />
                     {/* Chat Button in AppBar */}
                     <Button color="inherit" startIcon={<Chat />} onClick={toggleChat}>
-                    
                     </Button>
                     <Dropdown>
                         <Dropdown.Trigger>

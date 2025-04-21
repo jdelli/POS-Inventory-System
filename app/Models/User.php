@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Announcements;
 
 class User extends Authenticatable
 {
@@ -45,4 +46,11 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function announcements()
+{
+    return $this->belongsToMany(Announcements::class, 'user_announcements')
+        ->withPivot('is_read')
+        ->withTimestamps();
+}
 }

@@ -34,8 +34,9 @@ import {
     Menu,
     BackupTable,
     Chat,
+    Announcement, // Import the Announcement icon
 } from '@mui/icons-material';
-
+import CampaignIcon from '@mui/icons-material/Campaign';
 import Draggable from 'react-draggable';
 
 export default function AdminLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
@@ -61,8 +62,16 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                         {header || 'Admin Dashboard'}
                     </Typography>
                     <Box sx={{ flexGrow: 1 }} />
+                    <Button
+                        color="inherit"
+                        startIcon={<CampaignIcon />}
+                        component={Link}
+                        href={route('admin-announcements')} // Navigate to the announcements route
+                    >
+
+                    </Button>
                     <Button color="inherit" startIcon={<Chat />} onClick={toggleChat}>
-                        
+
                     </Button>
                     <Dropdown>
                         <Dropdown.Trigger>
