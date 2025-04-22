@@ -1,4 +1,4 @@
-import React, { useState, PropsWithChildren, ReactNode } from 'react';
+import React, { useState, PropsWithChildren, ReactNode, useEffect } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
@@ -20,6 +20,7 @@ import {
     IconButton,
     Dialog,
     Paper,
+    Badge,
 } from '@mui/material';
 
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
@@ -38,12 +39,78 @@ import {
 } from '@mui/icons-material';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import Draggable from 'react-draggable';
+import echo from '@/Pages/echo';
+import axios from 'axios';
 
 export default function AdminLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [openBranchManagement, setOpenBranchManagement] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(true);
     const [chatOpen, setChatOpen] = useState(false);
+    const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+      
+
+
+
+     // Function to fetch the total unread messages
+        useEffect(() => {
+        if (!currentUserId) return; // Ensure the user is logged in
+    
+        const fetchTotalUnreadMessages = async () => {
+            try {
+                const response = await axios.get('/api/notifications/total-unread', {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                });
+                setTotalUnreadMessages(response.data.total);
+            } catch (error) {
+                console.error('Error fetching total unread messages:', error);
+            }
+        };
+    
+        fetchTotalUnreadMessages();
+    
+        const channel = echo.channel(`chat.${currentUserId}`); 
+        channel.listen('.message.sent', (event: any) => {
+            console.log('Real-time event received:', event);
+            setTotalUnreadMessages(event.totalUnread); // Use the totalUnread from the event
+        });
+    
+        return () => {
+            echo.leave(`chat.${currentUserId}`);
+        };
+    }, [currentUserId]);
+    
+    
+    
+    
+      // Fetch current user
+      useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const res = await axios.get('/api/current-user', {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                });
+                setCurrentUserId(res.data.id);
+            } catch (error) {
+                console.error('Error fetching current user:', error);
+            }
+        };
+    
+        fetchCurrentUser();
+    }, []);
+    
+
+
+
+
+
+
+
+
+
+
+
 
     const handleBranchManagementClick = () => {
         setOpenBranchManagement(!openBranchManagement);
@@ -64,14 +131,27 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                     <Box sx={{ flexGrow: 1 }} />
                     <Button
                         color="inherit"
-                        startIcon={<CampaignIcon />}
+                        startIcon={
+                            <Badge
+                            color="secondary"
+                            sx={{ ml: 1 }}
+                            >
+                            <CampaignIcon />
+                            </Badge>
+                        }
                         component={Link}
-                        href={route('admin-announcements')} // Navigate to the announcements route
-                    >
+                        href={route('admin-announcements')}
+                        />
 
-                    </Button>
-                    <Button color="inherit" startIcon={<Chat />} onClick={toggleChat}>
-
+                    <Button color="inherit" startIcon={
+                        <Badge
+                            color="error" // Red color for notification badge
+                            badgeContent={totalUnreadMessages > 0 ? totalUnreadMessages : null} // Show number if > 0, otherwise hide the badge
+                            sx={{ ml: 1 }} // Adds left margin to the badge for consistency
+                        >
+                            <Chat />
+                        </Badge>
+                    } onClick={toggleChat}>
                     </Button>
                     <Dropdown>
                         <Dropdown.Trigger>

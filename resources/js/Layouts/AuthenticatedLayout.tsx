@@ -19,19 +19,75 @@ import {
     Box,
     Dialog,
     Paper,
+    Badge,
 } from '@mui/material';
 import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, ShoppingCart, ShoppingCartCheckout, Chat } from '@mui/icons-material';
 import Echo from 'laravel-echo';
 import axios from 'axios';
 import Draggable from 'react-draggable';
 import AnnouncementModal from '@/Pages/Props/AnnouncementsModal';
-
+import echo from '@/Pages/echo';
 export default function Authenticated({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const user = usePage().props.auth.user;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(true);
     const [chatOpen, setChatOpen] = useState(false); // State for chat modal
     const [unreadCount, setUnreadCount] = useState(0);
+    const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  
+    
+
+    // Function to fetch the total unread messages
+    useEffect(() => {
+    if (!currentUserId) return; // Ensure the user is logged in
+
+    const fetchTotalUnreadMessages = async () => {
+        try {
+            const response = await axios.get('/api/notifications/total-unread', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            });
+            setTotalUnreadMessages(response.data.total);
+        } catch (error) {
+            console.error('Error fetching total unread messages:', error);
+        }
+    };
+
+    fetchTotalUnreadMessages();
+
+    const channel = echo.channel(`chat.${currentUserId}`); 
+    channel.listen('.message.sent', (event: any) => {
+        console.log('Real-time event received:', event);
+        setTotalUnreadMessages(event.totalUnread); // Use the totalUnread from the event
+    });
+
+    return () => {
+        echo.leave(`chat.${currentUserId}`);
+    };
+}, [currentUserId]);
+
+
+
+
+  // Fetch current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+        try {
+            const res = await axios.get('/api/current-user', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            });
+            setCurrentUserId(res.data.id);
+        } catch (error) {
+            console.error('Error fetching current user:', error);
+        }
+    };
+
+    fetchCurrentUser();
+}, []);
+
+
+
+
     
 
     const fetchUnreadCount = async () => {
@@ -92,9 +148,17 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
                     <Box sx={{ flexGrow: 1 }} />
                     {/* Announcement Button in AppBar */}
                     <AnnouncementModal unreadCount={unreadCount} onNewAnnouncement={fetchUnreadCount} />
-                    {/* Chat Button in AppBar */}
-                    <Button color="inherit" startIcon={<Chat />} onClick={toggleChat}>
+                    <Button color="inherit" startIcon={
+                        <Badge
+                            color="error" // Red color for notification badge
+                            badgeContent={totalUnreadMessages > 0 ? totalUnreadMessages : null} // Show number if > 0, otherwise hide the badge
+                            sx={{ ml: 1 }} // Adds left margin to the badge for consistency
+                        >
+                            <Chat />
+                        </Badge>
+                    } onClick={toggleChat}>
                     </Button>
+
                     <Dropdown>
                         <Dropdown.Trigger>
                             <Button color="inherit">{user.name}</Button>

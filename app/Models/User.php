@@ -48,9 +48,26 @@ class User extends Authenticatable
     }
 
     public function announcements()
-{
-    return $this->belongsToMany(Announcements::class, 'user_announcements')
-        ->withPivot('is_read')
-        ->withTimestamps();
-}
+    {
+        return $this->belongsToMany(Announcements::class, 'user_announcements')
+            ->withPivot('is_read')
+            ->withTimestamps();
+    }
+
+
+    // Define relationships
+    public function sentChats()
+    {
+        return $this->hasMany(Chat::class, 'sender_id');
+    }
+
+    public function receivedChats()
+    {
+        return $this->hasMany(Chat::class, 'receiver_id');
+    }
+
+    public function notifications()
+    {
+        return $this->hasMany(ChatNotification::class);
+    }
 }

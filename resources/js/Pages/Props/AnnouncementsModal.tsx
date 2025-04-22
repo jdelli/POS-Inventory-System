@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Dialog, DialogTitle, DialogContent, DialogActions,
-    Button, List, ListItem, ListItemText, Typography
+    Button, List, ListItem, ListItemText, Typography, Badge,
 } from '@mui/material';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import apiService from '../Services/ApiService';
@@ -95,14 +95,17 @@ const AnnouncementModal: React.FC<AnnouncementModalProps> = ({ onNewAnnouncement
 
     return (
         <>
-            <Button color="inherit" startIcon={<CampaignIcon />} onClick={handleOpen}>
-                {/* Announcements */}
-                {unreadCount > 0 && (
-                    <Typography variant="caption" color="error" sx={{ ml: 1 }}>
-                        {unreadCount}
-                    </Typography>
-                )}
-            </Button>
+                <Button color="inherit" onClick={handleOpen}>
+            {/* Announcements */}
+            <Badge
+                color="error"
+                badgeContent={unreadCount > 0 ? unreadCount : null} // Shows number only if unreadCount > 0
+                sx={{ ml: 1 }} // Adds a margin to the left of the badge
+            >
+                <CampaignIcon />
+            </Badge>
+        </Button>
+
 
             <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
                 <DialogTitle>Announcements</DialogTitle>

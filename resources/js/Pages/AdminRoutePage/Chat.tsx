@@ -13,8 +13,10 @@ import {
     Divider,
     IconButton,
     ListItemButton,
+    Badge,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
+import echo from '../echo';
 
 interface User {
     id: number;
@@ -41,8 +43,98 @@ const UserListWithChat: React.FC = () => {
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [newMessage, setNewMessage] = useState<string>('');
-
+    const [notifications, setNotifications] = useState<{ [userId: number]: number }>({});
     const chatContainerRef = useRef<HTMLDivElement | null>(null);
+
+
+
+
+
+    
+    const handleUserClick = async (userId: number) => {
+        setSelectedUserId(userId);
+    
+        try {
+            const res = await axios.get('/api/notifications', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            });
+    
+            const userNotifications = res.data.filter((n: any) => n.chat.sender_id === userId);
+    
+            for (const notif of userNotifications) {
+                await axios.put(`/api/notifications/${notif.id}/read`, {}, {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                });
+            }
+    
+            setNotifications((prev) => {
+                const updated = { ...prev };
+                delete updated[userId];
+                return updated;
+            });
+        } catch (error) {
+            console.error('Error marking notifications as read:', error);
+        }
+    };
+
+
+
+    useEffect(() => {
+            if (!currentUserId) return;
+        
+            const fetchNotifications = async () => {
+                try {
+                    const response = await axios.get('/api/notifications', {
+                        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                    });
+        
+                    const notificationCounts: { [userId: number]: number } = {};
+        
+                    response.data.forEach((notif: any) => {
+                        const senderId = notif.chat.sender_id;
+                        notificationCounts[senderId] = (notificationCounts[senderId] || 0) + 1;
+                    });
+        
+                    setNotifications(notificationCounts);
+                } catch (error) {
+                    console.error('Error fetching notifications:', error);
+                }
+            };
+        
+            // Using Echo to listen for real-time events
+            const channel = echo.channel(`chat.${currentUserId}`);
+        
+            const listener = (event: any) => {
+                console.log('🔔 New message:', event.chat);
+        
+                // Update notifications on new message
+                setNotifications((prev: any) => {
+                    const senderId = event.chat.sender_id;
+                    const updatedNotifications = { ...prev };
+                    updatedNotifications[senderId] = (updatedNotifications[senderId] || 0) + 1;
+                    return updatedNotifications;
+                });
+        
+                // Optionally, you can call fetchNotifications() here to refresh notifications
+                fetchNotifications(); // This will update the notification counts in real-time
+            };
+        
+            // Listen for 'MessageSent' event
+            channel.listen('.message.sent', listener); // This should work as it matches the broadcastAs in Laravel
+        
+            // Initial notification fetch when component mounts
+            fetchNotifications();
+        
+            // Cleanup to leave the channel when the component unmounts
+            return () => {
+                echo.leave(`chat.${currentUserId}`);
+            };
+        }, [currentUserId]);
+
+
+
+
+
 
     // Fetch current user
     useEffect(() => {
@@ -168,7 +260,7 @@ const UserListWithChat: React.FC = () => {
                         <ListItem key={user.id} disablePadding>
                             <ListItemButton
                                 selected={selectedUserId === user.id}
-                                onClick={() => setSelectedUserId(user.id)}
+                                onClick={() => handleUserClick(user.id)}
                                 sx={{
                                     '&.Mui-selected': {
                                         backgroundColor: '#f0f0f0',
@@ -176,7 +268,13 @@ const UserListWithChat: React.FC = () => {
                                 }}
                             >
                                 <ListItemAvatar>
-                                    <Avatar alt={user.name} src={user.avatar || ''} />
+                                    <Badge
+                                        color="secondary"
+                                        badgeContent={notifications[user.id] || 0}
+                                        invisible={notifications[user.id] === 0}
+                                    >
+                                        <Avatar alt={user.name} src={user.avatar || ''} />
+                                    </Badge>
                                 </ListItemAvatar>
                                 <Typography variant="body1">{user.name}</Typography>
                             </ListItemButton>

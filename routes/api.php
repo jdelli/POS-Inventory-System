@@ -94,6 +94,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chat/{userId}', [ChatController::class, 'getMessages']);
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/current-user', [UserController::class, 'current']);
+    Route::get('/notifications', [ChatController::class, 'getNotifications']);
+    Route::put('/notifications/{id}/read', [ChatController::class, 'markAsRead']);
+    Route::get('/notifications/total-unread', [ChatController::class, 'getTotalUnreadMessages']);
 
 
     // Announcements
