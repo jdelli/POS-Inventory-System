@@ -289,46 +289,58 @@ const submitSalesOrder = async () => {
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Sales Order</h2>}>
       <Head title="Inventory" />
       <div className="p-4">
-        <button onClick={openReceiptModal} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded p-2 mb-4 ml-2">
-          New Sales Order
-        </button>
+        
 
         {/* Date Range Filters */}
-        <div className="mb-4 flex space-x-4">
-          <div>
-            <label className="text-gray-700">Filtered by Month</label>
-            <select
-              value={selectedMonth ?? ''}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-              className="mt-2 p-2 border rounded"
-            >
-              <option value="">All</option> {/* Empty value for 'All' */}
-              {[...Array(12).keys()].map((month) => (
-                <option key={month} value={month + 1}>
-                  {new Date(0, month).toLocaleString('default', { month: 'long' })}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="text-gray-700">Filtered by Year</label>
-            <select
-              value={selectedYear !== null ? selectedYear.toString() : ''} // Ensure the value is always a string or empty string if null
-              onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)} // Set selected year or null
-              className="mt-2 p-2 border rounded"
-            >
-              <option value="">All</option> {/* Empty value for 'All' */}
-              {new Array(10).fill(null).map((_, index) => {
-                const year = new Date().getFullYear() - index; // Generate the last 10 years
-                return (
-                  <option key={year} value={year}>
-                    {year}
+        <div className="mb-4 flex justify-between items-end">
+          {/* Filters */}
+          <div className="flex space-x-4">
+            <div>
+              <label className="text-gray-700">Filtered by Month</label>
+              <select
+                value={selectedMonth ?? ''}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
+                className="mt-2 p-2 border rounded"
+              >
+                <option value="">All</option>
+                {[...Array(12).keys()].map((month) => (
+                  <option key={month} value={month + 1}>
+                    {new Date(0, month).toLocaleString('default', { month: 'long' })}
                   </option>
-                );
-              })}
-            </select>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-gray-700">Filtered by Year</label>
+              <select
+                value={selectedYear !== null ? selectedYear.toString() : ''}
+                onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
+                className="mt-2 p-2 border rounded"
+              >
+                <option value="">All</option>
+                {new Array(10).fill(null).map((_, index) => {
+                  const year = new Date().getFullYear() - index;
+                  return (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+
+          {/* New Sales Order Button */}
+          <div>
+            <button
+              onClick={openReceiptModal}
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            >
+              New Sales Order
+            </button>
           </div>
         </div>
+
 
         {/* Sales Order Table */}
         <div className="overflow-x-auto">

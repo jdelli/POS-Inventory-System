@@ -35,6 +35,16 @@ const SupplierStocksModal: React.FC<SupplierStocksModalProps> = ({ open, onClose
   // Ensure stocks is always an array
   const stockList = stocks || [];
 
+  // Helper function to format currency as ₱100,000 without decimals
+    const formatCurrency = (amount: number): string => {
+      return new Intl.NumberFormat('en-PH', {
+          style: 'currency',
+          currency: 'PHP',
+          minimumFractionDigits: 0, // No decimal places
+          maximumFractionDigits: 0, // No decimal places
+      }).format(amount);
+    };
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Supplier Stocks</DialogTitle>
@@ -60,12 +70,18 @@ const SupplierStocksModal: React.FC<SupplierStocksModalProps> = ({ open, onClose
               ) : (
                 stockList.map((stock) => (
                   <TableRow key={stock.id}>
-                    <TableCell>{stock.product_code}</TableCell>
-                    <TableCell>{stock.product_name}</TableCell>
-                    <TableCell>{stock.quantity}</TableCell>
-                    <TableCell>{stock.price}</TableCell>
-                    <TableCell>{stock.total}</TableCell>
-                  </TableRow>
+                  <TableCell>{stock.product_code}</TableCell>
+                  <TableCell>{stock.product_name}</TableCell>
+                  <TableCell>{stock.quantity}</TableCell>
+                  <TableCell>
+                      {/* Format Price */}
+                      {formatCurrency(stock.price || 0)}
+                  </TableCell>
+                  <TableCell>
+                      {/* Format Total */}
+                      {formatCurrency(stock.total || 0)}
+                  </TableCell>
+              </TableRow>
                 ))
               )}
             </TableBody>

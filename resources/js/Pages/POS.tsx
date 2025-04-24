@@ -8,7 +8,7 @@ interface Product {
   name: string;
   price: number;
   image: string;
-  quantity: number;
+  description: string;
 }
 
 interface CartItem {
@@ -182,47 +182,46 @@ const POSSystem: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6 font-sans">
       <div className="absolute top-0 right-0 p-4 z-10">
-        <nav className="-mx-3 flex flex-1 justify-end">
-          {auth?.user ? (
-              <>
-                {auth.user.usertype === 'admin' ? (
-                  // Render the Admin Dashboard link
-                  <Link
-                    href={route('admin-dashboard')}
-                    className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                  >
-                    Admin Dashboard
-                  </Link>
-                ) : (
-                  // Render the User Dashboard link
-                  <Link
-                    href={route('user-dashboard')}
-                    className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                  >
-                    User Dashboard
-                  </Link>
-                )}
-              </>
+      <nav className="-mx-3 flex flex-1 justify-end text-sm space-x-2">
+        {auth?.user ? (
+          <>
+            {auth.user.usertype === 'admin' ? (
+              <Link
+                href={route('admin-dashboard')}
+                className="rounded-md bg-blue-100 px-4 py-2 font-semibold text-blue-800 transition duration-300 hover:bg-blue-200 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-300"
+              >
+                Admin Dashboard
+              </Link>
             ) : (
-              <>
-                <Link
-                  href={route('login')}
-                  className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                >
-                  Log in
-                </Link>
-                <Link
-                  href={route('register')}
-                  className="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                >
-                  Register
-                </Link>
-              </>
+              <Link
+                href={route('user-dashboard')}
+                className="rounded-md bg-blue-100 px-4 py-2 font-semibold text-blue-800 transition duration-300 hover:bg-blue-200 hover:text-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-300"
+              >
+                User Dashboard
+              </Link>
             )}
-        </nav>
+          </>
+        ) : (
+          <>
+            <Link
+              href={route('login')}
+              className="rounded-md bg-green-100 px-4 py-2 font-semibold text-green-800 transition duration-300 hover:bg-green-200 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-300"
+            >
+              Log in
+            </Link>
+            <Link
+              href={route('register')}
+              className="rounded-md bg-green-100 px-4 py-2 font-semibold text-green-800 transition duration-300 hover:bg-green-200 hover:text-green-900 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-green-300"
+            >
+              Register
+            </Link>
+          </>
+        )}
+      </nav>
+
       </div>
 
-      <header className="bg-blue-700 text-white py-4 px-6 flex justify-between items-center shadow-md sticky top-0 z-0">
+      <header className="bg-blue-700 text-white py-4 px-6 flex justify-between items-center shadow-md sticky top-0 z-0 mt-10">
         <h1 className="text-2xl font-bold">CCTV PRODUCTS</h1>
         <div className="flex items-center gap-4">
           <div className="flex gap-2">
@@ -268,8 +267,8 @@ const POSSystem: React.FC = () => {
                     className="w-full h-40 object-cover rounded mb-3"
                   />
                   <h3 className="text-lg font-semibold text-gray-800 mb-1">{product.name}</h3>
-                  <p className="text-gray-600 mb-3">${product.price.toFixed(2)}</p>
-                  <p className="text-sm text-gray-500">Quantity: {product.quantity}</p>
+                  <p className="text-gray-600 mb-3">₱{product.price.toFixed(2)}</p>
+                  <p className="text-sm text-gray-500"> {product.description}</p>
                   <button
                     className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 w-full mt-3"
                     onClick={() => addToCart(product)}
@@ -373,7 +372,7 @@ const POSSystem: React.FC = () => {
               className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 w-full"
               onClick={handleCheckout}
             >
-              Checkout (₱{calculateTotal().toFixed(2)})
+              Order (₱{calculateTotal().toFixed(2)})
             </button>
           </div>
         </section>

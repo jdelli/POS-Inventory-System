@@ -47,25 +47,29 @@ class AdminController extends Controller
 
 
     public function getDailySalesAllBranch(Request $request)
-{
-    // Get today's date in 'YY/MM/DD' format for matching database records
-    $date = Carbon::now()->setTimezone('Asia/Manila')->format('y/m/d');
+    {
+        // Validate the date parameter
+        $validated = $request->validate([
+            'date' => 'required|date_format:Y-m-d',
+        ]);
 
-    // Log the date being queried
-    \Log::info("Querying daily sales for date: " . $date);
+        $requestedDate = $validated['date'];
 
-    // Query sales orders using exact match (VARCHAR column)
-    $sales = SalesOrder::where('date', $date)
-        ->join('sales_order_items', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
-        ->selectRaw('branch_id, SUM(sales_order_items.price * sales_order_items.quantity) as total_sales')
-        ->groupBy('branch_id')
-        ->get();
+        // Log the date being queried
+        \Log::info("Querying daily sales for date: " . $requestedDate);
 
-    return response()->json([
-        'success' => true,
-        'data' => $sales,
-    ]);
-}
+        // Query sales orders using exact match (VARCHAR column)
+        $sales = SalesOrder::where('date', $requestedDate)
+            ->join('sales_order_items', 'sales_orders.id', '=', 'sales_order_items.sales_order_id')
+            ->selectRaw('branch_id, SUM(sales_order_items.price * sales_order_items.quantity) as total_sales')
+            ->groupBy('branch_id')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $sales,
+        ]);
+    }
 
 
 public function getAllBranches()

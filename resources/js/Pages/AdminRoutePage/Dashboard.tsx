@@ -64,6 +64,29 @@ export default function Dashboard() {
     const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
     const [users, setUsers] = useState<User[]>([]);
 
+
+    // Helper function to format the date as YYYY-MM-DD
+    const formatDateWithoutTimezone = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+
+    // Helper function to format currency as ₱100,000 without decimals
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-PH', {
+            style: 'currency',
+            currency: 'PHP',
+            minimumFractionDigits: 0, // No minimum decimal places
+            maximumFractionDigits: 0, // No maximum decimal places
+        }).format(amount);
+    };
+
+
+
+
     // Fetch yearly sales data by branch
     useEffect(() => {
         const fetchYearlySalesByBranch = async () => {
@@ -86,15 +109,21 @@ export default function Dashboard() {
         };
         fetchYearlySalesByBranch();
     }, [selectYear]);
+    
 
     // Fetch daily sales data
     useEffect(() => {
         const fetchDataDailySales = async () => {
             if (!selectedDate) return;
             try {
+                // Format the date as YYYY-MM-DD without timezone conversion
+                const formattedDate = formatDateWithoutTimezone(selectedDate);
+                console.log('Fetching data for date:', formattedDate);
+    
                 const response = await apiService.get<ApiResponse<SalesData>>('/daily-sales-by-branch', {
-                    params: { date: selectedDate?.toISOString().split('T')[0] },
+                    params: { date: formattedDate },
                 });
+    
                 if (response.data.success) {
                     setDailySales(response.data.data);
                 }
@@ -212,31 +241,66 @@ export default function Dashboard() {
                                 className="border border-gray-300 p-2 rounded"
                             />
                         </Box>
-                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 6 }}>
+                        <Box sx={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
+                            gap: 6, 
+                            mt: 4 
+                        }}>
                             {dailySales.map((branch) => {
-                                const salesAmount = branch.total_sales || 0;
+                                const salesAmount = branch.total_sales || 0; // Default to 0 if no sales data exists
+
                                 return (
                                     <Box
                                         key={branch.branch_id}
                                         sx={{
-                                            background: 'linear-gradient(to right, green.400, green.600)',
-                                            color: 'white',
-                                            boxShadow: 3,
-                                            borderRadius: 2,
-                                            p: 6,
+                                            background: 'linear-gradient(to right, #4CAF50, #388E3C)',
+                                            color: '#121212',
+                                            boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.2)',
+                                            borderRadius: 3,
+                                            p: 4,
                                             textAlign: 'center',
-                                            transition: 'box-shadow 0.3s',
-                                            '&:hover': { boxShadow: 5 },
-                                            border: '2px solid white',
+                                            transition: 'transform 0.3s, box-shadow 0.3s',
+                                            '&:hover': {
+                                                transform: 'scale(1.03)',
+                                                boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.3)',
+                                            },
+                                            position: 'relative',
+                                            overflow: 'hidden',
                                         }}
                                     >
-                                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                                            Branch {branch.branch_id}
+                                        {/* Branch Name */}
+                                        <Typography
+                                            variant="h6"
+                                            sx={{
+                                                fontWeight: 'bold',
+                                                mb: 2,
+                                                color: '#FFFFFF',
+                                            }}
+                                        >
+                                            {branch.branch_id}
                                         </Typography>
-                                        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                                            ₱{salesAmount.toLocaleString()}
+
+                                        {/* Sales Amount */}
+                                        <Typography
+                                            variant="h4"
+                                            sx={{
+                                                fontWeight: 'bold',
+                                                mb: 2,
+                                                color: '#FFFFFF',
+                                            }}
+                                        >
+                                            {formatCurrency(salesAmount)} {/* Format the sales amount */}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ opacity: 0.75 }}>
+
+                                        {/* Sales Status */}
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                color: salesAmount > 0 ? '#FFFFFF' : '#FF9800',
+                                                fontWeight: salesAmount > 0 ? 'normal' : 'bold',
+                                            }}
+                                        >
                                             {salesAmount > 0 ? "Today's Sales" : 'No Sales Today'}
                                         </Typography>
                                     </Box>
@@ -267,7 +331,8 @@ export default function Dashboard() {
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" />
                                 <YAxis />
-                                <Tooltip formatter={(value) => `₱${value.toLocaleString()}`} />
+                                {/* Updated Tooltip to use formatCurrency */}
+                                <Tooltip formatter={(value: number) => formatCurrency(value)} />
                                 <Bar dataKey="sales" fill="url(#colorDaily)" barSize={40} />
                                 <defs>
                                     <linearGradient id="colorDaily" x1="0" y1="0" x2="0" y2="1">
@@ -279,7 +344,7 @@ export default function Dashboard() {
                         </ResponsiveContainer>
                     </Box>
 
-                    {/* Year Picker and Yearly Sales Section */}
+                                        {/* Year Picker and Yearly Sales Section */}
                     <Box
                         sx={{
                             background: 'white',
@@ -303,14 +368,15 @@ export default function Dashboard() {
                             />
                         </Box>
                         <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                            Yearly Total Sales by Branch
+                            Accumulative Sales by Branch
                         </Typography>
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={yearlyChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="name" />
                                 <YAxis />
-                                <Tooltip formatter={(value) => `₱${value.toLocaleString()}`} />
+                                {/* Updated Tooltip to use formatCurrency */}
+                                <Tooltip formatter={(value: number) => formatCurrency(value)} />
                                 <Bar dataKey="sales" fill="url(#colorUv)" barSize={40} />
                                 <defs>
                                     <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
@@ -372,7 +438,8 @@ export default function Dashboard() {
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                     ))}
                                 </Pie>
-                                <Tooltip />
+                                {/* Updated Tooltip to use formatCurrency */}
+                                <Tooltip formatter={(value: number) => formatCurrency(value)} />
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>

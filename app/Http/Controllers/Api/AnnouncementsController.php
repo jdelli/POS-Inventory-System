@@ -13,10 +13,27 @@ use App\Events\NewAnnouncement;
 
 class AnnouncementsController extends Controller
 {
-    public function index()
-    {
-        return response()->json(Announcements::latest()->get());
-    }
+    public function index(Request $request)
+{
+    // Get query parameters for page and limit (default to 1 and 10 if not provided)
+    $page = $request->input('page', 1);
+    $limit = $request->input('limit', 10);
+
+    // Fetch paginated announcements
+    $announcements = Announcements::latest()
+        ->paginate($limit, ['*'], 'page', $page);
+
+    return response()->json([
+        'data' => $announcements->items(), // Paginated items
+        'pagination' => [
+            'total' => $announcements->total(), // Total number of items
+            'currentPage' => $announcements->currentPage(), // Current page number
+            'lastPage' => $announcements->lastPage(), // Last page number
+            'perPage' => $announcements->perPage(), // Items per page
+        ],
+    ]);
+}
+
 
     public function store(Request $request)
 {

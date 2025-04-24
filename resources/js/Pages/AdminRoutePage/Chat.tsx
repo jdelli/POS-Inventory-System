@@ -14,6 +14,7 @@ import {
     IconButton,
     ListItemButton,
     Badge,
+    Tooltip,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import echo from '../echo';
@@ -284,85 +285,120 @@ const UserListWithChat: React.FC = () => {
             </Paper>
 
             {/* Chat Interface */}
-            <Box sx={{ flex: 1, padding: 2 }}>
+            <Box sx={{ flex: 1, p: 2, bgcolor: '#f5f7fa', borderRadius: 2, maxHeight: '100%', overflow: 'auto' }}>
                 {selectedUserId ? (
                     <>
                         <Typography variant="h5" gutterBottom>
                             Chat with {users.find((u) => u.id === selectedUserId)?.name}
                         </Typography>
-                        <Divider />
+                        <Divider sx={{ mb: 2 }} />
+            
                         <Paper
                             ref={chatContainerRef}
+                            elevation={0}
                             sx={{
                                 maxHeight: '70vh',
                                 overflowY: 'auto',
-                                padding: 2,
-                                marginBottom: 2,
-                                wordWrap: 'break-word',
-                                wordBreak: 'break-word',
+                                p: 2,
+                                mb: 2,
+                                backgroundColor: '#ffffff',
+                                borderRadius: 2,
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                             }}
                         >
-                            {messages.map((msg) => (
-                                <Box
-                                    key={msg.id}
-                                    sx={{
-                                        display: 'flex',
-                                        flexDirection: msg.sender_id === currentUserId ? 'row-reverse' : 'row',
-                                        alignItems: 'flex-start',
-                                        marginBottom: 1,
-                                    }}
-                                >
-                                    <Avatar
-                                        alt={
-                                            msg.sender_id === currentUserId
-                                                ? 'You'
-                                                : users.find((u) => u.id === msg.sender_id)?.name || 'User'
-                                        }
-                                        src={
-                                            msg.sender_id === currentUserId
-                                                ? users.find((u) => u.id === currentUserId)?.avatar || ''
-                                                : users.find((u) => u.id === msg.sender_id)?.avatar || ''
-                                        }
-                                        sx={{ margin: '0 8px' }}
-                                    />
+                            {messages.map((msg) => {
+                                const isCurrentUser = msg.sender_id === currentUserId;
+                                const user = users.find((u) => u.id === msg.sender_id);
+                                return (
                                     <Box
+                                        key={msg.id}
                                         sx={{
-                                            maxWidth: '70%',
-                                            padding: 1,
-                                            borderRadius: 2,
-                                            backgroundColor:
-                                                msg.sender_id === currentUserId ? '#DCF8C6' : '#ECECEC',
+                                            display: 'flex',
+                                            flexDirection: isCurrentUser ? 'row-reverse' : 'row',
+                                            alignItems: 'flex-start',
+                                            mb: 2,
+                                            gap: 1,
                                         }}
                                     >
-                                        <Typography variant="subtitle2">
-                                            {msg.sender_id === currentUserId ? 'You' : users.find((u) => u.id === msg.sender_id)?.name}
-                                        </Typography>
-                                        <Typography variant="body1">{msg.message}</Typography>
-                                        <Typography variant="caption" color="text.secondary">
-                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </Typography>
+                                        <Tooltip title={user?.name || 'User'}>
+                                            <Avatar
+                                                alt={isCurrentUser ? 'You' : user?.name || 'User'}
+                                                src={user?.avatar || ''}
+                                            />
+                                        </Tooltip>
+            
+                                        <Box
+                                            sx={{
+                                                maxWidth: '70%',
+                                                p: 1.5,
+                                                borderRadius: 3,
+                                                bgcolor: isCurrentUser ? '#DCF8C6' : '#E5E5EA',
+                                                color: 'black',
+                                                boxShadow: 1,
+                                                transition: 'all 0.3s ease',
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="subtitle2"
+                                                sx={{ fontWeight: 600, mb: 0.5 }}
+                                            >
+                                                {isCurrentUser ? 'You' : user?.name}
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                                                {msg.message}
+                                            </Typography>
+                                            <Tooltip
+                                                title={new Date(msg.created_at).toLocaleString()}
+                                                placement="top"
+                                            >
+                                                <Typography
+                                                    variant="caption"
+                                                    color="text.secondary"
+                                                    sx={{ mt: 0.5, display: 'block', textAlign: isCurrentUser ? 'right' : 'left' }}
+                                                >
+                                                    {new Date(msg.created_at).toLocaleTimeString([], {
+                                                        hour: '2-digit',
+                                                        minute: '2-digit',
+                                                    })}
+                                                </Typography>
+                                            </Tooltip>
+                                        </Box>
                                     </Box>
-                                </Box>
-                            ))}
+                                );
+                            })}
                         </Paper>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
+            
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                p: 1,
+                                bgcolor: 'white',
+                                borderRadius: 2,
+                                boxShadow: 1,
+                            }}
+                        >
                             <TextField
                                 fullWidth
                                 size="small"
+                                variant="outlined"
                                 value={newMessage}
                                 onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type a message"
+                                placeholder="Type a message..."
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') sendMessage();
                                 }}
                             />
-                            <IconButton color="primary" onClick={sendMessage}>
+                            <IconButton color="primary" onClick={sendMessage} sx={{ borderRadius: 2 }}>
                                 <SendIcon />
                             </IconButton>
                         </Box>
                     </>
                 ) : (
-                    <Typography variant="body1">Select a contact to start chatting</Typography>
+                    <Typography variant="body1" sx={{ mt: 2 }}>
+                        Select a contact to start chatting
+                    </Typography>
                 )}
             </Box>
         </Box>

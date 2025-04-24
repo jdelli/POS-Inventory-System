@@ -9,18 +9,17 @@ import {
     Typography,
     Button,
     Drawer,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemIcon,
     Collapse,
-    Divider,
     IconButton,
     Box,
     Dialog,
     Paper,
     Badge,
+
 } from '@mui/material';
+import FeedIcon from '@mui/icons-material/Feed';
+import CloseIcon from '@mui/icons-material/Close';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, ShoppingCart, ShoppingCartCheckout, Chat } from '@mui/icons-material';
 import Echo from 'laravel-echo';
 import axios from 'axios';
@@ -138,179 +137,325 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
     };
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f4f4f4' }}>
-            {/* AppBar */}
-            <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
-                <Toolbar>
-                    <Typography variant="h6" noWrap component="div">
-                        {header || 'User Dashboard'}
-                    </Typography>
-                    <Box sx={{ flexGrow: 1 }} />
-                    {/* Announcement Button in AppBar */}
-                    <AnnouncementModal unreadCount={unreadCount} onNewAnnouncement={fetchUnreadCount} />
-                    <Button color="inherit" startIcon={
+        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+    {/* AppBar */}
+    <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, backgroundColor: '#ffffff', color: '#333', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)' }}>
+        <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Left Side */}
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <IconButton
+                    size="large"
+                    edge="start"
+                    color="inherit"
+                    aria-label="menu"
+                    onClick={() => setDrawerOpen(!drawerOpen)}
+                    sx={{ mr: 2 }}
+                >
+                    <Menu />
+                </IconButton>
+                <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
+                    {header || 'User Dashboard'}
+                </Typography>
+            </Box>
+
+            {/* Right Side */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* Announcement Button */}
+                <AnnouncementModal unreadCount={unreadCount} onNewAnnouncement={fetchUnreadCount} />
+
+                {/* Chat Button */}
+                <Button
+                    color="inherit"
+                    startIcon={
                         <Badge
-                            color="error" // Red color for notification badge
-                            badgeContent={totalUnreadMessages > 0 ? totalUnreadMessages : null} // Show number if > 0, otherwise hide the badge
-                            sx={{ ml: 1 }} // Adds left margin to the badge for consistency
+                            color="error"
+                            badgeContent={totalUnreadMessages > 0 ? totalUnreadMessages : null}
+                            sx={{ ml: 1 }}
                         >
                             <Chat />
                         </Badge>
-                    } onClick={toggleChat}>
-                    </Button>
+                    }
+                    onClick={toggleChat}
+                    sx={{ textTransform: 'none', fontWeight: 500 }}
+                >
+                   
+                </Button>
 
-                    <Dropdown>
-                        <Dropdown.Trigger>
-                            <Button color="inherit">{user.name}</Button>
-                        </Dropdown.Trigger>
-                        <Dropdown.Content>
-                            <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
-                            <Dropdown.Link href={route('logout')} method="post" as="button">
-                                Log Out
-                            </Dropdown.Link>
-                        </Dropdown.Content>
-                    </Dropdown>
-                </Toolbar>
-            </AppBar>
-
-            {/* Drawer */}
-            <Drawer
-                variant="permanent"
-                open={drawerOpen}
-                sx={{
-                    width: drawerOpen ? 240 : 0,
-                    flexShrink: 0,
-                    [`& .MuiDrawer-paper`]: {
-                        width: 240,
-                        boxSizing: 'border-box',
-                        transition: (theme) => theme.transitions.create('width', {
-                            easing: theme.transitions.easing.sharp,
-                            duration: theme.transitions.duration.enteringScreen,
-                        }),
-                        overflowX: 'hidden',
-                    },
-                }}
-            >
-                <Toolbar />
-                <Box sx={{ overflow: 'auto' }}>
-                    <List>
-                        <Divider />
-                        <NavLink href={route('user-dashboard')} active={route().current('user-dashboard')} className="hover:bg-gray-700">
-                            <ListItem>
-                                <ListItemIcon>
-                                    <Dashboard />
-                                </ListItemIcon>
-                                <ListItemText primary="Dashboard" />
-                            </ListItem>
-                        </NavLink>
-                        <NavLink href={route('user-sales')} active={route().current('user-sales')} className="hover:bg-gray-700">
-                            <ListItem>
-                                <ListItemIcon>
-                                    <Receipt />
-                                </ListItemIcon>
-                                <ListItemText primary="Sales Order" />
-                            </ListItem>
-                        </NavLink>
-                        <ListItem component="button" onClick={handleNavigationDropdownClick}>
-                            <ListItemIcon>
-                                <Store />
-                            </ListItemIcon>
-                            <ListItemText primary="Stocks" />
-                            {showingNavigationDropdown ? <ExpandLess /> : <ExpandMore />}
-                        </ListItem>
-                        <Collapse in={showingNavigationDropdown} timeout="auto" unmountOnExit>
-                            <List component="div" disablePadding>
-                                <NavLink href={route('user-stocks')} active={route().current('user-stocks')} className="hover:bg-gray-600">
-                                    <ListItem>
-                                        <ListItemText primary="Stock Overview" />
-                                    </ListItem>
-                                </NavLink>
-                                <NavLink href={route('user-stocksentries')} active={route().current('user-stocksentries')} className="hover:bg-gray-600">
-                                    <ListItem>
-                                        <ListItemText primary="Stock Entries" />
-                                    </ListItem>
-                                </NavLink>
-                            </List>
-                        </Collapse>
-                        <NavLink href={route('user-quotation')} active={route().current('user-quotation')} className="hover:bg-gray-700">
-                            <ListItem>
-                                <ListItemIcon>
-                                    <Receipt />
-                                </ListItemIcon>
-                                <ListItemText primary="Quotation" />
-                            </ListItem>
-                        </NavLink>
-                        <NavLink href={route('user-customers')} active={route().current('user-customers')} className="hover:bg-gray-700">
-                            <ListItem>
-                                <ListItemIcon>
-                                    <ShoppingCartCheckout />
-                                </ListItemIcon>
-                                <ListItemText primary="Customer Orders" />
-                            </ListItem>
-                        </NavLink>
-                        <NavLink href={route('user-reports')} active={route().current('user-reports')} className="hover:bg-gray-700">
-                            <ListItem>
-                                <ListItemIcon>
-                                    <Report />
-                                </ListItemIcon>
-                                <ListItemText primary="Reports" />
-                            </ListItem>
-                        </NavLink>
-                    </List>
-                </Box>
-            </Drawer>
-
-            {/* Main Content */}
-            <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-                <Toolbar />
-                {children}
+                {/* User Dropdown */}
+                <Dropdown>
+                    <Dropdown.Trigger>
+                        <Button color="inherit" sx={{ textTransform: 'none', fontWeight: 500 }}>
+                            {user.name}
+                        </Button>
+                    </Dropdown.Trigger>
+                    <Dropdown.Content>
+                        {/* <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link> */}
+                        <Dropdown.Link href={route('logout')} method="post" as="button">
+                            Log Out
+                        </Dropdown.Link>
+                    </Dropdown.Content>
+                </Dropdown>
             </Box>
+        </Toolbar>
+    </AppBar>
 
-            {/* Movable Chat Dialog */}
-            <Dialog
-                open={chatOpen}
-                onClose={toggleChat}
-                PaperComponent={(props) => (
-                    <Draggable handle="#chat-dialog-title" cancel={'[class*="MuiDialogContent-root"]'}>
-                        <Paper
-                            {...props}
-                            sx={{
-                                width: '100%', // Adjusted width for larger modal
-                                maxWidth: '900px', // Maximum width
-                                height: '60%', // Adjusted height for larger modal
-                                maxHeight: '700px', // Maximum height
-                                position: 'absolute',
-                            }}
-                        />
-                    </Draggable>
-                )}
-                aria-labelledby="chat-dialog-title"
-            >
-                <Box>
-                    {/* Draggable Title Bar */}
+    {/* Drawer */}
+    <Drawer
+        variant="permanent"
+        open={drawerOpen}
+        sx={{
+            width: drawerOpen ? 280 : 80,
+            flexShrink: 0,
+            transition: (theme) => theme.transitions.create('width', {
+                easing: theme.transitions.easing.sharp,
+                duration: theme.transitions.duration.enteringScreen,
+            }),
+            [`& .MuiDrawer-paper`]: {
+                width: drawerOpen ? 280 : 80,
+                boxSizing: 'border-box',
+                overflowX: 'hidden',
+                borderRight: '1px solid #e0e0e0',
+                backgroundColor: '#ffffff',
+            },
+        }}
+    >
+        <Toolbar />
+        <Box sx={{  padding: drawerOpen ? '16px' : '0' }}>
+            {/* Navigation Links */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {/* Dashboard */}
+                <NavLink href={route('user-dashboard')} active={route().current('user-dashboard')}>
                     <Box
-                        id="chat-dialog-title"
                         sx={{
-                            cursor: 'move',
-                            backgroundColor: '#1976d2',
-                            color: '#fff',
-                            px: 2,
-                            py: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: route().current('user-dashboard') ? '#f0faff' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: '#f0faff',
+                            },
                         }}
                     >
-                        <Typography variant="h6">Chat</Typography>
+                        <Dashboard sx={{ fontSize: 20 }} />
+                        <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Dashboard</Typography>
                     </Box>
-                    {/* Chat Content */}
-                    <Box sx={{ p: 2 }}>
-                        <iframe
-                            src={route('user-chat')} // Replace with your user-chat route
-                            width="100%"
-                            height="500px" // Adjusted iframe height for more content visibility
-                            style={{ border: 'none' }}
-                        ></iframe>
+                </NavLink>
+
+                {/* Sales Order */}
+                <NavLink href={route('user-sales')} active={route().current('user-sales')}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: route().current('user-sales') ? '#f0faff' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: '#f0faff',
+                            },
+                        }}
+                    >
+                        <Receipt sx={{ fontSize: 20 }} />
+                        <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Sales Order</Typography>
                     </Box>
+                </NavLink>
+
+                {/* Stocks Dropdown */}
+                <Box
+                    sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 2,
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: showingNavigationDropdown ? '#f0faff' : 'transparent',
+                        cursor: 'pointer',
+                        '&:hover': {
+                            backgroundColor: '#f0faff',
+                        },
+                    }}
+                    onClick={handleNavigationDropdownClick}
+                >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Store sx={{ fontSize: 20 }} />
+                        <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Stocks</Typography>
+                    </Box>
+                    {showingNavigationDropdown ? <ExpandLess /> : <ExpandMore />}
                 </Box>
-            </Dialog>
+                <Collapse in={showingNavigationDropdown} timeout="auto" unmountOnExit>
+                    <Box sx={{ pl: 2, mt: 1 }}>
+                        <NavLink href={route('user-stocks')} active={route().current('user-stocks')}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    backgroundColor: route().current('user-stocks') ? '#e6f7ff' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: '#e6f7ff',
+                                    },
+                                }}
+                            >
+                                <Typography>Stock Overview</Typography>
+                            </Box>
+                        </NavLink>
+                        <NavLink href={route('user-stocksentries')} active={route().current('user-stocksentries')}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 2,
+                                    padding: '8px 12px',
+                                    borderRadius: '8px',
+                                    backgroundColor: route().current('user-stocksentries') ? '#e6f7ff' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: '#e6f7ff',
+                                    },
+                                }}
+                            >
+                                <Typography>Stock Entries</Typography>
+                            </Box>
+                        </NavLink>
+                    </Box>
+                </Collapse>
+
+                {/* Quotation */}
+                <NavLink href={route('user-quotation')} active={route().current('user-quotation')}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: route().current('user-quotation') ? '#f0faff' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: '#f0faff',
+                            },
+                        }}
+                    >
+                        <FeedIcon sx={{ fontSize: 20 }} />
+                        <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Quotation</Typography>
+                    </Box>
+                </NavLink>
+
+                {/* Customer Orders */}
+                <NavLink href={route('user-customers')} active={route().current('user-customers')}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: route().current('user-customers') ? '#f0faff' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: '#f0faff',
+                            },
+                        }}
+                    >
+                        <ShoppingCartCheckout sx={{ fontSize: 20 }} />
+                        <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Customer Orders</Typography>
+                    </Box>
+                </NavLink>
+
+                {/* Reports */}
+                <NavLink href={route('user-reports')} active={route().current('user-reports')}>
+                    <Box
+                        sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            backgroundColor: route().current('user-reports') ? '#f0faff' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: '#f0faff',
+                            },
+                        }}
+                    >
+                        <ReceiptLongIcon sx={{ fontSize: 20 }} />
+                        <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Reports</Typography>
+                    </Box>
+                </NavLink>
+            </Box>
         </Box>
+    </Drawer>
+
+    {/* Main Content */}
+    <Box component="main" sx={{ flexGrow: 1, p: 3, paddingTop: '72px', backgroundColor: '#f9fafb' }}>
+        {children}
+    </Box>
+
+    <Dialog
+    open={chatOpen}
+    onClose={toggleChat}
+    PaperComponent={(props) => (
+        <Draggable handle="#chat-dialog-title" cancel={'[class*="MuiDialogContent-root"]'}>
+            <Paper
+                {...props}
+                sx={{
+                    width: '100%',
+                    maxWidth: 500,
+                    height: '65vh',
+                    maxHeight: 700,
+                    position: 'absolute',
+                    borderRadius: 3,
+                    overflow: 'hidden',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                }}
+            />
+        </Draggable>
+    )}
+    aria-labelledby="chat-dialog-title"
+>
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <Box
+            id="chat-dialog-title"
+            sx={{
+                cursor: 'move',
+                bgcolor: 'primary.main',
+                color: 'white',
+                px: 2,
+                py: 1.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderTopLeftRadius: 3,
+                borderTopRightRadius: 3,
+                boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.1)',
+            }}
+        >
+            <Typography variant="h6" sx={{ fontWeight: 600, textShadow: '0 1px 1px rgba(0,0,0,0.2)' }}>
+                Chat
+            </Typography>
+            <IconButton size="small" onClick={toggleChat} sx={{ color: 'white' }}>
+                <CloseIcon />
+            </IconButton>
+        </Box>
+
+        {/* Content */}
+        <Box sx={{ flex: 1, p: 0, overflow: 'hidden', bgcolor: '#f9f9f9' }}>
+            <iframe
+                src={route('user-chat')}
+                width="100%"
+                height="100%"
+                style={{
+                    border: 'none',
+                    display: 'block',
+                }}
+            />
+        </Box>
+    </Box>
+</Dialog>
+
+</Box>
     );
 }

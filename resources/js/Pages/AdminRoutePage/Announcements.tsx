@@ -26,15 +26,42 @@ const Announcement = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
+  const [pagination, setPagination] = useState({
+    total: 0,
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 10,
+  });
   const [loading, setLoading] = useState(false);
 
   // Fetch announcements from backend
   useEffect(() => {
-    axios
-      .get('/api/announcements')
-      .then((res) => setAnnouncements(res.data))
-      .catch((err) => console.error('Error fetching announcements:', err));
-  }, []);
+    const fetchAnnouncements = async () => {
+      setLoading(true);
+
+      try {
+        const response = await axios.get('/api/announcements', {
+          params: {
+            page: pagination.currentPage,
+            limit: pagination.perPage,
+          },
+        });
+
+        setAnnouncements(response.data.data); // Update announcements list
+        setPagination((prev) => ({
+          ...prev,
+          total: response.data.pagination.total,
+          lastPage: response.data.pagination.lastPage,
+        }));
+      } catch (error) {
+        console.error('Error fetching announcements:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnnouncements();
+  }, [pagination.currentPage, pagination.perPage]);
 
   // Handle posting a new announcement
   const handlePostAnnouncement = async () => {
@@ -108,7 +135,6 @@ const Announcement = () => {
                 <CardContent>
                   <Typography variant="h6">{announcement.title}</Typography>
                   <Typography variant="body2" color="textSecondary">
-                    {/* Safely parse and display the date */}
                     {announcement.date
                       ? new Date(announcement.date).toLocaleDateString()
                       : 'Invalid Date'}
@@ -121,6 +147,33 @@ const Announcement = () => {
             ))
           )}
         </Stack>
+
+        {/* Pagination Controls */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <Button
+            variant="outlined"
+            disabled={pagination.currentPage === 1}
+            onClick={() =>
+              setPagination((prev) => ({ ...prev, currentPage: prev.currentPage - 1 }))
+            }
+          >
+            Previous
+          </Button>
+
+          <Typography sx={{ mx: 2 }}>
+            Page {pagination.currentPage} of {pagination.lastPage}
+          </Typography>
+
+          <Button
+            variant="outlined"
+            disabled={pagination.currentPage === pagination.lastPage}
+            onClick={() =>
+              setPagination((prev) => ({ ...prev, currentPage: prev.currentPage + 1 }))
+            }
+          >
+            Next
+          </Button>
+        </Box>
       </Box>
     </AdminLayout>
   );

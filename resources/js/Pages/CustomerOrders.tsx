@@ -58,6 +58,18 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [selectedBranch, setSelectedBranch] = useState<string | null>(null); // Fix duplicated state
   const [branches, setBranches] = useState<Branch[]>([]);
 
+
+
+  // Helper function to format currency as ₱100,000 without decimals
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 0, // No decimal places
+        maximumFractionDigits: 0, // No decimal places
+    }).format(amount);
+  };
+
   // Fetch branches
   useEffect(() => {
     const fetchBranches = async () => {
@@ -237,11 +249,17 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
             <TableBody>
               {selectedCustomer.orders.map((order) => (
                 <TableRow key={order.id}>
-                  <TableCell>{order.product_name}</TableCell>
-                  <TableCell>{order.quantity}</TableCell>
-                  <TableCell>{order.price}</TableCell>
-                  <TableCell>{order.total}</TableCell>
-                </TableRow>
+                <TableCell>{order.product_name}</TableCell>
+                <TableCell>{order.quantity}</TableCell>
+                <TableCell>
+                    {/* Format Price */}
+                    {formatCurrency(order.price || 0)}
+                </TableCell>
+                <TableCell>
+                    {/* Format Total */}
+                    {formatCurrency(order.total || 0)}
+                </TableCell>
+            </TableRow>
               ))}
             </TableBody>
           </Table>
@@ -253,16 +271,16 @@ const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-        <Typography variant="h6" fontWeight="bold">
-          Total:
-        </Typography>
-        <Typography variant="h6" fontWeight="bold">
-          {selectedCustomer.orders
-            .reduce((sum, order) => sum + (Number(order.total) || 0), 0)
-            .toFixed(2)}
-        </Typography>
+          <Typography variant="h6" fontWeight="bold">
+              Total:
+          </Typography>
+          <Typography variant="h6" fontWeight="bold">
+              {/* Format Total */}
+              {formatCurrency(
+                  selectedCustomer.orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0)
+              )}
+          </Typography>
       </div>
-
       <FormControl variant="outlined" sx={{ marginTop: 2 }}>
         <InputLabel>Forward to</InputLabel>
         <Select

@@ -33,6 +33,17 @@ const MonthlySalesDashboard: React.FC = () => {
     const monthlyTarget = salesTarget / 12;
     const COLORS = ['#1E90FF', '#FF6347'];
 
+
+    // Helper function to format currency as ₱100,000 without decimals
+        const formatCurrency = (amount: number): string => {
+            return new Intl.NumberFormat('en-PH', {
+                style: 'currency',
+                currency: 'PHP',
+                minimumFractionDigits: 0, // No decimal places
+                maximumFractionDigits: 0, // No decimal places
+            }).format(amount);
+        };
+
     useEffect(() => {
         // Fetch monthly sales data
         apiService.get<{ success: boolean; data: SalesData[] }>('/get-monthly-sales', {
@@ -115,28 +126,34 @@ const MonthlySalesDashboard: React.FC = () => {
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
                     {/* Card for Total Sales Orders */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        {/* Total Sales Orders */}
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
                             <h3 className="text-lg font-bold text-gray-800 mb-2">Total Sales Orders:</h3>
                             <p className="text-3xl font-semibold text-blue-600">
                                 {totalSalesOrders !== null ? totalSalesOrders : 'Loading...'}
                             </p>
                         </div>
+
+                        {/* Sales Orders Today */}
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
-                            <h3 className="text-lg font-bold text-gray-800 mb-2"> Sales Orders Today:</h3>
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">Sales Orders Today:</h3>
                             <p className="text-3xl font-semibold text-blue-600">
                                 {totalSalesToday !== null ? totalSalesToday : 'Loading...'}
                             </p>
                         </div>
+
+                        {/* Daily Sales */}
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:shadow-xl">
                             <h3 className="text-lg font-bold text-gray-800 mb-2">Daily Sales:</h3>
                             <p className="text-3xl font-semibold text-blue-600">
                                 {typeof dailySales === 'number'
-                                    ? `₱${dailySales}`
+                                    ? formatCurrency(dailySales) // Format as currency
                                     : dailySales.length > 0
-                                    ? dailySales.map((item) => `₱${item.sales}`).join(', ')
+                                    ? dailySales.map((item) => formatCurrency(item.sales)).join(', ') // Format each sales value
                                     : 'No sales today'}
                             </p>
                         </div>
+
                         {/* Add more cards here if needed */}
                     </div>
 
@@ -148,7 +165,10 @@ const MonthlySalesDashboard: React.FC = () => {
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="month" />
                                 <YAxis />
-                                <Tooltip formatter={(value: number) => `₱${value}`} />
+                                {/* Updated Tooltip to use formatCurrency */}
+                                <Tooltip
+                                    formatter={(value: number) => formatCurrency(value)} // Format as currency
+                                />
                                 <Legend />
                                 <Bar dataKey="sales" fill="#1E90FF" name="Actual Sales" />
                                 <Bar dataKey="target" fill="#FF6347" name="Sales Target" />
@@ -166,7 +186,7 @@ const MonthlySalesDashboard: React.FC = () => {
                                     <CartesianGrid strokeDasharray="3 3" />
                                     <XAxis dataKey="month" />
                                     <YAxis />
-                                    <Tooltip formatter={(value: number) => `₱${value}`} />
+                                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
                                     <Legend />
                                     <Line type="monotone" dataKey="sales" stroke="#1E90FF" name="Sales Performance" />
                                 </LineChart>
@@ -177,30 +197,35 @@ const MonthlySalesDashboard: React.FC = () => {
                         <div className="bg-white shadow-lg rounded-lg p-6 transition hover:bg-gray-50 hover:shadow-xl flex-1">
                             <h3 className="text-xl font-semibold text-gray-800 mb-4">Yearly Sales Target Status</h3>
                             <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={totalSalesData}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        cx="50%"
-                                        cy="50%"
-                                        outerRadius={100}
-                                        label
-                                    >
-                                        {totalSalesData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(value: number) => `₱${value}`} />
-                                </PieChart>
+                            <PieChart>
+                                <Pie
+                                    data={totalSalesData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={100}
+                                    label
+                                >
+                                    {totalSalesData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                {/* Updated Tooltip to use formatCurrency */}
+                                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                            </PieChart>
                             </ResponsiveContainer>
                             <div className="text-center mt-4 text-lg font-semibold">
-                                Yearly Total Sales: ₱{totalSales}
+                                Yearly Total Sales: {formatCurrency(totalSales)}
                             </div>
-                            <div className={`text-center mt-4 ${totalSales >= salesTarget ? 'text-green-600' : 'text-red-600'} font-semibold`}>
+                            <div
+                                className={`text-center mt-4 ${
+                                    totalSales >= salesTarget ? 'text-green-600' : 'text-red-600'
+                                } font-semibold`}
+                            >
                                 {totalSales >= salesTarget
                                     ? 'Fantastic! You have met or exceeded the sales target!'
-                                    : `You need ₱${salesTarget - totalSales} more to meet your sales target.`}
+                                    : `You need ${formatCurrency(salesTarget - totalSales)} more to meet your sales target.`}
                             </div>
                         </div>
                     </div>
