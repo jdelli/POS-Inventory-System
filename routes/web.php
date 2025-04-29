@@ -14,7 +14,7 @@ Route::get('/', function () {
     ]);
 });
 
-// Admin Routes
+// Users Routes
 Route::middleware(['checkrole:user'])->group(function () {
     Route::get('/user-dashboard', function () {
         return Inertia::render('Dashboard');
@@ -60,7 +60,7 @@ Route::middleware(['checkrole:user'])->group(function () {
 
 
 
-// User Routes
+// admin Routes
 Route::middleware(['checkrole:admin'])->group(function () {
     Route::get('/admin-dashboard', function () {
         return Inertia::render('AdminRoutePage/Dashboard');
@@ -98,7 +98,6 @@ Route::middleware(['checkrole:admin'])->group(function () {
         return Inertia::render('AdminRoutePage/SalesStatistics');
     })->name('admin-sales-stats');
 
-
     Route::get('/admin-chat', function () {
         return Inertia::render('AdminRoutePage/Chat');
     })->name('admin-chat');
@@ -106,6 +105,11 @@ Route::middleware(['checkrole:admin'])->group(function () {
     Route::get('/admin-announcements', function () {
         return Inertia::render('AdminRoutePage/Announcements');
     })->name('admin-announcements');
+
+    Route::get('/admin-sales-data', function () {
+        return Inertia::render('AdminRoutePage/BranchData');
+    })->name('admin-sales-data');
+
 
 });
 

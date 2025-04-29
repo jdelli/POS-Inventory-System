@@ -26,7 +26,7 @@ const MonthlySalesDashboard: React.FC = () => {
     const { auth } = usePage().props as { auth: { user: User } };
     const [salesData, setSalesData] = useState<SalesData[]>([]);
     const [totalSales, setTotalSales] = useState<number>(0);
-    const [salesTarget, setSalesTarget] = useState<number>(3000000);
+    const [salesTarget, setSalesTarget] = useState<number>(0); // Start at 0, update after fetching
     const [totalSalesOrders, setTotalSalesOrders] = useState<number | null>(null);
     const [totalSalesToday, setTotalSalesToday] = useState<number | null>(null);
     const [dailySales, setDailySales] = useState<number | DailySalesData[]>(0);
@@ -43,6 +43,25 @@ const MonthlySalesDashboard: React.FC = () => {
                 maximumFractionDigits: 0, // No decimal places
             }).format(amount);
         };
+
+
+        useEffect(() => {
+            // Fetch sales target
+            apiService.get<{ success: boolean; data: number }>('/get-sales-target', {
+                params: { user_name: auth.user.name } // Assuming your branch_id is based on user.name
+            })
+            .then((response) => {
+                console.log("Sales Target Data:", response.data);
+                if (response.data.success) {
+                    setSalesTarget(response.data.data);
+                }
+            })
+            .catch((error) => {
+                console.error("Error fetching sales target:", error);
+            });
+        }, [auth.user.name]);
+
+
 
     useEffect(() => {
         // Fetch monthly sales data

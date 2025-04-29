@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { usePage, Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import EditProductModal from './Props/Edit';
-import AddProductModal from './Props/Add';
-import { Grid, TextField, InputLabel, MenuItem, Select, FormControl, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Typography } from '@mui/material';
+import { CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Typography } from '@mui/material';
 
 
 

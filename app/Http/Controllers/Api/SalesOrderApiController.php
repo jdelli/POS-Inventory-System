@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Models\Products;
 use App\Models\StockHistory;
+use App\Events\NewSalesUpdate;
 
 
 
@@ -46,6 +47,9 @@ class SalesOrderApiController extends Controller
             'branch_id' => $validatedData['branch_id'],
             'payment_method' => $validatedData['payment_option'],
         ]);
+
+        // Trigger event
+        event(new NewSalesUpdate($salesOrder->date, $salesOrder->branch_id));
 
         // Process each item
         foreach ($validatedData['items'] as $item) {

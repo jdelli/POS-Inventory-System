@@ -156,6 +156,8 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
 
 
 const submitSalesOrder = async () => {
+  if (isSubmitting) return; // Prevent double click submit
+
   try {
     if (
       !client || 
@@ -168,7 +170,7 @@ const submitSalesOrder = async () => {
       return;
     }
 
-    setIsSubmitting(true);
+    setIsSubmitting(true); // Disable the button immediately
 
     const itemsPayload = receiptItems.map(item => ({
       id: item.id,
@@ -179,7 +181,6 @@ const submitSalesOrder = async () => {
       total: item.price * item.quantity,
     }));
 
-    // Call backend
     const response = await apiService.post('/add-sales-order', {
       customer_name: client,
       receipt_number: receiptNumber,
@@ -200,7 +201,6 @@ const submitSalesOrder = async () => {
     console.error('Error:', error);
 
     if (axios.isAxiosError(error)) {
-      // Handle backend error messages properly
       const errorMessage = error.response?.data?.message || "An unexpected error occurred.";
       alert(errorMessage);
     } else if (error instanceof Error) {
@@ -214,6 +214,7 @@ const submitSalesOrder = async () => {
     fetchSalesReceipts();
   }
 };
+
 
 
 
@@ -554,9 +555,10 @@ const submitSalesOrder = async () => {
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-                      >
-                        Submit
+                        disabled={isSubmitting}
+                        className={`bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                         {isSubmitting ? 'Submitting...' : 'Submit'}
                       </button>
                     </div>
                   </div>

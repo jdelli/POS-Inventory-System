@@ -28,6 +28,7 @@ import AssessmentIcon from '@mui/icons-material/Assessment';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import GroupsIcon from '@mui/icons-material/Groups';
 import CampaignIcon from '@mui/icons-material/Campaign';
+import TableChartIcon from '@mui/icons-material/TableChart';
 import {
     Menu,
 } from '@mui/icons-material';
@@ -111,19 +112,6 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
     
 
 
-
-
-
-
-
-
-
-
-
-
-    const handleBranchManagementClick = () => {
-        setOpenBranchManagement(!openBranchManagement);
-    };
 
     const toggleChat = () => {
         setChatOpen(!chatOpen);
@@ -401,6 +389,26 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                         >
                             <ReceiptLongIcon sx={{ fontSize: 20 }} />
                             <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Branch Reports</Typography>
+                        </Box>
+                    </NavLink>
+
+                    {/* Branch Data */}
+                    <NavLink href={route('admin-sales-data')} active={route().current('admin-sales-data')}>
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 2,
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                backgroundColor: route().current('admin-sales-data') ? '#f0faff' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: '#f0faff',
+                                },
+                            }}
+                        >
+                            <TableChartIcon sx={{ fontSize: 20 }} />
+                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Branch Data</Typography>
                         </Box>
                     </NavLink>
 

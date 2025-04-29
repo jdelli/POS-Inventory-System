@@ -9,26 +9,39 @@ use App\Models\SalesOrderItems;
 use App\Models\Remittance;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
 
 class SalesReportController extends Controller
 {
+   
+
     public function dailySalesReport(Request $request)
 {
     $userName = $request->input('user_name');
-    
-    // Paginate the results (10 items per page, adjust as needed)
+    $month = (int) $request->input('month'); // force integer
+    $year = $request->input('year');
+
     $sales = SalesOrder::with('items')
         ->selectRaw('date, SUM(items.total) as total_sales')
         ->join('sales_order_items as items', 'sales_orders.id', '=', 'items.sales_order_id')
         ->when($userName, function ($query) use ($userName) {
             return $query->where('branch_id', $userName);
         })
+        ->when($month >= 0 && $year, function ($query) use ($month, $year) {
+            return $query->whereMonth('date', $month + 1) // Now correct
+                         ->whereYear('date', $year);
+        }, function ($query) {
+            $query->whereMonth('date', Carbon::now()->month)
+                  ->whereYear('date', Carbon::now()->year);
+        })
         ->groupBy('date')
         ->orderBy('date', 'desc')
-        ->paginate(10);  // Paginate results (10 per page)
+        ->paginate(10);
 
     return response()->json($sales);
 }
+
+    
 
 
 
@@ -180,19 +193,28 @@ public function store(Request $request)
      */
     public function index(Request $request)
 {
-    // Validate that branch_id is provided
     $request->validate([
         'branch_id' => 'required|string',
-        'page' => 'nullable|integer|min:1', // Handle page parameter
+        'page' => 'nullable|integer|min:1',
     ]);
 
     $branchId = $request->query('branch_id');
-    $page = $request->query('page', 1); // Default to page 1 if not provided
+    $page = $request->query('page', 1);
+    $month = $request->query('month');
+    $year = $request->query('year');
 
-    // Fetch remittances for the specific branch with pagination
-    $cashBreakdowns = Remittance::where('branch_id', $branchId)
-        ->orderBy('created_at', 'desc')
-        ->paginate(10, ['*'], 'page', $page); // Paginate 10 items per page
+    $query = Remittance::where('branch_id', $branchId);
+
+    if ($month >= 0 && $year) {
+        $query->whereMonth('created_at', $month + 1)
+              ->whereYear('created_at', $year);
+    } else {
+        $query->whereMonth('created_at', Carbon::now()->month)
+              ->whereYear('created_at', Carbon::now()->year);
+    }
+
+    $cashBreakdowns = $query->orderBy('created_at', 'desc')
+                            ->paginate(10, ['*'], 'page', $page);
 
     return response()->json([
         'success' => true,
@@ -202,7 +224,6 @@ public function store(Request $request)
         'total' => $cashBreakdowns->total(),
     ]);
 }
-
 
 
     /**

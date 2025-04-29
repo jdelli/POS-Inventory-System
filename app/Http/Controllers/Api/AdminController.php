@@ -16,6 +16,7 @@ use App\Models\SupplierStocks;
 use App\Models\Remittance;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use App\Models\SalesTarget;
 
 class AdminController extends Controller
 {
@@ -489,6 +490,48 @@ public function perBranchSalesStatistics(Request $request)
         'total_remittance_expenses' => $remittanceExpenses,
     ]);
 }
+
+
+
+
+
+// GET sales target by branch_id
+public function getSalesTarget(Request $request)
+{
+    $branchId = $request->query('user_name');
+
+    $salesTarget = SalesTarget::where('branch_id', $branchId)->first();
+
+    return response()->json([
+        'success' => true,
+        'data' => $salesTarget ? $salesTarget->target_sales : 0,
+    ]);
+}
+
+// POST or UPDATE sales target
+public function saveSalesTarget(Request $request)
+{
+    $request->validate([
+        'branch_id' => 'required|string',
+        'target_sales' => 'required|numeric|min:0',
+    ]);
+
+    $branchId = $request->input('branch_id');
+    $targetSales = $request->input('target_sales');
+
+    $salesTarget = SalesTarget::updateOrCreate(
+        ['branch_id' => $branchId],
+        ['target_sales' => $targetSales]
+    );
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Sales target saved successfully.',
+    ]);
+}
+
+
+
 
 
 }

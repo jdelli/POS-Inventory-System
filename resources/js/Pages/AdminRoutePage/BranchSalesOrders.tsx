@@ -51,14 +51,7 @@ interface InventoryManagementProps {
 
 const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
     const [isReceiptModalOpen, setIsReceiptModalOpen] = useState<boolean>(false);
-    const [receiptItems, setReceiptItems] = useState<Item[]>([{ name: '', price: 0, quantity: 0, id: 0 }]);
-    const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
-    const [searchTerms, setSearchTerms] = useState<string[]>(['']);
-    const [client, setClient] = useState<string>('');
-    const [receiptNumber, setReceiptNumber] = useState<string>('');
-    const [date, setDate] = useState<string>('');
     const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [filteredOrders, setFilteredOrders] = useState<SalesOrder[]>([]);
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [totalPages, setTotalPages] = useState<number>(1);

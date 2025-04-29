@@ -88,7 +88,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/delete-supplier-stocks/{id}', [AdminController::class, 'deleteSupplierStocks']);
     Route::get('/sales-statistics', [AdminController::class, 'salesStatistics']);
     Route::get('/branch-monthly-sales-statistics', [AdminController::class, 'perBranchSalesStatistics']);
+    Route::get('/get-sales-target', [AdminController::class, 'getSalesTarget']);
+    Route::post('/sales-target', [AdminController::class, 'saveSalesTarget']);
 
+    
     // Chat
     Route::post('/chat/send', [ChatController::class, 'sendMessage']);
     Route::get('/chat/{userId}', [ChatController::class, 'getMessages']);
@@ -106,9 +109,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/announcements/unread', [AnnouncementsController::class, 'unread']);
         Route::patch('/announcements/{id}/read', [AnnouncementsController::class, 'markAsRead']);
     });
-    
-
-    
+     
 });
 
 

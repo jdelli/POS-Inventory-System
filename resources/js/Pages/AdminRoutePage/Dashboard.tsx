@@ -20,6 +20,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import Pusher from 'pusher-js';
 import Echo from 'laravel-echo';
 import { Box, Typography, List, ListItem, ListItemText, Chip } from '@mui/material';
+import echo from '../echo';
 
 // Attach Pusher to the window object globally
 (window as any).Pusher = Pusher;
@@ -59,10 +60,9 @@ export default function Dashboard() {
     const [dailySales, setDailySales] = useState<SalesData[]>([]);
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     const [selectYear, setSelectYear] = useState<number>(new Date().getFullYear());
-    const [productSalesData, setProductSalesData] = useState<ProductSalesData[]>([]);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
     const [users, setUsers] = useState<User[]>([]);
+    const [reloadTrigger, setReloadTrigger] = useState(0);
+    
 
 
     // Helper function to format the date as YYYY-MM-DD
@@ -83,6 +83,28 @@ export default function Dashboard() {
             maximumFractionDigits: 0, // No maximum decimal places
         }).format(amount);
     };
+
+
+
+
+
+    // Echo listener
+    useEffect(() => {
+        const channel = echo.channel('daily-sales');
+
+        channel.listen('.new-sales-update', (event: { date: string; branchId: number }) => {
+            console.log('Daily sales updated:', event);
+
+            if (formatDateWithoutTimezone(selectedDate as Date) === event.date) {
+                setReloadTrigger(prev => prev + 1);  // 👈 Trigger a re-fetch
+            }
+        });
+
+        return () => {
+            echo.leave('daily-sales');
+        };
+    }, [selectedDate]);
+    
 
 
 
@@ -111,19 +133,17 @@ export default function Dashboard() {
     }, [selectYear]);
     
 
-    // Fetch daily sales data
-    useEffect(() => {
+        // Fetch daily sales data
         const fetchDataDailySales = async () => {
             if (!selectedDate) return;
             try {
-                // Format the date as YYYY-MM-DD without timezone conversion
                 const formattedDate = formatDateWithoutTimezone(selectedDate);
                 console.log('Fetching data for date:', formattedDate);
-    
+
                 const response = await apiService.get<ApiResponse<SalesData>>('/daily-sales-by-branch', {
                     params: { date: formattedDate },
                 });
-    
+
                 if (response.data.success) {
                     setDailySales(response.data.data);
                 }
@@ -131,41 +151,14 @@ export default function Dashboard() {
                 console.error('Error fetching daily sales data:', error);
             }
         };
-        fetchDataDailySales();
-    }, [selectedDate]);
 
-    // Fetch product sales data
-    useEffect(() => {
-        const fetchProductSalesData = async () => {
-            if (!selectedBranch) return;
-            try {
-                const response = await apiService.get('/most-sold-product', {
-                    params: { branch_id: selectedBranch },
-                });
-                if (response.data.success && response.data.data.length > 0) {
-                    setProductSalesData(response.data.data);
-                } else {
-                    setProductSalesData([]); // Ensure empty state is handled
-                }
-            } catch (error) {
-                console.error('Error fetching product sales data:', error);
-            }
-        };
-        fetchProductSalesData();
-    }, [selectedBranch]);
+        // Fetch when either selectedDate or reloadTrigger changes
+        useEffect(() => {
+            fetchDataDailySales();
+        }, [selectedDate, reloadTrigger]);  // 👈 Added reloadTrigger
 
-    // Fetch branches
-    useEffect(() => {
-        const fetchBranches = async () => {
-            try {
-                const response = await apiService.get('/get-branches');
-                setBranches(response.data);
-            } catch (error) {
-                console.error('Error fetching branches:', error);
-            }
-        };
-        fetchBranches();
-    }, []);
+
+
 
     // Initialize Pusher and listen for user status updates
     useEffect(() => {
@@ -187,16 +180,6 @@ export default function Dashboard() {
 
         fetchUsers();
 
-        const echo = new Echo({
-            broadcaster: 'pusher',
-            key: import.meta.env.VITE_REVERB_APP_KEY,
-            wsHost: import.meta.env.VITE_REVERB_HOST,
-            wsPort: Number(import.meta.env.VITE_REVERB_PORT),
-            forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https',
-            disableStats: true,
-            enabledTransports: ['ws'],
-            cluster: 'mt1', // Dummy value; you can adjust based on your setup
-        });
 
         echo.channel('user-status').listen('.UserStatusUpdated', (data: any) => {
             setUsers((prev) => {
@@ -388,62 +371,7 @@ export default function Dashboard() {
                         </ResponsiveContainer>
                     </Box>
 
-                    {/* Product Sales Pie Chart Section */}
-                    <Box
-                        sx={{
-                            background: 'white',
-                            boxShadow: 3,
-                            borderRadius: 2,
-                            p: 6,
-                            mt: 6,
-                            border: '2px solid white',
-                        }}
-                    >
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>
-                            Mostly Sold Products
-                        </Typography>
-                        <Box sx={{ mb: 6 }}>
-                            <Typography variant="body1" sx={{ color: 'gray.700', fontWeight: 'bold', mb: 2 }}>
-                                Select Branch:
-                            </Typography>
-                            <select
-                                value={selectedBranch || ''}
-                                onChange={(e) => setSelectedBranch(e.target.value)}
-                                className="border rounded-md py-2 px-3 w-full md:w-auto"
-                                aria-label="Select Branch"
-                            >
-                                <option value="" disabled>
-                                    Select Branch
-                                </option>
-                                {branches.map((branch) => (
-                                    <option key={branch.id} value={branch.name}>
-                                        {branch.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </Box>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={productSalesData}
-                                    dataKey="total_amount"
-                                    nameKey="product_name"
-                                    cx="50%"
-                                    cy="50%"
-                                    outerRadius={100}
-                                    fill="#8884d8"
-                                    label
-                                >
-                                    {productSalesData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                {/* Updated Tooltip to use formatCurrency */}
-                                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </Box>
+                    
                 </Box>
 
                 {/* User Status Section */}

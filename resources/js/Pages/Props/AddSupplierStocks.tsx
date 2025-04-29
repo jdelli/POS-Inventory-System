@@ -66,20 +66,25 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
   };
 
   const submitAddSupplier = async () => {
+    if (isSubmitting) return; // 🛡️ Prevent double click!
+  
     try {
       if (!deliveryNumber || !productCategory || !date || supplierItems.length === 0) {
         alert("Please fill in all required fields.");
         return;
       }
-      setIsSubmitting(true);
+  
+      setIsSubmitting(true); // Set immediately after checks!
+  
       const itemsPayload = supplierItems.map((item) => ({
         id: item.id,
         product_code: item.product_code,
         product_name: item.name,
         quantity: item.quantity,
         price: item.price,
-        total: item.total || 0, // Include total in the payload
+        total: item.total || 0,
       }));
+  
       const response = await apiService.post('/add-supplier', {
         supplier_name: selectedSupplierName,
         delivery_number: deliveryNumber,
@@ -87,12 +92,15 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
         product_category: productCategory,
         items: itemsPayload,
       });
+  
       if (!response.data.success) {
         throw new Error(response.data.message || 'Error adding supplier.');
       }
+  
       alert('Supplier added successfully!');
       closeModal();
-      onSuccess(); // Refresh data after success
+      onSuccess();
+  
     } catch (error: unknown) {
       console.error('Error submitting supplier:', error);
       alert(error instanceof Error ? error.message : 'An unknown error occurred.');
@@ -100,6 +108,7 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
       setIsSubmitting(false);
     }
   };
+  
 
   useEffect(() => {
     searchTerms.forEach((term, index) => {
@@ -302,12 +311,15 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
           </div>
       
           <div className="flex justify-end space-x-4">
-            <button
-              onClick={submitAddSupplier}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
-            >
-              Submit
-            </button>
+          <button
+            type="button"
+            onClick={submitAddSupplier}
+            disabled={isSubmitting}
+            className={`bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit'}
+          </button>
+
             <button
               onClick={closeModal}
               className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"

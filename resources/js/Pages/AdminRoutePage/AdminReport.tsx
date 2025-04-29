@@ -27,6 +27,7 @@ import { Table,
 
 
 
+
 interface SalesOrderItem {
   product_code: string;
   product_name: string;
@@ -72,10 +73,6 @@ interface Remittance {
 
 
 
-
-
-
-
 const DailySalesReport: React.FC = () => {
   const [salesData, setSalesData] = useState<SalesOrder[]>([]);
   const [selectedSalesOrder, setSelectedSalesOrder] = useState<SalesOrder[]>([]);
@@ -87,30 +84,28 @@ const DailySalesReport: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [grandTotal, setGrandTotal] = useState<Product[]>([]);
-  const [isCashBreakdownModalOpen, setIsCashBreakdownModalOpen] = useState(false);
-  const [cashBreakdown, setCashBreakdown] = useState<{ [key: number]: number }>({});
-  const [expenses, setExpenses] = useState<{ particular: string; amount: number }[]>([]);
-  const [totalSales, setTotalSales] = useState(0);
-  const [startDate, setStartDate] = useState(""); // User input for start date
-  const [endDate, setEndDate] = useState(""); // User input for end date
-  const [totalCash, setTotalCash] = useState(0);
-  const [totalExpenses, setTotalExpenses] = useState(0);
   const [remittances, setRemittances] = useState([]);
-  const [selectedBreakdown, setSelectedBreakdown] = useState(null);
   const [isRemittanceModalOpen, setIsRemittanceModalOpen] = useState(false);
   const [selectedRemittance, setSelectedRemittance] = useState<Remittance | null>(null);
-  const [onlinePayments, setOnlinePayments] = useState(0);
-  const [totalSalesAmount, setTotalSalesAmount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1); // Track current page
   const [totalPages, setTotalPages] = useState(1); // Track total pages
   const [currentPageRemittances, setCurrentPageRemittances] = useState(1); // Track current page
   const [totalPagesRemittances, setTotalPagesRemittances] = useState(1); // Track total pages
   const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
   const [selectedBranchName, setSelectedBranchName] = useState<string | null>(null);
+  const [selectedMonthDaily, setSelectedMonthDaily] = useState(new Date().getMonth().toString());
+  const [selectedYearDaily, setSelectedYearDaily] = useState(new Date().getFullYear().toString());
   
+  
+  
+  // Get an array of month names
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
 
-  const totalExpensesAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-  const remainingCash = totalSales - totalExpensesAmount;
+  // Generate a list of years (e.g., 5 years before and after the current year)
+  const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
 
 
   // Helper function to format currency as ₱100,000 without decimals
@@ -125,25 +120,25 @@ const DailySalesReport: React.FC = () => {
 
 
 
-  useEffect(() => {
-    if (!auth?.user?.name || !selectedBranchName) return;
-  
-    // Fetch sales data with pagination and branch filtering
-    apiService
-      .get("/sales-report/daily", {
-        params: { 
-          
-          user_name: selectedBranchName, // Pass selected branch
-          page: currentPage, // Pagination
-        },
-      })
-      .then((response) => {
-        setSalesData(response.data.data); // Update sales data
-        setTotalPages(response.data.last_page); // Update total pages
-      })
-      .catch((error) => console.error("Error fetching sales data:", error));
-  }, [auth?.user?.name, selectedBranchName, currentPage]); 
-  // Re-fetch when user, branch, or page changes
+    useEffect(() => {
+      if (!auth?.user?.name || !selectedBranchName) return;
+    
+      apiService
+        .get("/sales-report/daily", {
+          params: { 
+            user_name: selectedBranchName,
+            page: currentPage,
+            month: selectedMonthDaily,
+            year: selectedYearDaily,
+          },
+        })
+        .then((response) => {
+          setSalesData(response.data.data);
+          setTotalPages(response.data.last_page);
+        })
+        .catch((error) => console.error("Error fetching sales data:", error));
+    }, [auth?.user?.name, selectedBranchName, currentPage, selectedMonthDaily, selectedYearDaily]);
+    
   
 
   // Handle page change
@@ -155,39 +150,34 @@ const DailySalesReport: React.FC = () => {
 
 
 
-
-  useEffect(() => {
-    const calculatedTotalCash = Object.entries(cashBreakdown).reduce(
-      (sum, [denom, qty]) => sum + parseInt(denom) * qty,
-      0
-    );
-    setTotalCash(calculatedTotalCash);
-
-  }, [cashBreakdown, expenses]);
-
-
    // Fetch all remittance records
    const fetchRemittances = async () => {
     try {
       const response = await apiService.get("/cash-breakdowns", {
-        params: { branch_id: selectedBranchName, page: currentPageRemittances }, // Send current page
+        params: { 
+          branch_id: selectedBranchName,
+          page: currentPageRemittances,
+          month: selectedMonthDaily,
+          year: selectedYearDaily,
+        },
       });
-
+  
       if (!response.data.success) {
         alert("No remittances found for this branch.");
         return;
       }
-
+  
       setRemittances(response.data.data || []);
-      setTotalPagesRemittances(response.data.last_page); // Set total pages from response
+      setTotalPagesRemittances(response.data.last_page);
     } catch (error) {
       console.error("Error fetching remittances:", error);
     }
   };
+  
 
   useEffect(() => {
     fetchRemittances();
-  }, [currentPageRemittances, selectedBranchName]); // Fetch data when currentPage changes
+  }, [currentPageRemittances, selectedBranchName, selectedMonthDaily, selectedYearDaily]); // Fetch data when currentPage changes
 
   const handlePageChangeRemittance = (page: any) => {
     if (page > 0 && page <= totalPagesRemittances) {
@@ -255,11 +245,6 @@ const DailySalesReport: React.FC = () => {
 
     fetchBranches();
   }, []);
-
-
-
- 
-
 
 
 
@@ -412,19 +397,15 @@ const DailySalesReport: React.FC = () => {
     }
   };
 
-  const openCashBreakdownModal = () => {
-    setIsCashBreakdownModalOpen(true);
-  };
 
-  const closeCashBreakdownModal = () => {
-    setIsCashBreakdownModalOpen(false);
-  };
 
 
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight"> Sales Report</h2>}>
       <Head title="Admin Sales Report" />
       <div className="p-4 bg-white shadow rounded-lg">
+         <div className="flex flex-wrap items-center gap-4">
+          {/* Left side (Branch, Month, Year) */}
           <div className="flex flex-wrap items-center gap-4">
             {/* Branch Selection Dropdown */}
             <select
@@ -446,7 +427,40 @@ const DailySalesReport: React.FC = () => {
               ))}
             </select>
 
-            {/* View Monthly Sales Button */}
+            {/* Month and Year Selectors */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="month">Month:</label>
+              <select
+                id="month"
+                value={selectedMonthDaily}
+                onChange={(e) => setSelectedMonthDaily(e.target.value)}
+                className="border rounded-md py-2 px-3"
+              >
+                {months.map((month, index) => (
+                  <option key={index} value={index.toString()}>
+                    {month}
+                  </option>
+                ))}
+              </select>
+
+              <label htmlFor="year" className="ml-2">Year:</label>
+              <select
+                id="year"
+                value={selectedYearDaily}
+                onChange={(e) => setSelectedYearDaily(e.target.value)}
+                className="border rounded-md py-2 px-3"
+              >
+                {years.map((year, index) => (
+                  <option key={index} value={year.toString()}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Right side (View Monthly Sales Button) */}
+          <div className="ml-auto">
             <button
               onClick={openSalesModal}
               className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
@@ -454,6 +468,9 @@ const DailySalesReport: React.FC = () => {
               View Monthly Sales
             </button>
           </div>
+        </div>
+
+
 
 
 
@@ -638,28 +655,24 @@ const DailySalesReport: React.FC = () => {
                           <tr>
                               <td className="p-2 border font-bold">Total Sales:</td>
                               <td className="p-2 border">
-                                  {/* Format Total Sales */}
                                   {formatCurrency(selectedRemittance.total_sales || 0)}
                               </td>
                           </tr>
                           <tr>
                               <td className="p-2 border font-bold">Total Cash:</td>
                               <td className="p-2 border">
-                                  {/* Format Total Cash */}
                                   {formatCurrency(selectedRemittance.total_cash || 0)}
                               </td>
                           </tr>
                           <tr>
                               <td className="p-2 border font-bold">Total Online Payments:</td>
                               <td className="p-2 border">
-                                  {/* Format Total Online Payments */}
                                   {formatCurrency(selectedRemittance.online_payments || 0)}
                               </td>
                           </tr>
                           <tr>
                               <td className="p-2 border font-bold">Total Expenses:</td>
                               <td className="p-2 border">
-                                  {/* Format Total Expenses */}
                                   {Array.isArray(selectedRemittance.expenses)
                                       ? formatCurrency(
                                             selectedRemittance.expenses.reduce((sum, expense) => sum + Number(expense.amount), 0) || 0
@@ -670,7 +683,6 @@ const DailySalesReport: React.FC = () => {
                           <tr>
                               <td className="p-2 border font-bold">Remaining Cash:</td>
                               <td className="p-2 border">
-                                  {/* Format Remaining Cash */}
                                   {formatCurrency(selectedRemittance.remaining_cash || 0)}
                               </td>
                           </tr>
@@ -717,7 +729,6 @@ const DailySalesReport: React.FC = () => {
                                           <tr key={index}>
                                               <td className="p-2 border">{expense.particular}</td>
                                               <td className="p-2 border">
-                                                  {/* Format Expense Amount */}
                                                   {formatCurrency(Number(expense.amount) || 0)}
                                               </td>
                                           </tr>
@@ -733,16 +744,34 @@ const DailySalesReport: React.FC = () => {
                           </table>
                       </div>
                   )}
+
+                  {/* ACTION BUTTONS */}
+                  <div className="mt-4 flex space-x-4">
+                      <button
+                          onClick={() => handleUpdateStatus(selectedRemittance.id, "Received")}
+                          className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                          Received
+                      </button>
+                      <button
+                          onClick={() => handleUpdateStatus(selectedRemittance.id, "Rejected")}
+                          className="w-full py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                          Reject
+                      </button>
+                  </div>
+
                   {/* CLOSE BUTTON */}
                   <button
                       onClick={() => setIsRemittanceModalOpen(false)}
-                      className="mt-4 w-full py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                      className="mt-4 w-full py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
                   >
                       Close
                   </button>
               </div>
           </div>
-        )}
+      )}
+
             </div>
           </div>
   
