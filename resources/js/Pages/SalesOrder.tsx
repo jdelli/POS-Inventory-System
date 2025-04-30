@@ -79,6 +79,17 @@ const InventoryManagement: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [paymentOption, setPaymentOption] = useState<string>('');
 
+   // Helper function to format currency as ₱100,000 without decimals
+   const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 0, // No decimal places
+        maximumFractionDigits: 0, // No decimal places
+    }).format(amount);
+};
+
+
   // Functions
   const openReceiptModal = () => setIsReceiptModalOpen(true);
 
@@ -216,10 +227,6 @@ const submitSalesOrder = async () => {
 };
 
 
-
-
-
-
   useEffect(() => {
   searchTerms.forEach((term, index) => {
     if (term.length > 0) {
@@ -293,15 +300,17 @@ const submitSalesOrder = async () => {
         
 
         {/* Date Range Filters */}
-        <div className="mb-4 flex justify-between items-end">
+        <div className="mb-2 flex justify-between items-end">
           {/* Filters */}
           <div className="flex space-x-4">
+          <div className="flex items-end gap-4">
+            {/* Month Picker */}
             <div>
-              <label className="text-gray-700">Filtered by Month</label>
+              <label className="text-gray-700 block">Filtered by Month</label>
               <select
                 value={selectedMonth ?? ''}
                 onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-                className="mt-2 p-2 border rounded"
+                className="mt-1 p-2 border rounded w-full"
               >
                 <option value="">All</option>
                 {[...Array(12).keys()].map((month) => (
@@ -311,12 +320,16 @@ const submitSalesOrder = async () => {
                 ))}
               </select>
             </div>
+
+            {/* Year Picker */}
             <div>
-              <label className="text-gray-700">Filtered by Year</label>
+              <label className="text-gray-700 block">Filtered by Year</label>
               <select
                 value={selectedYear !== null ? selectedYear.toString() : ''}
-                onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
-                className="mt-2 p-2 border rounded"
+                onChange={(e) =>
+                  setSelectedYear(e.target.value ? parseInt(e.target.value) : null)
+                }
+                className="mt-1 p-2 border rounded w-full"
               >
                 <option value="">All</option>
                 {new Array(10).fill(null).map((_, index) => {
@@ -329,6 +342,8 @@ const submitSalesOrder = async () => {
                 })}
               </select>
             </div>
+          </div>
+
           </div>
 
           {/* New Sales Order Button */}
@@ -520,7 +535,7 @@ const submitSalesOrder = async () => {
                           <label className="block text-sm font-medium mb-1">Total</label>
                           <input
                             type="text"
-                            value={(item.price * item.quantity).toFixed(2)}
+                            value={formatCurrency(item.price * item.quantity)}
                             readOnly
                             className="border border-gray-300 p-2 w-full rounded bg-gray-100"
                           />
@@ -544,7 +559,7 @@ const submitSalesOrder = async () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <h2 className="text-lg font-bold">Total: ₱{calculateTotal()}</h2>
+                  <h2 className="text-lg font-bold">Total: {formatCurrency(calculateTotal())}</h2>
                     <div className="space-x-2">
                       <button
                         type="button"

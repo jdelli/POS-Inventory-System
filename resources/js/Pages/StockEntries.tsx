@@ -49,32 +49,45 @@ const StockEntriesTable: React.FC<InventoryManagementProps> = ({ auth }) => {
   const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // State for selected month
+  const [selectedYear, setSelectedYear] = useState<number | null>(null); // State for selected month
   const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState<boolean>(false);
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
   const [isRequestStockModalOpen, setIsRequestStockModalOpen] = useState<boolean>(false);
 
 
-  // Fetch stock entries data with pagination and sorting by date
-  const fetchDeliveryReceipts = async () => {
-    setLoading(true);
-    try {
-     let url = `/fetch-delivery-receipts?sort_by=date&page=${page}&limit=${limit}&user_name=${auth.user.name}`;
-if (selectedMonth !== null) {
-  url += `&month=${selectedMonth}`;
-}
 
-      const response = await apiService.get(url);
-      setStockEntries(response.data.deliveryReceipts);
-      setTotalPages(response.data.last_page);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching delivery receipts:', error);
-      setLoading(false);
-    }
-  };
+// Fetch stock entries data with pagination and sorting by date
+const fetchDeliveryReceipts = async () => {
+  setLoading(true);
+  try {
+    const params = new URLSearchParams({
+      sort_by: 'date',
+      page: page.toString(),
+      per_page: limit.toString(),
+      user_name: auth.user.name,
+      month: selectedMonth ? selectedMonth.toString() : '',
+      year: selectedYear ? selectedYear.toString() : '',
+    });
 
-  
+
+
+    const response = await apiService.get(`/fetch-delivery-receipts?${params.toString()}`);
+    setStockEntries(response.data.deliveryReceipts);
+    setTotalPages(response.data.last_page);
+  } catch (error) {
+    console.error('Error fetching delivery receipts:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  fetchDeliveryReceipts();
+}, [ page, limit, selectedMonth, selectedYear]); 
+
+
+
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -94,10 +107,7 @@ if (selectedMonth !== null) {
     fetchDeliveryReceipts();
   };
 
-  // Initial data fetch and fetch on sorting or page/limit change
-  useEffect(() => {
-    fetchDeliveryReceipts();
-  }, [ page, limit, selectedMonth]); // Add selectedMonth as a dependency
+
 
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stocks Entries</h2>}>
@@ -109,21 +119,50 @@ if (selectedMonth !== null) {
 
        {/* Date Range Filters */}
        <div className="mb-4 flex justify-between items-center"> {/* Flexbox with space-between */}
-          <div>
-            <label className="text-gray-700">Filtered by Month</label>
-            <select
-              value={selectedMonth ?? ''}
-              onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-              className="mt-2 p-2 border rounded"
-            >
-              <option value="">All</option> {/* Empty value for 'All' */}
-              {[...Array(12).keys()].map((month) => (
-                <option key={month} value={month + 1}>
-                  {new Date(0, month).toLocaleString('default', { month: 'long' })}
-                </option>
-              ))}
-            </select>
+          {/* Month Picker */}
+          <div className="flex items-end gap-4">
+            {/* Month Picker */}
+            <div>
+              <label className="text-gray-700 block">Filtered by Month</label>
+              <select
+                value={selectedMonth ?? ''}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
+                className="mt-1 p-2 border rounded w-full"
+              >
+                <option value="">All</option>
+                {[...Array(12).keys()].map((month) => (
+                  <option key={month} value={month + 1}>
+                    {new Date(0, month).toLocaleString('default', { month: 'long' })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Year Picker */}
+            <div>
+              <label className="text-gray-700 block">Filtered by Year</label>
+              <select
+                value={selectedYear ?? ''}
+                onChange={(e) =>
+                  setSelectedYear(e.target.value ? parseInt(e.target.value) : null)
+                }
+                className="mt-1 p-2 border rounded w-full"
+              >
+                <option value="">All</option>
+                {[...Array(new Date().getFullYear() - 2020 + 1)].map((_, i) => {
+                  const year = 2020 + i;
+                  return (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           </div>
+
+
+
           <Button
             variant="contained"
             color="success"

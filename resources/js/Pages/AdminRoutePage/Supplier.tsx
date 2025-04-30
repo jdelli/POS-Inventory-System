@@ -122,8 +122,8 @@ const SupplierData: React.FC = () => {
   }
 
   return (
-    <AdminLayout header={<Typography variant="h6">Stock Entries</Typography>}>
-      <Head title="Stock Entries (Admin)" />
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Supplier</h2>}>
+      <Head title="Supplier" />
       <div>
         <div className='flex justify-end mb-4'>
           <Button variant="contained" color="primary" onClick={handleOpenAddModal}>

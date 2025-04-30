@@ -209,7 +209,7 @@ const SalesStatistics: React.FC = () => {
       {/* Modal for Monthly Sales Details */}
       <Dialog open={openModal} onClose={closeModal}>
         <DialogTitle sx={{ backgroundColor: '#f0f0f0', borderBottom: '1px solid #ccc', py: 2, px: 3 }}>
-          {selectedBranch ? `Monthly Sales for ₱{selectedBranch}` : ''}
+        {selectedBranch ? `Monthly Sales for ${selectedBranch}` : ''}
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
           {monthlySalesDetails.length === 0 && <CircularProgress />}
@@ -231,7 +231,7 @@ const SalesStatistics: React.FC = () => {
           </Table>
           {remittanceTotalExpenses !== null && (
             <Typography variant="body1" sx={{ mt: 2 }}>
-              <strong>Total Monthly Expenses:</strong> ₱{remittanceTotalExpenses.toLocaleString()}
+              <strong>Total Expenses:</strong> ₱{remittanceTotalExpenses.toLocaleString()}
             </Typography>
           )}
         </DialogContent>

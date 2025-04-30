@@ -42,6 +42,17 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
   const [date, setDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+
+   // Helper function to format currency as ₱100,000 without decimals
+   const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 0, // No decimal places
+        maximumFractionDigits: 0, // No decimal places
+    }).format(amount);
+  };
+
   const handleItemChange = (index: number, field: string, value: string | number) => {
   const updatedItems = supplierItems.map((item, i) =>
     i === index
@@ -286,12 +297,13 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
                 <label className="block text-sm font-medium mb-1">Total</label>
                 <input
                   type="text"
-                  value={item.total?.toFixed(2) || '0.00'}
+                  value={item.total !== undefined ? formatCurrency(item.total) : '₱0'}
                   readOnly
                   className="border border-gray-300 p-2 w-full rounded bg-gray-100"
                   placeholder="Total"
                 />
               </div>
+
               <button
                 type="button"
                 onClick={() => removeItem(index)}
@@ -328,8 +340,8 @@ const AddSupplierModal: React.FC<AddSupplierModalProps> = ({ showModal, closeMod
             </button>
           </div>
           <div className="mt-4">
-  <h3 className="font-bold text-lg">Grand Total: {calculateGrandTotal().toFixed(2)}</h3>
-</div>
+            <h3 className="font-bold text-lg">Grand Total: {formatCurrency(calculateGrandTotal())}</h3>
+          </div>
         </div>
         
       </div>

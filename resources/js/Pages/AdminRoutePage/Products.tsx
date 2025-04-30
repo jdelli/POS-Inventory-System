@@ -72,6 +72,17 @@ const Products = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State for edit modal
   const [editProduct, setEditProduct] = useState<WarehouseProduct | null>(null); // Store the product to edit
 
+  // Helper function to format currency as ₱100,000 without decimals
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 0, // No decimal places
+        maximumFractionDigits: 0, // No decimal places
+    }).format(amount);
+};
+
+
   useEffect(() => {
     fetchWarehouseProducts(warehousePage);
   }, [warehousePage]);
@@ -177,7 +188,7 @@ const Products = () => {
                       <TableCell>{product.product_code}</TableCell>
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.category}</TableCell>
-                      <TableCell>₱{product.price}</TableCell>
+                      <TableCell>{formatCurrency(product.price)}</TableCell>
                       <TableCell>{product.quantity}</TableCell>
                       <TableCell>
                         <IconButton

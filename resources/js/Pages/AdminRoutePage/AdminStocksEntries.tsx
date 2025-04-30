@@ -58,12 +58,15 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
   const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(''); // Ensure this is a string or null
+  const [selectedYear, setSelectedYear] = useState<string | null>('');
   const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState<boolean>(false);
   const [isModalOpen, setModalOpen] = useState<boolean>(false);
   const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
   const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
   const [selectedBranchName, setSelectedBranchName] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
+
+  const years = Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => (2020 + i).toString());
 
   useEffect(() => {
     const fetchBranches = async () => {
@@ -78,19 +81,21 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
     fetchBranches();
   }, []);
 
-  const fetchDeliveryReceipts = async () => {
+   // Fetch Delivery Receipts
+   const fetchDeliveryReceipts = async () => {
     if (!selectedBranchName) return;
 
     setLoading(true);
     try {
-      const response = await apiService.get('/admin-fetch-delivery-receipts-by-branch', {
-        params: {
-          branch_name: selectedBranchName,
-          page,
-          limit,
-          month: selectedMonth ? parseInt(selectedMonth) : undefined, // Ensure proper parsing
-        },
-      });
+      const params = {
+        branch_name: selectedBranchName,
+        page,
+        limit,
+        ...(selectedMonth && { month: parseInt(selectedMonth) }), // Include only if `selectedMonth` exists
+        ...(selectedYear && { year: parseInt(selectedYear) }), // Include only if `selectedYear` exists
+      };
+
+      const response = await apiService.get('/admin-fetch-delivery-receipts-by-branch', { params });
       setStockEntries(response.data.data);
       setTotalPages(response.data.last_page);
       setCurrentPage(response.data.current_page);
@@ -103,7 +108,7 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
 
   useEffect(() => {
     fetchDeliveryReceipts();
-  }, [page, selectedBranchName, limit, selectedMonth]);
+  }, [page, selectedBranchName, limit, selectedMonth, selectedYear]);
 
   const handleAddStocksSuccess = () => {
     fetchDeliveryReceipts();
@@ -125,8 +130,8 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
   
 
   return (
-    <AdminLayout header={<Typography variant="h6">Stock Entries</Typography>}>
-      <Head title="Stock Entries (Admin)" />
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stock Entries</h2>}>
+      <Head title="Stock Entries" />
       <Container maxWidth="xl" sx={{ mx: 'auto' }}>
         {/* Controls */}
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
@@ -168,6 +173,27 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
               </MenuItem>
             ))}
           </Select>
+
+          <Select
+            value={selectedYear ?? ''}
+            onChange={(e) => setSelectedYear(e.target.value || '')} // Ensure the value is handled properly
+            displayEmpty
+            fullWidth
+            variant="outlined"
+            style={{ marginRight: '8px' }}
+            aria-label="Filter by Year"
+          >
+            <MenuItem value="">All</MenuItem>
+            {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
+              const year = 2020 + i; // Generate the range of years dynamically
+              return (
+                <MenuItem key={year} value={year.toString()}>
+                  {year}
+                </MenuItem>
+              );
+            })}
+          </Select>
+
 
           <Button
             onClick={() => setIsAddStocksModalOpen(true)}

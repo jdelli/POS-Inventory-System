@@ -323,7 +323,7 @@ const DailySalesReport: React.FC = () => {
                   <th>#</th>
                   <th>Receipt #</th>
                   <th>Customer</th>
-                  <th>Total Sales ($)</th>
+                  <th>Total Sales (₱)</th>
                   <th>Mode of Payment</th>
                 </tr>
               </thead>

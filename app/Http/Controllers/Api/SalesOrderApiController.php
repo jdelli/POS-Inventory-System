@@ -117,7 +117,9 @@ class SalesOrderApiController extends Controller
     $userName = $request->query('user_name');
 
     // Start the query
-    $query = SalesOrder::with('items')->where('branch_id', $userName);
+    $query = SalesOrder::with('items')
+            ->where('branch_id', $userName)
+            ->orderBy('date', 'desc'); 
 
     // Apply month filter if provided
     if ($month) {

@@ -313,12 +313,13 @@ const AddStocks: React.FC<AddStockModalProps> = ({ showModal, closeModal, onSucc
             </div>
 
             <div className="flex justify-end space-x-4">
-              <button
-                onClick={submitAddStocks}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
-              >
-                Submit
-              </button>
+            <button
+              onClick={submitAddStocks}
+              disabled={isSubmitting}
+              className={`px-4 py-2 rounded text-white ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-700'}`}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit'}
+            </button>
               <button
                 onClick={closeAddStocksModal}
                 className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"

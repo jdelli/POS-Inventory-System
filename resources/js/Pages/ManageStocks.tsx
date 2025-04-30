@@ -97,6 +97,18 @@ const ProductTable: React.FC = () => {
   const [lastPage, setLastPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
+
+   // Helper function to format currency as ₱100,000 without decimals
+   const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('en-PH', {
+        style: 'currency',
+        currency: 'PHP',
+        minimumFractionDigits: 0, // No decimal places
+        maximumFractionDigits: 0, // No decimal places
+    }).format(amount);
+};
+
+
   const fetchProducts = async (userName: string, page: number = 1, limit: number = 20) => {
     setLoading(true);
     try {
@@ -177,7 +189,7 @@ const ProductTable: React.FC = () => {
               <TableCell>{product.product_code}</TableCell>
               <TableCell>{product.name}</TableCell>
               <TableCell>{product.category}</TableCell>
-              <TableCell>₱{product.price.toLocaleString()}</TableCell>
+              <TableCell>{formatCurrency(product.price)}</TableCell>
               <TableCell className="text-red-500">{product.quantity}</TableCell>
             </TableRow>
           ))

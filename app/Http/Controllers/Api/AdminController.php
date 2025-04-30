@@ -88,9 +88,6 @@ public function getAllBranches()
 
 
 
-
-
-
 public function AdminfetchProductsByBranch(Request $request)
 {
     $branchName = $request->query('branch_name');
@@ -129,9 +126,11 @@ public function AdminfetchProductsByBranch(Request $request)
         $page = $request->query('page', 1);
         $limit = $request->query('limit', 20);
         $month = $request->query('month');  // Get the month parameter
+        $year = $request->query('year');
     
         // Start the query with necessary eager loading
-        $query = DeliveryReceipt::with('items');
+        $query = DeliveryReceipt::with('items')
+                ->orderBy('date', 'desc'); 
     
         // Apply the branch filter if branchName is provided
         if ($branchName) {
@@ -141,6 +140,11 @@ public function AdminfetchProductsByBranch(Request $request)
         // Apply the month filter if the month is provided
         if ($month) {
             $query->whereMonth('date', $month); // Filter by month
+        }
+    
+        // Apply the year filter if the year is provided
+        if ($year) {
+            $query->whereYear('date', $year);
         }
     
         // Paginate the results
@@ -167,7 +171,8 @@ public function AdminfetchProductsByBranch(Request $request)
     $month = $request->query('month');
     $year = $request->query('year');
 
-    $query = SalesOrder::with('items');
+    $query = SalesOrder::with('items')
+            ->orderBy('date', 'desc'); 
 
     if ($branchName) {
         $query->where('branch_id', $branchName);
@@ -365,7 +370,10 @@ public function deleteSupplierStocks($id)
 
 public function getAllSuppliers()
 {
-    $suppliers = Supplier::with('supplierStocks')->paginate(10); // You can adjust the number of items per page.
+    $suppliers = Supplier::with('supplierStocks')
+                ->orderBy('date', 'desc')
+                ->paginate(10);
+                
 
     // Log the fetched suppliers for debugging
     Log::info('Fetched Suppliers: ', $suppliers->toArray());

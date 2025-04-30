@@ -75,39 +75,47 @@ class DeliveryReceiptsApiController extends Controller
 }
 
 
-    public function getDeliveryReceipts(Request $request) {
-        $request->validate([
-            'user_name' => 'required|string',
-            'per_page' => 'integer|min:1|max:100',
-            'sort_by' => 'in:date,created_at',
-            'sort_direction' => 'in:asc,desc',
-            'month' => 'nullable|integer|between:1,12', // Month filter (1 to 12)
-        ]);
-        
-        $userName = $request->query('user_name');
-        $perPage = $request->input('per_page', 10);
-        $sortBy = $request->input('sort_by', 'date');
-        $sortDirection = $request->input('sort_direction', 'asc');
-        $month = $request->input('month');
+public function getDeliveryReceipts(Request $request) {
+    $request->validate([
+        'user_name' => 'required|string',
+        'per_page' => 'integer|min:1|max:100',
+        'sort_by' => 'in:date,created_at',
+        'sort_direction' => 'in:asc,desc',
+        'month' => 'nullable|integer|between:1,12',
+        'year' => 'nullable|integer',
+    ]);
     
-        $query = DeliveryReceipt::with('items')->where('branch_id', $userName);
-    
-        if ($month) {
-            // Filter by the specified month
-            $query->whereMonth('date', $month);
-        }
-    
-        $deliveryReceipts = $query->orderBy($sortBy, $sortDirection)->paginate($perPage);
-    
-        return response()->json([
-            'success' => true,
-            'deliveryReceipts' => $deliveryReceipts->items(),
-            'current_page' => $deliveryReceipts->currentPage(),
-            'per_page' => $deliveryReceipts->perPage(),
-            'last_page' => $deliveryReceipts->lastPage(),
-            'total' => $deliveryReceipts->total(),
-        ]);
+    $userName = $request->query('user_name');
+    $perPage = $request->input('per_page', 10);
+    $sortBy = $request->input('sort_by', 'date');
+    $sortDirection = $request->input('sort_direction', 'asc');
+    $month = $request->input('month');
+    $year = $request->input('year');
+
+    $query = DeliveryReceipt::with('items')
+            ->where('branch_id', $userName)
+            ->orderBy('date', 'desc'); 
+
+    if ($month) {
+        $query->whereMonth('date', $month);
     }
+
+    if ($year) {
+        $query->whereYear('date', $year);
+    }
+
+    $deliveryReceipts = $query->orderBy($sortBy, $sortDirection)->paginate($perPage);
+
+    return response()->json([
+        'success' => true,
+        'deliveryReceipts' => $deliveryReceipts->items(),
+        'current_page' => $deliveryReceipts->currentPage(),
+        'per_page' => $deliveryReceipts->perPage(),
+        'last_page' => $deliveryReceipts->lastPage(),
+        'total' => $deliveryReceipts->total(),
+    ]);
+}
+
 
     public function deleteDeliveryReceipt($id, Request $request)
 {

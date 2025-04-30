@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import jsPDF from 'jspdf';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
@@ -9,7 +9,6 @@ import {
   Box,
   Button,
   Divider,
-  
   Table,
   TableBody,
   TableCell,
@@ -17,10 +16,9 @@ import {
   TableHead,
   TableRow,
   Paper,
- 
-
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import apiService from './Services/ApiService';
 
 interface Product {
   name: string;
@@ -28,23 +26,31 @@ interface Product {
   price: number;
 }
 
+interface InventoryItem {
+  id: number;
+  name: string;
+  price: number;
+  product_code: string;
+}
+
 const SalesInvoice: React.FC = () => {
-  const [products, setProducts] = React.useState<Product[]>([]);
-  const [customerName, setCustomerName] = React.useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customerName, setCustomerName] = useState('');
+  const [searchTerms, setSearchTerms] = useState<string[]>([]);
+  const [productSuggestions, setProductSuggestions] = useState<InventoryItem[][]>([]);
   const invoiceRef = useRef<HTMLDivElement>(null);
 
   const addProduct = () => {
     setProducts([...products, { name: '', quantity: 0, price: 0 }]);
+    setSearchTerms([...searchTerms, '']);
+    setProductSuggestions([...productSuggestions, []]);
   };
 
   const handleProductChange = (index: number, field: keyof Product, value: string | number) => {
-    const newProducts = [...products];
-    if (field === 'price' || field === 'quantity') {
-      newProducts[index][field] = Number(value);
-    } else {
-      newProducts[index][field] = value as string;
-    }
-    setProducts(newProducts);
+    const updatedProducts = products.map((product, i) =>
+      i === index ? { ...product, [field]: field === 'quantity' || field === 'price' ? Number(value) : value } : product
+    );
+    setProducts(updatedProducts);
   };
 
   const calculateTotal = () => {
@@ -52,103 +58,127 @@ const SalesInvoice: React.FC = () => {
   };
 
   const removeItem = (index: number) => {
-    setProducts((prevItems) => prevItems.filter((_, i) => i !== index));
+    setProducts((prev) => prev.filter((_, i) => i !== index));
+    setSearchTerms((prev) => prev.filter((_, i) => i !== index));
+    setProductSuggestions((prev) => prev.filter((_, i) => i !== index));
   };
 
-  
- const handleExportPDF = () => {
+  const handleSearchTermChange = (index: number, value: string) => {
+    const updatedSearchTerms = [...searchTerms];
+    updatedSearchTerms[index] = value;
+    setSearchTerms(updatedSearchTerms);
+
+    const updatedProducts = [...products];
+    updatedProducts[index].name = value;
+    setProducts(updatedProducts);
+  };
+
+  useEffect(() => {
+    searchTerms.forEach((term, index) => {
+      if (term.length > 0) {
+        apiService
+          .get('/search-products', { params: { q: term, user_name: 'warehouse' } })
+          .then((response) => {
+            const updatedSuggestions = [...productSuggestions];
+            updatedSuggestions[index] = response.data;
+            setProductSuggestions(updatedSuggestions);
+          })
+          .catch((error) => {
+            console.error('Error fetching product suggestions:', error);
+          });
+      } else {
+        const updatedSuggestions = [...productSuggestions];
+        updatedSuggestions[index] = [];
+        setProductSuggestions(updatedSuggestions);
+      }
+    });
+  }, [searchTerms]);
+
+  const handleSuggestionClick = (index: number, product: InventoryItem) => {
+    const updatedProducts = products.map((p, i) =>
+      i === index ? { name: product.name, quantity: 1, price: product.price } : p
+    );
+    setProducts(updatedProducts);
+
+    const updatedSearchTerms = [...searchTerms];
+    updatedSearchTerms[index] = '';
+    setSearchTerms(updatedSearchTerms);
+
+    const updatedSuggestions = [...productSuggestions];
+    updatedSuggestions[index] = [];
+    setProductSuggestions(updatedSuggestions);
+  };
+
+  const handleExportPDF = () => {
     const doc = new jsPDF('p', 'pt', 'a4');
     const pageWidth = doc.internal.pageSize.width;
 
-    // Add Quotation Title
     doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
-    const title = "Quotation";
+    doc.setFont('helvetica', 'bold');
+    const title = 'Quotation';
     doc.text(title, (pageWidth - doc.getTextWidth(title)) / 2, 100);
 
-    // Customer and invoice date details
     doc.setFontSize(12);
     const currentDate = new Date().toLocaleDateString();
     doc.text(`Client: ${customerName}`, 40, 130);
     doc.text(`Date: ${currentDate}`, 40, 150);
 
-    // Table settings
     const startX = 40;
     const startY = 180;
     const tableWidth = pageWidth - 2 * startX;
-    const tableColumns = ["Product Name", "Quantity", "Price", "Total"];
+    const tableColumns = ['Product Name', 'Quantity', 'Price', 'Total'];
     const columnWidths = [tableWidth * 0.5, tableWidth * 0.15, tableWidth * 0.15, tableWidth * 0.2];
 
-    // Table header with background color
-    doc.setFillColor(230, 230, 230); // Light grey background
-    doc.rect(startX, startY - 20, tableWidth, 20, 'F'); // Header background
-    doc.setFont("helvetica", "bold");
+    doc.setFillColor(230, 230, 230);
+    doc.rect(startX, startY - 20, tableWidth, 20, 'F');
+    doc.setFont('helvetica', 'bold');
 
-    // Header text
     tableColumns.forEach((col, i) => {
-        doc.text(col, startX + columnWidths.slice(0, i).reduce((a, b) => a + b, 0) + 10, startY - 5);
+      doc.text(col, startX + columnWidths.slice(0, i).reduce((a, b) => a + b, 0) + 10, startY - 5);
     });
 
-    // Product rows with alternating background color
     products.forEach((product, index) => {
-        const rowY = startY + 20 + index * 30;
+      const rowY = startY + 20 + index * 30;
 
-        // Alternating row color
-        if (index % 2 === 0) {
-            doc.setFillColor(245, 245, 245); // Light grey for even rows
-            doc.rect(startX, rowY - 10, tableWidth, 30, 'F'); // Row background
-        }
+      if (index % 2 === 0) {
+        doc.setFillColor(245, 245, 245);
+        doc.rect(startX, rowY - 10, tableWidth, 30, 'F');
+      }
 
-        // Product details
-        doc.setFont("helvetica", "normal");
-        doc.text(product.name, startX + 10, rowY);
-        doc.text(`${product.quantity}`, startX + columnWidths[0] + 10, rowY);
-        doc.text(`${product.price.toLocaleString()}`, startX + columnWidths[0] + columnWidths[1] + 10, rowY);
-        doc.text(`${(product.quantity * product.price).toLocaleString()}`, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, rowY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(product.name, startX + 10, rowY);
+      doc.text(`${product.quantity}`, startX + columnWidths[0] + 10, rowY);
+      doc.text(`${product.price.toLocaleString()}`, startX + columnWidths[0] + columnWidths[1] + 10, rowY);
+      doc.text(`${(product.quantity * product.price).toLocaleString()}`, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, rowY);
     });
 
-    // Grand Total
     const grandTotal = calculateTotal().toLocaleString();
     const rowAfterProducts = startY + 20 + products.length * 30;
-
-    // Adjust spacing by adding more Y-distance between "Grand Total:" and the value
-    doc.setFont("helvetica", "bold");
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
-    doc.text("Grand total:", startX + columnWidths[0] + columnWidths[1] + 1, rowAfterProducts + 40); // Increased space before the value
-    doc.text(`${grandTotal}`, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, rowAfterProducts + 40); // Increased Y-coordinate for the grand total value
+    doc.text('Grand total:', startX + columnWidths[0] + columnWidths[1] + 1, rowAfterProducts + 40);
+    doc.text(`${grandTotal}`, startX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, rowAfterProducts + 40);
 
-
-    // Footer
-    const footerY = rowAfterProducts + 80;
-    doc.setFont("helvetica", "italic");
+    doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text("Thank you for your business!", startX, footerY);
-    doc.text("For any inquiries, contact us at 09063229966 Globe", startX, footerY + 15);
-    doc.text("Contact Person: Darel", startX, footerY + 30);
+    doc.text('Thank you for your business!', startX, rowAfterProducts + 80);
 
-    // Save PDF
-    doc.save((customerName) + ".pdf");
-};
+    doc.save(`${customerName}.pdf`);
+  };
 
   const isProductEmpty = products.length === 0;
-
 
   return (
     <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Generate Quotation</h2>}>
       <Head title="Generate Quotation" />
-
       <div className="p-8 bg-gray-100 min-h-screen">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-8xl mx-auto">
-        <Box textAlign="center" mb={4}>
+          <Box textAlign="center" mb={4}>
             <Typography variant="h3" fontWeight="bold" color="primary">
               Generate Sales Quotation
             </Typography>
           </Box>
-
-          <Typography variant="h6" mb={1}>
-            Client:
-          </Typography>
 
           <TextField
             fullWidth
@@ -159,129 +189,97 @@ const SalesInvoice: React.FC = () => {
             sx={{ mb: 4 }}
           />
 
-          <Typography variant="h5" fontWeight="bold" mb={2}>
-            Products
-          </Typography>
-
           {products.map((product, index) => (
-            <Box
-              key={index}
-              display="flex"
-              flexWrap="wrap"
-              gap={2}
-              alignItems="center"
-              mb={3}
-            >
+            <Box key={index} display="flex" alignItems="center" gap={2} mb={3}>
               <TextField
-                label="Product Name"
                 variant="outlined"
-                value={product.name}
-                onChange={(e) => handleProductChange(index, 'name', e.target.value)}
-                sx={{ flex: 1, minWidth: '150px' }}
+                label="Product Name"
+                value={searchTerms[index] || product.name}
+                onChange={(e) => handleSearchTermChange(index, e.target.value)}
+                sx={{ flex: 1 }}
               />
-
+              {productSuggestions[index]?.length > 0 && (
+                <ul className="absolute z-10 bg-white border rounded shadow-md max-h-40 overflow-y-auto">
+                  {productSuggestions[index].map((suggestion) => (
+                    <li
+                      key={suggestion.id}
+                      onClick={() => handleSuggestionClick(index, suggestion)}
+                      className="cursor-pointer px-4 py-2 hover:bg-gray-200"
+                    >
+                      {suggestion.name} ({suggestion.product_code}) - ₱{suggestion.price}
+                    </li>
+                  ))}
+                </ul>
+              )}
               <TextField
                 label="Quantity"
-                variant="outlined"
                 type="number"
-                value={product.quantity || ""}
-                onChange={(e) =>
-                  handleProductChange(index, 'quantity', e.target.value.replace(/[^0-9]/g, ''))
-                }
+                value={product.quantity || ''}
+                onChange={(e) => handleProductChange(index, 'quantity', Number(e.target.value))}
                 sx={{ width: '120px' }}
               />
-
               <TextField
-                label="Price"
-                variant="outlined"
+                label="Price/unit"
                 type="number"
-                value={product.price || ""}
-                onChange={(e) =>
-                  handleProductChange(index, 'price', e.target.value.replace(/[^0-9.]/g, ''))
-                }
+                value={product.price || ''}
+                onChange={(e) => handleProductChange(index, 'price', Number(e.target.value))}
                 sx={{ width: '150px' }}
               />
-
               <Typography fontWeight="bold" color="text.secondary">
                 ₱{(product.quantity * product.price).toLocaleString()}
               </Typography>
-
-              <IconButton
-                color="error"
-                onClick={() => removeItem(index)}
-                aria-label="Remove Item"
-              >
+              <IconButton color="error" onClick={() => removeItem(index)}>
                 <DeleteIcon />
               </IconButton>
             </Box>
           ))}
 
-          <Divider sx={{ my: 3 }} />
-
-          <Button variant="contained" color="primary" onClick={addProduct}>
+          <Button variant="contained" color="primary" onClick={addProduct} sx={{ mt: 2 }}>
             Add Product
           </Button>
 
-      
-
-          <Box
-            ref={invoiceRef}
-            sx={{
-              borderTop: 2,
-              pt: 4,
-              mt: 4,
-              backgroundColor: 'grey.100',
-              px: 2,
-              pb: 4,
-              borderColor: 'divider',
-            }}
-          >
+          <Box ref={invoiceRef} sx={{ mt: 4 }}>
             <Typography variant="h6" fontWeight="bold" color="primary" mb={2}>
-              Client: {customerName}
+              Quotation Summary
             </Typography>
-
-            <TableContainer component={Paper} elevation={0}>
+            <TableContainer component={Paper}>
               <Table>
                 <TableHead>
-                  <TableRow sx={{ backgroundColor: 'grey.200' }}>
+                  <TableRow>
                     <TableCell>Product Name</TableCell>
                     <TableCell>Quantity</TableCell>
-                    <TableCell>Price per unit</TableCell>
+                    <TableCell>Price/unit</TableCell>
                     <TableCell>Total</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {products.map((product, index) => (
-                    <TableRow key={index} hover>
+                    <TableRow key={index}>
                       <TableCell>{product.name}</TableCell>
                       <TableCell>{product.quantity}</TableCell>
-                      <TableCell>₱ {product.price.toLocaleString()}</TableCell>
-                      <TableCell>₱ {(product.quantity * product.price).toLocaleString()}</TableCell>
+                      <TableCell>₱{product.price}</TableCell>
+                      <TableCell>₱{(product.quantity * product.price).toLocaleString()}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </TableContainer>
-
-            <Divider sx={{ my: 4 }} />
-
-            <Box textAlign="right">
-              <Typography variant="h5" fontWeight="bold" color="primary">
-                Grand Total: ₱ {calculateTotal().toLocaleString()}
+            <Box textAlign="right" mt={2}>
+              <Typography variant="h5" fontWeight="bold">
+                Grand Total: ₱{calculateTotal().toLocaleString()}
               </Typography>
             </Box>
           </Box>
 
-          <div className="flex gap-6 mt-8 justify-center">
-            <button
-              onClick={handleExportPDF}
-              className="bg-blue-500 text-white py-3 px-8 rounded shadow-md hover:bg-blue-600 focus:outline-none"
-              disabled={isProductEmpty}
-              aria-label="Download PDF Invoice"
-            >
-              Export as PDF
-            </button>
-          </div>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleExportPDF}
+            disabled={isProductEmpty}
+            sx={{ mt: 4 }}
+          >
+            Download PDF
+          </Button>
         </div>
       </div>
     </AuthenticatedLayout>

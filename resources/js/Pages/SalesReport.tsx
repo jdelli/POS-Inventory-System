@@ -24,6 +24,8 @@ import {
   Pagination,
   Stack,
   Typography,
+  Alert,
+  Snackbar
 } from '@mui/material';
 
 interface SalesOrderItem {
@@ -102,6 +104,10 @@ const DailySalesReport: React.FC = () => {
   const [totalPages, setTotalPages] = useState(1); // Track total pages
   const [currentPageRemittances, setCurrentPageRemittances] = useState(1); // Track current page
   const [totalPagesRemittances, setTotalPagesRemittances] = useState(1); // Track total pages
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertSeverity, setAlertSeverity] = useState<'success' | 'error'>('success');
+  const [alertMessage, setAlertMessage] = useState('');
   
 
   const totalExpensesAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
@@ -225,6 +231,7 @@ const DailySalesReport: React.FC = () => {
 
 
   const submitCashBreakdown = async () => {
+    setIsSubmitting(true);
     try {
       const response = await apiService.post("/cash-breakdowns", {
         user_name: auth.user.name,
@@ -239,12 +246,34 @@ const DailySalesReport: React.FC = () => {
         online_payments: onlinePayments
       });
   
-      alert("Cash Breakdown Created Successfully!");
+      setAlertSeverity('success');
+      setAlertMessage('Cash Breakdown Created Successfully!');
+      setShowAlert(true);
+  
+      resetCashBreakdownForm();
       closeCashBreakdownModal();
       fetchRemittances();
+  
     } catch (error) {
       console.error("Error creating cash breakdown:", error);
+      setAlertSeverity('error');
+      setAlertMessage('Failed to create cash breakdown.');
+      setShowAlert(true);
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+  
+
+
+  const resetCashBreakdownForm = () => {
+    setStartDate('');
+    setEndDate('');
+    setTotalSalesAmount(0);
+    setCashBreakdown([]); // or initial object/structure if it's not an array
+    setTotalSales(0);
+    setExpenses([]); // or initial object/structure
+    setOnlinePayments(0);
   };
   
 
@@ -371,7 +400,7 @@ const deleteCashBreakdown = async (id: number) => {
                   <th>#</th>
                   <th>Receipt #</th>
                   <th>Customer</th>
-                  <th>Total Sales ($)</th>
+                  <th>Total Sales (₱)</th>
                   <th>Mode of Payment</th>
                 </tr>
               </thead>
@@ -1046,33 +1075,34 @@ const deleteCashBreakdown = async (id: number) => {
         </button>
         
         {/* Overall Expenses Total */}
-<div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
-  Total Expenses: {formatCurrency(expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0))}
-</div>
-      </div>
-      
-      {/* Summary Section */}
-<div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
-  Total Sales Cash: {formatCurrency(totalSales)}
-</div>
-<div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
-  Total Sales Online Payment: {formatCurrency(onlinePayments)}
-</div>
-<div className="mt-4 p-2 bg-yellow-100 rounded text-lg font-semibold">
-  Remaining Cash: {formatCurrency(remainingCash)}
-</div>
-<div className="mt-4 p-2 bg-green-100 rounded text-lg font-semibold">
-  Total Sales: {formatCurrency(totalSalesAmount)}
-</div>
+        <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
+          Total Expenses: {formatCurrency(expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0))}
+        </div>
+              </div>
+              
+              {/* Summary Section */}
+        <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
+          Total Sales Cash: {formatCurrency(totalSales)}
+        </div>
+        <div className="mt-4 p-2 bg-gray-100 rounded text-lg font-semibold">
+          Total Sales Online Payment: {formatCurrency(onlinePayments)}
+        </div>
+        <div className="mt-4 p-2 bg-yellow-100 rounded text-lg font-semibold">
+          Remaining Cash: {formatCurrency(remainingCash)}
+        </div>
+        <div className="mt-4 p-2 bg-green-100 rounded text-lg font-semibold">
+          Total Sales: {formatCurrency(totalSalesAmount)}
+        </div>
       
       
       {/* Buttons */}
       <div className="flex justify-end space-x-2 mt-4">
       <button
         onClick={submitCashBreakdown}
-        className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+        disabled={isSubmitting}
+        className={`px-4 py-2 rounded text-white ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'}`}
       >
-        Create
+        {isSubmitting ? 'Creating...' : 'Create'}
       </button>
         <button
           onClick={closeCashBreakdownModal}
@@ -1084,6 +1114,23 @@ const deleteCashBreakdown = async (id: number) => {
     </div>
   </div>
 )}
+
+    <Snackbar
+      open={showAlert}
+      autoHideDuration={4000}
+      onClose={() => setShowAlert(false)}
+      anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+    >
+      <Alert
+        onClose={() => setShowAlert(false)}
+        severity={alertSeverity}
+        variant="filled"
+        sx={{ width: '100%' }}
+      >
+        {alertMessage}
+      </Alert>
+    </Snackbar>
+
       </div>
     </AuthenticatedLayout>
   );

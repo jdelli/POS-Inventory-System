@@ -3,7 +3,6 @@ import { usePage, Head } from '@inertiajs/react';
 import apiService from '../Services/ApiService';
 import AdminLayout from '@/Layouts/AdminLayout';
 import EditProductModal from '../Props/Edit';
-import AddProductModal from '../Props/Add';
 import StockHistoryModal from '../Props/StockHistoryModal';
 
 import {
@@ -160,7 +159,7 @@ const ProductTable: React.FC = () => {
   );
 
   return (
-    <AdminLayout header={<Typography variant="h6">Manage Stocks</Typography>}>
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight"> Manage Stocks</h2>}>
       <Head title="Manage Stocks" />
       <Container maxWidth="xl" sx={{ mx: 'auto' }}>
         {/* Branch Selector */}

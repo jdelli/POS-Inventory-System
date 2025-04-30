@@ -136,9 +136,7 @@ const MonthlySalesDashboard: React.FC = () => {
             }));
 
     return (
-        <AuthenticatedLayout
-            header={<h2 className="font-semibold text-2xl text-gray-800 leading-tight">Sales Dashboard</h2>}
-        >
+        <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>}>
             <Head title="Dashboard" />
 
             <div className="py-12 bg-gray-100 overflow-y-auto max-h-screen">

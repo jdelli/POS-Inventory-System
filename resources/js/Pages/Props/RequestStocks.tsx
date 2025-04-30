@@ -30,6 +30,7 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
   const [productSuggestions, setProductSuggestions] = useState<Item[][]>([[]]);
   const [date, setDate] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Set today's date when the component mounts
   useEffect(() => {
@@ -104,6 +105,9 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
   };
 
   const submitStockRequest = async () => {
+    // Prevent double-clicking by setting isSubmitting to true
+    setIsSubmitting(true);
+    
     const payload = { branch_id: auth.user.name, date, items: requestItems };
     try {
       const response = await apiService.post('/add-stock-request', payload);
@@ -117,6 +121,9 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
     } catch (error) {
       console.error('Error submitting stock request:', error);
       setError('An error occurred while submitting the stock request.');
+    } finally {
+      // Reset isSubmitting to false after the request is complete
+      setIsSubmitting(false);
     }
   };
 
@@ -209,12 +216,13 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
             </div>
 
             <div className="flex justify-end space-x-4">
-              <button
-                onClick={submitStockRequest}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
-              >
-                Submit
-              </button>
+            <button
+              onClick={submitStockRequest}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
+              disabled={isSubmitting} // Disable the button if submitting
+            >
+              Submit
+            </button>
               <button
                 onClick={() => { onClose(); resetForm(); }}
                 className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"

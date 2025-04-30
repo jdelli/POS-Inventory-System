@@ -77,7 +77,7 @@ const StockRequest: React.FC = () => {
   };
 
   return (
-    <AdminLayout header={<Typography variant="h6">Stocks Request</Typography>}>
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stock Request</h2>}>
       <Container maxWidth="xl" sx={{ mx: 'auto' }}>
         <TableContainer component={Paper}>
           <Table>
