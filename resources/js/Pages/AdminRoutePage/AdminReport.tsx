@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { usePage, Head } from "@inertiajs/react";
-import axios from "axios";
 import {
   ResponsiveContainer,
   BarChart,
@@ -251,7 +250,7 @@ const DailySalesReport: React.FC = () => {
 
   const handleOpenModal = (date: string) => {
     setLoading(true);
-    axios
+    apiService
       .get(`/api/sales-orders-by-date?date=${date}`, {
         params: { user_name: selectedBranchName },
       })

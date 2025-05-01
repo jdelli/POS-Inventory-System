@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { Tooltip, IconButton } from '@mui/material';
 import { Visibility, Delete } from '@mui/icons-material';
-import { Fab } from '@mui/material';
+
 
 
 interface DeliveryItem {
@@ -66,7 +66,6 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
   const [selectedBranchName, setSelectedBranchName] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  const years = Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => (2020 + i).toString());
 
   useEffect(() => {
     const fetchBranches = async () => {

@@ -11,7 +11,7 @@ import {
   Button,
   Paper,
 } from '@mui/material';
-import axios from 'axios';
+import apiService from '../Services/ApiService';
 
 // Interface for Announcement
 interface Announcement {
@@ -40,7 +40,7 @@ const Announcement = () => {
       setLoading(true);
 
       try {
-        const response = await axios.get('/api/announcements', {
+        const response = await apiService.get('/api/announcements', {
           params: {
             page: pagination.currentPage,
             limit: pagination.perPage,
@@ -70,7 +70,7 @@ const Announcement = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/announcements', {
+      const response = await apiService.post('/api/announcements', {
         title: newTitle,
         content: newContent,
       });

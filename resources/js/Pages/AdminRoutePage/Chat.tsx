@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
 import Pusher from 'pusher-js';
 import {
     Box,
@@ -18,6 +17,7 @@ import {
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import echo from '../echo';
+import apiService from '../Services/ApiService';
 
 interface User {
     id: number;
@@ -56,14 +56,14 @@ const UserListWithChat: React.FC = () => {
         setSelectedUserId(userId);
     
         try {
-            const res = await axios.get('/api/notifications', {
+            const res = await apiService.get('/notifications', {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });
     
             const userNotifications = res.data.filter((n: any) => n.chat.sender_id === userId);
     
             for (const notif of userNotifications) {
-                await axios.put(`/api/notifications/${notif.id}/read`, {}, {
+                await apiService.put(`/notifications/${notif.id}/read`, {}, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
             }
@@ -85,7 +85,7 @@ const UserListWithChat: React.FC = () => {
         
             const fetchNotifications = async () => {
                 try {
-                    const response = await axios.get('/api/notifications', {
+                    const response = await apiService.get('/notifications', {
                         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                     });
         
@@ -141,7 +141,7 @@ const UserListWithChat: React.FC = () => {
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const res = await axios.get('/api/current-user', {
+                const res = await apiService.get('/current-user', {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
                 setCurrentUserId(res.data.id);
@@ -157,7 +157,7 @@ const UserListWithChat: React.FC = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const response = await axios.get<User[]>('/api/users', {
+                const response = await apiService.get<User[]>('/users', {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
                 setUsers(response.data);
@@ -175,7 +175,7 @@ const UserListWithChat: React.FC = () => {
 
         const fetchMessages = async () => {
             try {
-                const response = await axios.get<ChatMessage[]>(`/api/chat/${selectedUserId}`, {
+                const response = await apiService.get<ChatMessage[]>(`/chat/${selectedUserId}`, {
                     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                 });
                 setMessages(response.data);
@@ -238,7 +238,7 @@ const UserListWithChat: React.FC = () => {
         setMessages((prev) => [...prev, tempMessage]);
 
         try {
-            await axios.post('/api/chat/send', payload, {
+            await apiService.post('/chat/send', payload, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
             });
 
