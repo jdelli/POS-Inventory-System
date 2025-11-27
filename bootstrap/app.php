@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\HandleCors;
 
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -13,6 +14,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Ensure every request goes through the CORS handler first.
+        $middleware->prepend([
+            HandleCors::class,
+        ]);
+
         // Add web middleware stack
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,

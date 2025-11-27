@@ -21,5 +21,20 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        if (app()->runningInConsole()) {
+            return;
+        }
+
+        $configuredDomain = config('session.domain');
+        $currentHost = request()->getHost();
+
+        if (
+            app()->environment('local') &&
+            ! empty($configuredDomain) &&
+            $configuredDomain !== $currentHost
+        ) {
+            config(['session.domain' => $currentHost]);
+        }
     }
 }

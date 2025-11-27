@@ -22,18 +22,27 @@ import CloseIcon from '@mui/icons-material/Close';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import { Dashboard, ExpandLess, ExpandMore, Store, Receipt, Report, People, Menu, ShoppingCart, ShoppingCartCheckout, Chat } from '@mui/icons-material';
 import Echo from 'laravel-echo';
-import axios from 'axios';
 import Draggable from 'react-draggable';
 import AnnouncementModal from '@/Pages/Props/AnnouncementsModal';
 import echo from '@/Pages/echo';
+import apiService from '@/Pages/Services/ApiService';
 export default function Authenticated({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
-    const user = usePage().props.auth.user;
+    const { user, token } = usePage().props.auth;
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(true);
     const [chatOpen, setChatOpen] = useState(false); // State for chat modal
     const [unreadCount, setUnreadCount] = useState(0);
     const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(user?.id ?? null);
+  
+    // Keep API token in localStorage for axios-based API calls.
+    useEffect(() => {
+        if (token) {
+            localStorage.setItem('token', token);
+        } else {
+            localStorage.removeItem('token');
+        }
+    }, [token]);
   
     
 
@@ -43,9 +52,7 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
 
     const fetchTotalUnreadMessages = async () => {
         try {
-            const response = await axios.get('/api/notifications/total-unread', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            });
+            const response = await apiService.get('/notifications/total-unread');
             setTotalUnreadMessages(response.data.total);
         } catch (error) {
             console.error('Error fetching total unread messages:', error);
@@ -68,30 +75,11 @@ export default function Authenticated({ header, children }: PropsWithChildren<{ 
 
 
 
-  // Fetch current user
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-        try {
-            const res = await axios.get('/api/current-user', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            });
-            setCurrentUserId(res.data.id);
-        } catch (error) {
-            console.error('Error fetching current user:', error);
-        }
-    };
-
-    fetchCurrentUser();
-}, []);
-
-
-
-
     
 
     const fetchUnreadCount = async () => {
         try {
-            const response = await axios.get('/api/announcements/unread');
+            const response = await apiService.get('/announcements/unread');
             setUnreadCount(response.data.length);
         } catch (error) {
             console.error('Error fetching unread count:', error);

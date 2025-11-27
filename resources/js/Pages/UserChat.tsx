@@ -56,16 +56,12 @@ const UserListWithChat: React.FC = () => {
         setSelectedUserId(userId);
     
         try {
-            const res = await apiService.get('/notifications', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            });
+            const res = await apiService.get('/notifications');
     
             const userNotifications = res.data.filter((n: any) => n.chat.sender_id === userId);
     
             for (const notif of userNotifications) {
-                await apiService.put(`/notifications/${notif.id}/read`, {}, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
+                await apiService.put(`/notifications/${notif.id}/read`, {});
             }
     
             setNotifications((prev) => {
@@ -83,9 +79,7 @@ const UserListWithChat: React.FC = () => {
     
         const fetchNotifications = async () => {
             try {
-                const response = await apiService.get('/notifications', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
+                const response = await apiService.get('/notifications');
     
                 const notificationCounts: { [userId: number]: number } = {};
     
@@ -138,9 +132,7 @@ const UserListWithChat: React.FC = () => {
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const res = await apiService.get('/current-user', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
+                const res = await apiService.get('/current-user');
                 setCurrentUserId(res.data.id);
             } catch (error) {
                 console.error('Error fetching current user:', error);
@@ -154,9 +146,7 @@ const UserListWithChat: React.FC = () => {
     useEffect(() => {
         const fetchUsers = async () => {
             try {
-                const response = await apiService.get<User[]>('/users', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
+                const response = await apiService.get<User[]>('/users');
                 setUsers(response.data);
             } catch (error) {
                 console.error('Error fetching users:', error);
@@ -172,9 +162,7 @@ const UserListWithChat: React.FC = () => {
 
         const fetchMessages = async () => {
             try {
-                const response = await apiService.get<ChatMessage[]>(`/chat/${selectedUserId}`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
+                const response = await apiService.get<ChatMessage[]>(`/chat/${selectedUserId}`);
                 setMessages(response.data);
             } catch (error) {
                 console.error('Error fetching messages:', error);
@@ -235,10 +223,7 @@ const UserListWithChat: React.FC = () => {
         setMessages((prev) => [...prev, tempMessage]);
 
         try {
-            await apiService.post('/chat/send', payload, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-            });
-
+            await apiService.post('/chat/send', payload);
             setNewMessage('');
         } catch (error) {
             console.error('Error sending message:', error);

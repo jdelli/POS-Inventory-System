@@ -21,6 +21,7 @@ import {
     Dialog,
     Paper,
     Badge,
+    Avatar,
 } from '@mui/material';
 
 import WarehouseIcon from '@mui/icons-material/Warehouse';
@@ -29,8 +30,10 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import GroupsIcon from '@mui/icons-material/Groups';
 import CampaignIcon from '@mui/icons-material/Campaign';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import {
     Menu,
+    GridView,
 } from '@mui/icons-material';
 import {
     Dashboard as DashboardIcon,
@@ -45,137 +48,207 @@ import {
 } from '@mui/icons-material';
 import Draggable from 'react-draggable';
 import echo from '@/Pages/echo';
-import axios from 'axios';
+import apiService from '@/Pages/Services/ApiService';
 
 export default function AdminLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
-    const user = usePage().props.auth.user;
+    const { user, token } = usePage().props.auth;
     const [openBranchManagement, setOpenBranchManagement] = useState(false);
     const [drawerOpen, setDrawerOpen] = useState(true);
     const [chatOpen, setChatOpen] = useState(false);
     const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(user?.id ?? null);
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
     const handleNavigationDropdownClick = () => {
         setShowingNavigationDropdown(!showingNavigationDropdown);
     };
-      
 
+    useEffect(() => {
+        if (token) {
+            localStorage.setItem('token', token);
+        } else {
+            localStorage.removeItem('token');
+        }
+    }, [token]);
 
+    useEffect(() => {
+        if (!currentUserId) return;
 
-     // Function to fetch the total unread messages
-        useEffect(() => {
-        if (!currentUserId) return; // Ensure the user is logged in
-    
         const fetchTotalUnreadMessages = async () => {
             try {
-                const response = await axios.get('/api/notifications/total-unread', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
+                const response = await apiService.get('/notifications/total-unread');
                 setTotalUnreadMessages(response.data.total);
             } catch (error) {
                 console.error('Error fetching total unread messages:', error);
             }
         };
-    
+
         fetchTotalUnreadMessages();
-    
-        const channel = echo.channel(`chat.${currentUserId}`); 
+
+        const channel = echo.channel(`chat.${currentUserId}`);
         channel.listen('.message.sent', (event: any) => {
             console.log('Real-time event received:', event);
-            setTotalUnreadMessages(event.totalUnread); // Use the totalUnread from the event
+            setTotalUnreadMessages(event.totalUnread);
         });
-    
+
         return () => {
             echo.leave(`chat.${currentUserId}`);
         };
     }, [currentUserId]);
-    
-    
-    
-    
-      // Fetch current user
-      useEffect(() => {
-        const fetchCurrentUser = async () => {
-            try {
-                const res = await axios.get('/api/current-user', {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                });
-                setCurrentUserId(res.data.id);
-            } catch (error) {
-                console.error('Error fetching current user:', error);
-            }
-        };
-    
-        fetchCurrentUser();
-    }, []);
-    
-
-
 
     const toggleChat = () => {
         setChatOpen(!chatOpen);
     };
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f9fafb' }}>
-            {/* AppBar */}
-            <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, backgroundColor: '#ffffff', color: '#333', boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)' }}>
-                <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#F8F9FB' }}>
+            {/* Modern TopNav */}
+            <AppBar
+                position="fixed"
+                elevation={0}
+                sx={{
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
+                    backgroundColor: '#0B5D6D',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                }}
+            >
+                <Toolbar sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    minHeight: '64px !important',
+                    px: 3,
+                }}>
                     {/* Left Side */}
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <IconButton
-                            size="large"
+                            size="medium"
                             edge="start"
-                            color="inherit"
-                            aria-label="menu"
                             onClick={() => setDrawerOpen(!drawerOpen)}
-                            sx={{ mr: 2 }}
+                            sx={{
+                                color: 'white',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
                         >
                             <Menu />
                         </IconButton>
-                        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
-                            {header || 'User Dashboard'}
+                        <Typography
+                            variant="h6"
+                            component="div"
+                            sx={{
+                                fontWeight: 700,
+                                fontSize: '1.25rem',
+                                color: 'white',
+                                letterSpacing: '-0.5px',
+                            }}
+                        >
+                            Dashboard
                         </Typography>
                     </Box>
+
                     {/* Right Side */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                       {/* Announcement Button */}
-                        <Button
-                            color="inherit"
-                            href={route('admin-announcements')} // Use href for navigation
-                            startIcon={
-                                <Badge color="secondary">
-                                    <CampaignIcon />
-                                </Badge>
-                            }
-                            sx={{ textTransform: 'none', fontWeight: 500 }}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {/* Theme Toggle */}
+                        <IconButton
+                            sx={{
+                                color: 'white',
+                                width: 40,
+                                height: 40,
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
                         >
-                    
-                        </Button>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                                <path d="M10 2.5v15M10 2.5a5 5 0 100 10 5 5 0 000-10z" strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
+                        </IconButton>
+
+                        {/* Notifications */}
+                        <IconButton
+                            sx={{
+                                color: 'white',
+                                width: 40,
+                                height: 40,
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
+                        >
+                            <NotificationsIcon sx={{ fontSize: 20 }} />
+                        </IconButton>
+
                         {/* Chat Button */}
-                        <Button
-                            color="inherit"
-                            startIcon={
-                                <Badge
-                                    color="error"
-                                    badgeContent={totalUnreadMessages > 0 ? totalUnreadMessages : null}
-                                    sx={{ ml: 1 }}
-                                >
-                                    <ChatIcon />
-                                </Badge>
-                            }
+                        <IconButton
                             onClick={toggleChat}
-                            sx={{ textTransform: 'none', fontWeight: 500 }}
+                            sx={{
+                                color: 'white',
+                                width: 40,
+                                height: 40,
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
                         >
-                        
-                        </Button>
-                        {/* User Dropdown */}
+                            <Badge
+                                badgeContent={totalUnreadMessages}
+                                color="error"
+                                sx={{
+                                    '& .MuiBadge-badge': {
+                                        fontSize: '0.625rem',
+                                        height: 16,
+                                        minWidth: 16,
+                                        padding: '0 4px',
+                                    }
+                                }}
+                            >
+                                <ChatIcon sx={{ fontSize: 20 }} />
+                            </Badge>
+                        </IconButton>
+
+                        {/* User Profile */}
                         <Dropdown>
                             <Dropdown.Trigger>
-                                <Button color="inherit" sx={{ textTransform: 'none', fontWeight: 500 }}>
-                                    {user.name}
-                                </Button>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1,
+                                        cursor: 'pointer',
+                                        padding: '6px 12px',
+                                        borderRadius: '8px',
+                                        transition: 'background-color 0.2s',
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        }
+                                    }}
+                                >
+                                    <Avatar
+                                        sx={{
+                                            width: 32,
+                                            height: 32,
+                                            backgroundColor: '#F59E0B',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {user.name.charAt(0).toUpperCase()}
+                                    </Avatar>
+                                    <Typography
+                                        sx={{
+                                            color: 'white',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 500,
+                                        }}
+                                    >
+                                        {user.name}
+                                    </Typography>
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
+                                        <path d="M4 6l4 4 4-4"/>
+                                    </svg>
+                                </Box>
                             </Dropdown.Trigger>
                             <Dropdown.Content>
                                 <Dropdown.Link href={route('profile.edit')}>Profile</Dropdown.Link>
@@ -188,47 +261,74 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                 </Toolbar>
             </AppBar>
 
-            {/* Drawer (Sidebar) */}
+            {/* Modern Sidebar */}
             <Drawer
                 variant="permanent"
                 open={drawerOpen}
                 sx={{
-                    width: drawerOpen ? 280 : 80,
+                    width: drawerOpen ? 260 : 70,
                     flexShrink: 0,
-                    transition: (theme) => theme.transitions.create('width', {
-                        easing: theme.transitions.easing.sharp,
-                        duration: theme.transitions.duration.enteringScreen,
-                    }),
+                    transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     [`& .MuiDrawer-paper`]: {
-                        width: drawerOpen ? 280 : 80,
+                        width: drawerOpen ? 260 : 70,
                         boxSizing: 'border-box',
                         overflowX: 'hidden',
-                        borderRight: '1px solid #e0e0e0',
-                        backgroundColor: '#ffffff',
+                        border: 'none',
+                        backgroundColor: '#FFFFFF',
+                        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     },
                 }}
             >
-                <Toolbar />
-                <Box sx={{ padding: drawerOpen ? '16px' : '0' }}>
-                {/* Navigation Links */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}> {/* Add gap here */}
+                <Toolbar sx={{ minHeight: '64px !important' }} />
+
+                <Box sx={{
+                    padding: drawerOpen ? '16px 12px' : '16px 8px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.5,
+                }}>
+                    {/* Main Menu Label */}
+                    {drawerOpen && (
+                        <Typography
+                            sx={{
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                color: '#9CA3AF',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                px: 1.5,
+                                mb: 1,
+                            }}
+                        >
+                            Main Menu
+                        </Typography>
+                    )}
+
                     {/* Dashboard */}
                     <NavLink href={route('admin-dashboard')} active={route().current('admin-dashboard')}>
                         <Box
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 2,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                backgroundColor: route().current('admin-dashboard') ? '#f0faff' : 'transparent',
+                                gap: 1.5,
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                backgroundColor: route().current('admin-dashboard') ? '#0B5D6D' : 'transparent',
+                                color: route().current('admin-dashboard') ? '#FFFFFF' : '#6B7280',
+                                transition: 'all 0.2s',
+                                cursor: 'pointer',
                                 '&:hover': {
-                                    backgroundColor: '#f0faff',
+                                    backgroundColor: route().current('admin-dashboard') ? '#0B5D6D' : '#F3F4F6',
+                                    color: route().current('admin-dashboard') ? '#FFFFFF' : '#1F2937',
                                 },
                             }}
                         >
-                            <DashboardIcon sx={{ fontSize: 20 }} />
-                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Dashboard</Typography>
+                            <GridView sx={{ fontSize: 20 }} />
+                            {drawerOpen && (
+                                <Typography sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                                    Dashboard
+                                </Typography>
+                            )}
                         </Box>
                     </NavLink>
 
@@ -238,95 +338,121 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            gap: 2,
-                            padding: '8px 12px',
-                            borderRadius: '8px',
-                            backgroundColor: showingNavigationDropdown ? '#f0faff' : 'transparent',
+                            padding: '10px 12px',
+                            borderRadius: '10px',
+                            backgroundColor: showingNavigationDropdown ? '#F3F4F6' : 'transparent',
+                            color: '#6B7280',
                             cursor: 'pointer',
+                            transition: 'all 0.2s',
                             '&:hover': {
-                                backgroundColor: '#f0faff',
+                                backgroundColor: '#F3F4F6',
+                                color: '#1F2937',
                             },
                         }}
                         onClick={handleNavigationDropdownClick}
                     >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                             <StoreIcon sx={{ fontSize: 20 }} />
-                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Branch Management</Typography>
+                            {drawerOpen && (
+                                <Typography sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                                    Branch Management
+                                </Typography>
+                            )}
                         </Box>
-                        {showingNavigationDropdown ? <ExpandLess /> : <ExpandMore />}
+                        {drawerOpen && (showingNavigationDropdown ? <ExpandLess sx={{ fontSize: 20 }} /> : <ExpandMore sx={{ fontSize: 20 }} />)}
                     </Box>
+
                     <Collapse in={showingNavigationDropdown} timeout="auto" unmountOnExit>
-                        <Box sx={{ pl: 2, mt: 1 }}>
-                            {/* Stocks */}
+                        <Box sx={{ pl: drawerOpen ? 4.5 : 0, mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                            {/* Branch Stocks */}
                             <NavLink href={route('admin-stocks')} active={route().current('admin-stocks')}>
                                 <Box
                                     sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 2,
                                         padding: '8px 12px',
                                         borderRadius: '8px',
-                                        backgroundColor: route().current('admin-stocks') ? '#e6f7ff' : 'transparent',
+                                        backgroundColor: route().current('admin-stocks') ? '#EFF6FF' : 'transparent',
+                                        color: route().current('admin-stocks') ? '#1E40AF' : '#6B7280',
+                                        transition: 'all 0.2s',
                                         '&:hover': {
-                                            backgroundColor: '#e6f7ff',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#1E40AF',
                                         },
                                     }}
                                 >
-                                    <Typography>Branch Stocks</Typography>
+                                    {drawerOpen && (
+                                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                            Branch Stocks
+                                        </Typography>
+                                    )}
                                 </Box>
                             </NavLink>
+
                             {/* Stock Entries */}
                             <NavLink href={route('admin-entries')} active={route().current('admin-entries')}>
                                 <Box
                                     sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 2,
                                         padding: '8px 12px',
                                         borderRadius: '8px',
-                                        backgroundColor: route().current('admin-entries') ? '#e6f7ff' : 'transparent',
+                                        backgroundColor: route().current('admin-entries') ? '#EFF6FF' : 'transparent',
+                                        color: route().current('admin-entries') ? '#1E40AF' : '#6B7280',
+                                        transition: 'all 0.2s',
                                         '&:hover': {
-                                            backgroundColor: '#e6f7ff',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#1E40AF',
                                         },
                                     }}
                                 >
-                                    <Typography>Stock Entries</Typography>
+                                    {drawerOpen && (
+                                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                            Stock Entries
+                                        </Typography>
+                                    )}
                                 </Box>
                             </NavLink>
+
                             {/* Sales Orders */}
                             <NavLink href={route('admin-sales')} active={route().current('admin-sales')}>
                                 <Box
                                     sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 2,
                                         padding: '8px 12px',
                                         borderRadius: '8px',
-                                        backgroundColor: route().current('admin-sales') ? '#e6f7ff' : 'transparent',
+                                        backgroundColor: route().current('admin-sales') ? '#EFF6FF' : 'transparent',
+                                        color: route().current('admin-sales') ? '#1E40AF' : '#6B7280',
+                                        transition: 'all 0.2s',
                                         '&:hover': {
-                                            backgroundColor: '#e6f7ff',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#1E40AF',
                                         },
                                     }}
                                 >
-                                    <Typography>Sales Orders</Typography>
+                                    {drawerOpen && (
+                                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                            Sales Orders
+                                        </Typography>
+                                    )}
                                 </Box>
                             </NavLink>
+
                             {/* Stock Requests */}
                             <NavLink href={route('admin-stocks-request')} active={route().current('admin-stocks-request')}>
                                 <Box
                                     sx={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 2,
                                         padding: '8px 12px',
                                         borderRadius: '8px',
-                                        backgroundColor: route().current('admin-stocks-request') ? '#e6f7ff' : 'transparent',
+                                        backgroundColor: route().current('admin-stocks-request') ? '#EFF6FF' : 'transparent',
+                                        color: route().current('admin-stocks-request') ? '#1E40AF' : '#6B7280',
+                                        transition: 'all 0.2s',
                                         '&:hover': {
-                                            backgroundColor: '#e6f7ff',
+                                            backgroundColor: '#EFF6FF',
+                                            color: '#1E40AF',
                                         },
                                     }}
                                 >
-                                    <Typography>Stock Requests</Typography>
+                                    {drawerOpen && (
+                                        <Typography sx={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                                            Stock Requests
+                                        </Typography>
+                                    )}
                                 </Box>
                             </NavLink>
                         </Box>
@@ -338,17 +464,24 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 2,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                backgroundColor: route().current('admin-products') ? '#f0faff' : 'transparent',
+                                gap: 1.5,
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                backgroundColor: route().current('admin-products') ? '#0B5D6D' : 'transparent',
+                                color: route().current('admin-products') ? '#FFFFFF' : '#6B7280',
+                                transition: 'all 0.2s',
                                 '&:hover': {
-                                    backgroundColor: '#f0faff',
+                                    backgroundColor: route().current('admin-products') ? '#0B5D6D' : '#F3F4F6',
+                                    color: route().current('admin-products') ? '#FFFFFF' : '#1F2937',
                                 },
                             }}
                         >
                             <WarehouseIcon sx={{ fontSize: 20 }} />
-                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Warehouse Stocks</Typography>
+                            {drawerOpen && (
+                                <Typography sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                                    Warehouse Stocks
+                                </Typography>
+                            )}
                         </Box>
                     </NavLink>
 
@@ -358,37 +491,51 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 2,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                backgroundColor: route().current('admin-supplier') ? '#f0faff' : 'transparent',
+                                gap: 1.5,
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                backgroundColor: route().current('admin-supplier') ? '#0B5D6D' : 'transparent',
+                                color: route().current('admin-supplier') ? '#FFFFFF' : '#6B7280',
+                                transition: 'all 0.2s',
                                 '&:hover': {
-                                    backgroundColor: '#f0faff',
+                                    backgroundColor: route().current('admin-supplier') ? '#0B5D6D' : '#F3F4F6',
+                                    color: route().current('admin-supplier') ? '#FFFFFF' : '#1F2937',
                                 },
                             }}
                         >
                             <GroupsIcon sx={{ fontSize: 20 }} />
-                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Supplier</Typography>
+                            {drawerOpen && (
+                                <Typography sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                                    Supplier
+                                </Typography>
+                            )}
                         </Box>
                     </NavLink>
 
-                    {/* Reports */}
+                    {/* Branch Reports */}
                     <NavLink href={route('admin-reports')} active={route().current('admin-reports')}>
                         <Box
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 2,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                backgroundColor: route().current('admin-reports') ? '#f0faff' : 'transparent',
+                                gap: 1.5,
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                backgroundColor: route().current('admin-reports') ? '#0B5D6D' : 'transparent',
+                                color: route().current('admin-reports') ? '#FFFFFF' : '#6B7280',
+                                transition: 'all 0.2s',
                                 '&:hover': {
-                                    backgroundColor: '#f0faff',
+                                    backgroundColor: route().current('admin-reports') ? '#0B5D6D' : '#F3F4F6',
+                                    color: route().current('admin-reports') ? '#FFFFFF' : '#1F2937',
                                 },
                             }}
                         >
                             <ReceiptLongIcon sx={{ fontSize: 20 }} />
-                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Branch Reports</Typography>
+                            {drawerOpen && (
+                                <Typography sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                                    Branch Reports
+                                </Typography>
+                            )}
                         </Box>
                     </NavLink>
 
@@ -398,17 +545,24 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 2,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                backgroundColor: route().current('admin-sales-data') ? '#f0faff' : 'transparent',
+                                gap: 1.5,
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                backgroundColor: route().current('admin-sales-data') ? '#0B5D6D' : 'transparent',
+                                color: route().current('admin-sales-data') ? '#FFFFFF' : '#6B7280',
+                                transition: 'all 0.2s',
                                 '&:hover': {
-                                    backgroundColor: '#f0faff',
+                                    backgroundColor: route().current('admin-sales-data') ? '#0B5D6D' : '#F3F4F6',
+                                    color: route().current('admin-sales-data') ? '#FFFFFF' : '#1F2937',
                                 },
                             }}
                         >
                             <TableChartIcon sx={{ fontSize: 20 }} />
-                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Branch Data</Typography>
+                            {drawerOpen && (
+                                <Typography sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                                    Branch Data
+                                </Typography>
+                            )}
                         </Box>
                     </NavLink>
 
@@ -418,25 +572,39 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                             sx={{
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: 2,
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                backgroundColor: route().current('admin-sales-stats') ? '#f0faff' : 'transparent',
+                                gap: 1.5,
+                                padding: '10px 12px',
+                                borderRadius: '10px',
+                                backgroundColor: route().current('admin-sales-stats') ? '#0B5D6D' : 'transparent',
+                                color: route().current('admin-sales-stats') ? '#FFFFFF' : '#6B7280',
+                                transition: 'all 0.2s',
                                 '&:hover': {
-                                    backgroundColor: '#f0faff',
+                                    backgroundColor: route().current('admin-sales-stats') ? '#0B5D6D' : '#F3F4F6',
+                                    color: route().current('admin-sales-stats') ? '#FFFFFF' : '#1F2937',
                                 },
                             }}
                         >
                             <AssessmentIcon sx={{ fontSize: 20 }} />
-                            <Typography sx={{ opacity: drawerOpen ? 1 : 0 }}>Sales Statistics</Typography>
+                            {drawerOpen && (
+                                <Typography sx={{ fontSize: '0.9375rem', fontWeight: 500 }}>
+                                    Sales Statistics
+                                </Typography>
+                            )}
                         </Box>
                     </NavLink>
                 </Box>
-            </Box>
             </Drawer>
 
             {/* Main Content */}
-            <Box component="main" sx={{ flexGrow: 1, p: 3, paddingTop: '72px', backgroundColor: '#f9fafb' }}>
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    paddingTop: '64px',
+                    backgroundColor: '#F8F9FB',
+                    minHeight: '100vh',
+                }}
+            >
                 {children}
             </Box>
 
@@ -454,9 +622,9 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                                 height: '65vh',
                                 maxHeight: 700,
                                 position: 'absolute',
-                                borderRadius: 3,
+                                borderRadius: '16px',
                                 overflow: 'hidden',
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                                boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
                             }}
                         />
                     </Draggable>
@@ -469,19 +637,16 @@ export default function AdminLayout({ header, children }: PropsWithChildren<{ he
                         id="chat-dialog-title"
                         sx={{
                             cursor: 'move',
-                            bgcolor: 'primary.main',
+                            bgcolor: '#0B5D6D',
                             color: 'white',
-                            px: 2,
-                            py: 1.5,
+                            px: 3,
+                            py: 2,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            borderTopLeftRadius: 3,
-                            borderTopRightRadius: 3,
-                            boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.1)',
                         }}
                     >
-                        <Typography variant="h6" sx={{ fontWeight: 600, textShadow: '0 1px 1px rgba(0,0,0,0.2)' }}>
+                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
                             Chat
                         </Typography>
                         <IconButton size="small" onClick={toggleChat} sx={{ color: 'white' }}>

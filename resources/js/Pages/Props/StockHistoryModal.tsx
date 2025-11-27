@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import apiService from '../Services/ApiService';
 
 interface StockHistoryProps {
   showModal: boolean;
@@ -13,23 +12,6 @@ interface StockHistoryProps {
 const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal, productName, history }) => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  // Pagination Logic
-  const fetchPagedHistory = async () => {
-    try {
-      const response = await apiService.get(`/stock-history?page=${page}`);
-      setTotalPages(response.data.last_page);
-    } catch (error) {
-      console.error('Error fetching paged stock history:', error);
-    }
-  };
-
-  // Whenever page or history changes, fetch paged data
-  useEffect(() => {
-    fetchPagedHistory();
-  }, [page]);
 
   if (!showModal) return null;
 
@@ -107,26 +89,6 @@ const StockHistoryModal: React.FC<StockHistoryProps> = ({ showModal, closeModal,
           <p className="text-gray-600">No history available.</p>
         )}
 
-        {/* Pagination Controls */}
-        <div className="flex justify-between items-center mt-4">
-          <button
-            onClick={() => setPage(page - 1)}
-            disabled={page === 1}
-            className="text-blue-600 hover:text-blue-800 disabled:text-gray-400"
-          >
-            Previous
-          </button>
-          <span className="text-gray-600">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            onClick={() => setPage(page + 1)}
-            disabled={page === totalPages}
-            className="text-blue-600 hover:text-blue-800 disabled:text-gray-400"
-          >
-            Next
-          </button>
-        </div>
       </div>
     </div>
   );

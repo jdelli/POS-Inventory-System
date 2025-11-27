@@ -251,7 +251,7 @@ const DailySalesReport: React.FC = () => {
   const handleOpenModal = (date: string) => {
     setLoading(true);
     apiService
-      .get(`/api/sales-orders-by-date?date=${date}`, {
+      .get(`/sales-orders-by-date?date=${date}`, {
         params: { user_name: selectedBranchName },
       })
       .then((response) => setSelectedSalesOrder(response.data))
