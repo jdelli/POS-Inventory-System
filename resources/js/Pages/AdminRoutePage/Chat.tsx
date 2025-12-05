@@ -1,616 +1,240 @@
-import React, { useEffect, useState, useRef } from 'react';
-import Pusher from 'pusher-js';
-import echo from '../echo';
+import React, { useState, useEffect, useRef } from 'react';
+import AdminLayout from '@/Layouts/AdminLayout';
+import { Head, usePage } from '@inertiajs/react';
 import apiService from '../Services/ApiService';
-import { MessageCircle, Send, User as UserIcon, Circle } from 'lucide-react';
+import echo from '../echo';
+import { MessageCircle, Send, Users, Circle } from 'lucide-react';
+import SharedStyles from './SharedStyles';
+
+interface Message {
+  id: number;
+  sender_id: number;
+  sender_name: string;
+  receiver_id: number | null;
+  message: string;
+  created_at: string;
+  is_broadcast: boolean;
+}
 
 interface User {
-    id: number;
-    name: string;
-    avatar?: string;
+  id: number;
+  name: string;
+  usertype: string;
+  is_online: boolean;
 }
 
-interface ChatMessage {
-    id: number;
-    sender_id: number;
-    receiver_id: number;
-    message: string;
-    created_at: string;
-}
+const Chat: React.FC = () => {
+  const { auth } = usePage().props as { auth: { user: { id: number; name: string } } };
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [newMessage, setNewMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-interface SendMessagePayload {
-    receiver_id: number;
-    message: string;
-}
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
 
-const UserListWithChat: React.FC = () => {
-    const [users, setUsers] = useState<User[]>([]);
-    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-    const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [newMessage, setNewMessage] = useState<string>('');
-    const [notifications, setNotifications] = useState<{ [userId: number]: number }>({});
-    const chatContainerRef = useRef<HTMLDivElement | null>(null);
-
-    const handleUserClick = async (userId: number) => {
-        setSelectedUserId(userId);
-        try {
-            const res = await apiService.get('/notifications');
-            const userNotifications = res.data.filter((n: any) => n.chat.sender_id === userId);
-            for (const notif of userNotifications) {
-                await apiService.put(`/notifications/${notif.id}/read`, {});
-            }
-            setNotifications((prev) => {
-                const updated = { ...prev };
-                delete updated[userId];
-                return updated;
-            });
-        } catch (error) {
-            console.error('Error marking notifications as read:', error);
-        }
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await apiService.get('/users');
+        setUsers(response.data.filter((u: User) => u.id !== auth.user.id));
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
     };
-
-    useEffect(() => {
-        if (!currentUserId) return;
-
-        const fetchNotifications = async () => {
-            try {
-                const response = await apiService.get('/notifications');
-                const notificationCounts: { [userId: number]: number } = {};
-                response.data.forEach((notif: any) => {
-                    const senderId = notif.chat.sender_id;
-                    notificationCounts[senderId] = (notificationCounts[senderId] || 0) + 1;
-                });
-                setNotifications(notificationCounts);
-            } catch (error) {
-                console.error('Error fetching notifications:', error);
-            }
-        };
-
-        const channel = echo.channel(`chat.${currentUserId}`);
-        const listener = (event: any) => {
-            setNotifications((prev: any) => {
-                const senderId = event.chat.sender_id;
-                const updatedNotifications = { ...prev };
-                updatedNotifications[senderId] = (updatedNotifications[senderId] || 0) + 1;
-                return updatedNotifications;
-            });
-            fetchNotifications();
-        };
-
-        channel.listen('.message.sent', listener);
-        fetchNotifications();
-
-        return () => {
-            echo.leave(`chat.${currentUserId}`);
-        };
-    }, [currentUserId]);
-
-    useEffect(() => {
-        const fetchCurrentUser = async () => {
-            try {
-                const res = await apiService.get('/current-user');
-                setCurrentUserId(res.data.id);
-            } catch (error) {
-                console.error('Error fetching current user:', error);
-            }
-        };
-        fetchCurrentUser();
-    }, []);
-
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const response = await apiService.get<User[]>('/users');
-                setUsers(response.data);
-            } catch (error) {
-                console.error('Error fetching users:', error);
-            }
-        };
-        fetchUsers();
-    }, []);
-
-    useEffect(() => {
-        if (!selectedUserId) return;
-
-        const fetchMessages = async () => {
-            try {
-                const response = await apiService.get<ChatMessage[]>(`/chat/${selectedUserId}`);
-                setMessages(response.data);
-            } catch (error) {
-                console.error('Error fetching messages:', error);
-            }
-        };
-        fetchMessages();
-    }, [selectedUserId]);
-
-    useEffect(() => {
-        if (!currentUserId) return;
-
-        const pusher = new Pusher(import.meta.env.VITE_REVERB_APP_KEY, {
-            wsHost: import.meta.env.VITE_REVERB_HOST,
-            wsPort: parseInt(import.meta.env.VITE_REVERB_PORT, 10),
-            forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https',
-            cluster: 'mt1',
-            enabledTransports: ['ws', 'wss'],
-        });
-
-        const channel = pusher.subscribe(`chat.${currentUserId}`);
-        channel.bind('message.sent', (data: { chat: ChatMessage }) => {
-            const msg = data.chat;
-            if (msg.sender_id === selectedUserId || msg.receiver_id === selectedUserId) {
-                setMessages((prev) => [...prev, msg]);
-            }
-        });
-
-        return () => {
-            pusher.unsubscribe(`chat.${currentUserId}`);
-        };
-    }, [currentUserId, selectedUserId]);
-
-    useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-    }, [messages]);
-
-    const sendMessage = async () => {
-        if (!selectedUserId || newMessage.trim() === '') return;
-
-        const payload: SendMessagePayload = {
-            receiver_id: selectedUserId,
-            message: newMessage,
-        };
-
-        const tempMessage: ChatMessage = {
-            id: Date.now(),
-            sender_id: currentUserId!,
-            receiver_id: selectedUserId,
-            message: newMessage,
-            created_at: new Date().toISOString(),
-        };
-
-        setMessages((prev) => [...prev, tempMessage]);
-
-        try {
-            await apiService.post('/chat/send', payload);
-            setNewMessage('');
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
-    };
-
-    const selectedUser = users.find((u) => u.id === selectedUserId);
-
-    return (
-        <>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
-
-                .chat-wrapper {
-                    background: #F9FAFB;
-                    min-height: 100vh;
-                    padding: 2rem;
-                    font-family: 'Inter', sans-serif;
-                }
-
-                .chat-container {
-                    max-width: 1400px;
-                    margin: 0 auto;
-                    display: flex;
-                    height: calc(100vh - 4rem);
-                    background: white;
-                    border-radius: 16px;
-                    overflow: hidden;
-                    border: 1px solid #E5E7EB;
-                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-                    animation: slideUp 0.6s ease-out;
-                }
-
-                @keyframes slideUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(40px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                .users-sidebar {
-                    width: 360px;
-                    background: #F9FAFB;
-                    border-right: 1px solid #E5E7EB;
-                    display: flex;
-                    flex-direction: column;
-                }
-
-                .sidebar-header {
-                    padding: 1.75rem 1.5rem;
-                    border-bottom: 1px solid #E5E7EB;
-                    background: white;
-                }
-
-                .sidebar-title {
-                    font-size: 1.25rem;
-                    font-weight: 700;
-                    color: #1F2937;
-                    font-family: 'DM Sans', sans-serif;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.625rem;
-                }
-
-                .users-list {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 0.5rem;
-                }
-
-                .user-item {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.875rem;
-                    padding: 0.875rem 1rem;
-                    margin: 0 0.5rem 0.375rem 0.5rem;
-                    border-radius: 10px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    position: relative;
-                }
-
-                .user-item:hover {
-                    background: #F3F4F6;
-                }
-
-                .user-item.active {
-                    background: #EFF6FF;
-                    border: 1px solid #BFDBFE;
-                }
-
-                .user-item.active .user-name {
-                    color: #1E40AF;
-                    font-weight: 600;
-                }
-
-                .user-avatar {
-                    width: 42px;
-                    height: 42px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-weight: 600;
-                    font-size: 1rem;
-                    flex-shrink: 0;
-                }
-
-                .user-item.active .user-avatar {
-                    background: linear-gradient(135deg, #2563EB 0%, #1E40AF 100%);
-                }
-
-                .user-info {
-                    flex: 1;
-                    min-width: 0;
-                }
-
-                .user-name {
-                    font-weight: 500;
-                    color: #1F2937;
-                    font-size: 0.9375rem;
-                }
-
-                .notification-badge {
-                    background: #EF4444;
-                    color: white;
-                    font-size: 0.6875rem;
-                    font-weight: 700;
-                    padding: 0.1875rem 0.5rem;
-                    border-radius: 10px;
-                    min-width: 20px;
-                    text-align: center;
-                }
-
-                .chat-area {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    background: white;
-                }
-
-                .chat-header {
-                    padding: 1.25rem 1.75rem;
-                    background: white;
-                    border-bottom: 1px solid #E5E7EB;
-                    display: flex;
-                    align-items: center;
-                    gap: 0.875rem;
-                }
-
-                .chat-header-avatar {
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-weight: 600;
-                    font-size: 1rem;
-                }
-
-                .chat-header-name {
-                    font-size: 1.125rem;
-                    font-weight: 700;
-                    color: #1F2937;
-                    font-family: 'DM Sans', sans-serif;
-                }
-
-                .messages-container {
-                    flex: 1;
-                    overflow-y: auto;
-                    padding: 1.5rem;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 1rem;
-                    background: #F9FAFB;
-                }
-
-                .message-wrapper {
-                    display: flex;
-                    gap: 0.625rem;
-                    animation: messageIn 0.3s ease-out;
-                }
-
-                @keyframes messageIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
-                .message-wrapper.own-message {
-                    flex-direction: row-reverse;
-                }
-
-                .message-avatar {
-                    width: 32px;
-                    height: 32px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: white;
-                    font-weight: 600;
-                    font-size: 0.875rem;
-                    flex-shrink: 0;
-                }
-
-                .message-content {
-                    max-width: 60%;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.25rem;
-                }
-
-                .message-sender {
-                    font-size: 0.75rem;
-                    font-weight: 600;
-                    color: #6B7280;
-                    padding: 0 0.75rem;
-                }
-
-                .message-bubble {
-                    background: white;
-                    padding: 0.75rem 1rem;
-                    border-radius: 14px;
-                    border: 1px solid #E5E7EB;
-                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-                    word-wrap: break-word;
-                    color: #1F2937;
-                }
-
-                .own-message .message-bubble {
-                    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-                    border: none;
-                    color: white;
-                }
-
-                .message-time {
-                    font-size: 0.6875rem;
-                    color: #9CA3AF;
-                    padding: 0 0.75rem;
-                }
-
-                .own-message .message-content {
-                    align-items: flex-end;
-                }
-
-                .message-input-area {
-                    padding: 1.25rem 1.75rem;
-                    background: white;
-                    border-top: 1px solid #E5E7EB;
-                    display: flex;
-                    gap: 0.875rem;
-                    align-items: center;
-                }
-
-                .message-input {
-                    flex: 1;
-                    padding: 0.75rem 1.25rem;
-                    border: 1px solid #E5E7EB;
-                    border-radius: 20px;
-                    font-size: 0.9375rem;
-                    font-weight: 400;
-                    font-family: 'Inter', sans-serif;
-                    transition: all 0.2s ease;
-                    background: #F9FAFB;
-                }
-
-                .message-input:focus {
-                    outline: none;
-                    border-color: #3B82F6;
-                    background: white;
-                    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-                }
-
-                .send-button {
-                    width: 44px;
-                    height: 44px;
-                    border-radius: 50%;
-                    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
-                    border: none;
-                    color: white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    flex-shrink: 0;
-                }
-
-                .send-button:hover {
-                    transform: scale(1.05);
-                    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-                }
-
-                .send-button:active {
-                    transform: scale(0.95);
-                }
-
-                .empty-state {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    color: #9CA3AF;
-                    gap: 0.875rem;
-                    background: #F9FAFB;
-                }
-
-                .empty-state-icon {
-                    color: #D1D5DB;
-                }
-
-                .empty-state-text {
-                    font-size: 1rem;
-                    font-weight: 500;
-                    color: #6B7280;
-                }
-            `}</style>
-
-            <div className="chat-wrapper">
-                <div className="chat-container">
-                    {/* Users Sidebar */}
-                    <div className="users-sidebar">
-                        <div className="sidebar-header">
-                            <h2 className="sidebar-title">
-                                <MessageCircle size={28} />
-                                Messages
-                            </h2>
-                        </div>
-                        <div className="users-list">
-                            {users.map((user) => (
-                                <div
-                                    key={user.id}
-                                    className={`user-item ${selectedUserId === user.id ? 'active' : ''}`}
-                                    onClick={() => handleUserClick(user.id)}
-                                >
-                                    <div className="user-avatar">
-                                        {user.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="user-info">
-                                        <div className="user-name">{user.name}</div>
-                                    </div>
-                                    {notifications[user.id] > 0 && (
-                                        <span className="notification-badge">
-                                            {notifications[user.id]}
-                                        </span>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Chat Area */}
-                    <div className="chat-area">
-                        {selectedUserId && selectedUser ? (
-                            <>
-                                <div className="chat-header">
-                                    <div className="chat-header-avatar">
-                                        {selectedUser.name.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div className="chat-header-name">{selectedUser.name}</div>
-                                </div>
-
-                                <div className="messages-container" ref={chatContainerRef}>
-                                    {messages.map((msg) => {
-                                        const isCurrentUser = msg.sender_id === currentUserId;
-                                        const user = users.find((u) => u.id === msg.sender_id);
-                                        return (
-                                            <div
-                                                key={msg.id}
-                                                className={`message-wrapper ${isCurrentUser ? 'own-message' : ''}`}
-                                            >
-                                                <div className="message-avatar">
-                                                    {user?.name?.charAt(0).toUpperCase() || '?'}
-                                                </div>
-                                                <div className="message-content">
-                                                    <div className="message-sender">
-                                                        {isCurrentUser ? 'You' : user?.name}
-                                                    </div>
-                                                    <div className="message-bubble">
-                                                        {msg.message}
-                                                    </div>
-                                                    <div className="message-time">
-                                                        {new Date(msg.created_at).toLocaleTimeString([], {
-                                                            hour: '2-digit',
-                                                            minute: '2-digit',
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <div className="message-input-area">
-                                    <input
-                                        type="text"
-                                        className="message-input"
-                                        value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
-                                        placeholder="Type a message..."
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') sendMessage();
-                                        }}
-                                    />
-                                    <button className="send-button" onClick={sendMessage}>
-                                        <Send size={20} />
-                                    </button>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="empty-state">
-                                <MessageCircle size={64} className="empty-state-icon" />
-                                <div className="empty-state-text">Select a contact to start chatting</div>
-                            </div>
-                        )}
-                    </div>
+    fetchUsers();
+
+    echo.channel('user-status').listen('.UserStatusUpdated', (data: { userId: number; status: boolean }) => {
+      setUsers((prev) => prev.map((u) => u.id === data.userId ? { ...u, is_online: data.status } : u));
+    });
+
+    return () => echo.leave('user-status');
+  }, [auth.user.id]);
+
+  useEffect(() => {
+    if (!selectedUser) {
+      fetchBroadcastMessages();
+    } else {
+      fetchPrivateMessages(selectedUser.id);
+    }
+  }, [selectedUser]);
+
+  useEffect(() => { scrollToBottom(); }, [messages]);
+
+  useEffect(() => {
+    const channel = echo.private(`chat.${auth.user.id}`);
+    channel.listen('.new-message', (data: Message) => {
+      if (!selectedUser && data.is_broadcast) {
+        setMessages((prev) => [...prev, data]);
+      } else if (selectedUser && data.sender_id === selectedUser.id) {
+        setMessages((prev) => [...prev, data]);
+      }
+    });
+    return () => echo.leave(`chat.${auth.user.id}`);
+  }, [auth.user.id, selectedUser]);
+
+  const fetchBroadcastMessages = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get('/messages/broadcast');
+      setMessages(response.data);
+    } catch (error) {
+      console.error('Error fetching broadcast messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPrivateMessages = async (userId: number) => {
+    setLoading(true);
+    try {
+      const response = await apiService.get(`/messages/${userId}`);
+      setMessages(response.data);
+    } catch (error) {
+      console.error('Error fetching private messages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSend = async () => {
+    if (!newMessage.trim()) return;
+    try {
+      await apiService.post('/messages', {
+        receiver_id: selectedUser?.id || null,
+        message: newMessage,
+        is_broadcast: !selectedUser
+      });
+      setNewMessage('');
+      if (selectedUser) {
+        fetchPrivateMessages(selectedUser.id);
+      } else {
+        fetchBroadcastMessages();
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  };
+
+  const formatTime = (dateString: string) => new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+  return (
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Chat</h2>}>
+      <Head title="Chat" />
+      <SharedStyles />
+
+      <div className="admin-page">
+        <div className="page-header">
+          <h1 className="page-title"><MessageCircle size={20} />Chat</h1>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.75rem', height: 'calc(100vh - 180px)' }}>
+          {/* Sidebar */}
+          <div className="panel" style={{ width: 220, flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+            <div className="panel-header"><Users size={14} />Contacts</div>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              <div
+                onClick={() => setSelectedUser(null)}
+                style={{
+                  padding: '0.5rem 0.75rem',
+                  cursor: 'pointer',
+                  background: !selectedUser ? '#DBEAFE' : 'transparent',
+                  borderBottom: '1px solid #E5E7EB',
+                  fontWeight: !selectedUser ? 600 : 400,
+                  fontSize: '0.8125rem'
+                }}
+              >
+                <MessageCircle size={14} style={{ display: 'inline', marginRight: 6 }} />
+                Broadcast
+              </div>
+              {users.map((user) => (
+                <div
+                  key={user.id}
+                  onClick={() => setSelectedUser(user)}
+                  style={{
+                    padding: '0.5rem 0.75rem',
+                    cursor: 'pointer',
+                    background: selectedUser?.id === user.id ? '#DBEAFE' : 'transparent',
+                    borderBottom: '1px solid #E5E7EB',
+                    fontWeight: selectedUser?.id === user.id ? 600 : 400,
+                    fontSize: '0.8125rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <Circle size={8} fill={user.is_online ? '#10B981' : '#D1D5DB'} stroke="none" />
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</span>
+                  <span className="badge badge-gray" style={{ fontSize: '0.625rem' }}>{user.usertype}</span>
                 </div>
+              ))}
             </div>
-        </>
-    );
+          </div>
+
+          {/* Chat Area */}
+          <div className="panel" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div className="panel-header">
+              <MessageCircle size={14} />
+              {selectedUser ? selectedUser.name : 'Broadcast Messages'}
+              {selectedUser && (
+                <span className="badge badge-gray" style={{ marginLeft: 'auto' }}>{selectedUser.usertype}</span>
+              )}
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.75rem', background: '#F9FAFB' }}>
+              {loading ? (
+                <div className="loading"><div className="spinner"></div>Loading...</div>
+              ) : messages.length > 0 ? (
+                messages.map((msg) => (
+                  <div
+                    key={msg.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: msg.sender_id === auth.user.id ? 'flex-end' : 'flex-start',
+                      marginBottom: '0.5rem'
+                    }}
+                  >
+                    <div style={{
+                      maxWidth: '70%',
+                      padding: '0.5rem 0.75rem',
+                      borderRadius: '4px',
+                      background: msg.sender_id === auth.user.id ? '#1D4ED8' : '#FFFFFF',
+                      color: msg.sender_id === auth.user.id ? 'white' : '#374151',
+                      border: msg.sender_id === auth.user.id ? 'none' : '1px solid #E5E7EB',
+                      fontSize: '0.8125rem'
+                    }}>
+                      {msg.sender_id !== auth.user.id && (
+                        <div style={{ fontWeight: 600, fontSize: '0.6875rem', color: msg.sender_id === auth.user.id ? 'rgba(255,255,255,0.8)' : '#1D4ED8', marginBottom: '0.125rem' }}>
+                          {msg.sender_name}
+                        </div>
+                      )}
+                      <div>{msg.message}</div>
+                      <div style={{ fontSize: '0.625rem', textAlign: 'right', opacity: 0.7, marginTop: '0.25rem' }}>{formatTime(msg.created_at)}</div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="empty-state"><MessageCircle size={32} /><div className="empty-state-text">No messages yet</div></div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+            <div style={{ padding: '0.75rem', borderTop: '1px solid #E5E7EB', display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="text"
+                className="form-control"
+                placeholder={selectedUser ? `Message ${selectedUser.name}...` : 'Broadcast message...'}
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                style={{ flex: 1 }}
+              />
+              <button className="btn btn-primary" onClick={handleSend}><Send size={14} /></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </AdminLayout>
+  );
 };
 
-export default UserListWithChat;
+export default Chat;

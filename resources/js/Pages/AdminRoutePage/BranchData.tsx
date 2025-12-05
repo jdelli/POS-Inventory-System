@@ -1,391 +1,149 @@
 import React, { useEffect, useState } from 'react';
-import { usePage } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
-import {
-    BarChart, Bar, PieChart, Pie, Cell, CartesianGrid,
-    XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line,
-} from 'recharts';
 import apiService from '../Services/ApiService';
-import { MenuItem, Select, Box, Typography, Button } from '@mui/material';
-
-interface SalesData {
-    month: string;
-    sales: number;
-}
+import { Building2, Plus, Edit, Trash2, X, Users } from 'lucide-react';
+import SharedStyles from './SharedStyles';
 
 interface Branch {
-    id: number;
-    name: string;
+  id: number;
+  name: string;
+  address: string;
+  contact: string;
+  manager?: string;
+  status: 'active' | 'inactive';
 }
 
-interface User {
-    name: string;
-}
+const BranchData: React.FC = () => {
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+  const [formData, setFormData] = useState({ name: '', address: '', contact: '', manager: '', status: 'active' });
 
-interface ProductSalesData {
-    product_name: string;
-    total_quantity: number;
-}
+  const fetchBranches = async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.get('/get-branches');
+      setBranches(response.data || []);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const AdminMonthlySalesDashboard: React.FC = () => {
-    const { auth } = usePage().props as { auth: { user: User } };
-    const [salesData, setSalesData] = useState<SalesData[]>([]);
-    const [totalSales, setTotalSales] = useState<number>(0);
-    const [salesTarget, setSalesTarget] = useState<number>(0);
-    const [totalSalesOrders, setTotalSalesOrders] = useState<number | null>(null);
-    const [totalSalesToday, setTotalSalesToday] = useState<number | null>(null);
-    const [dailySalesAmount, setDailySalesAmount] = useState<number | null>(null);
-    const [branches, setBranches] = useState<Branch[]>([]);
-    const [selectedBranch, setSelectedBranch] = useState<string>('');
-    const monthlyTarget = salesTarget / 12;
-    const COLORS = ['#1E90FF', '#FF6347'];
-    const [productSalesData, setProductSalesData] = useState<ProductSalesData[]>([]);
+  useEffect(() => { fetchBranches(); }, []);
 
-       // ➕ NEW STATE FOR SALES TARGET MODAL
-       const [isTargetModalOpen, setIsTargetModalOpen] = useState<boolean>(false);
-       const [modalTargetSales, setModalTargetSales] = useState<number>(0);
+  const handleOpenModal = (branch?: Branch) => {
+    if (branch) {
+      setEditingBranch(branch);
+      setFormData({ name: branch.name, address: branch.address, contact: branch.contact, manager: branch.manager || '', status: branch.status });
+    } else {
+      setEditingBranch(null);
+      setFormData({ name: '', address: '', contact: '', manager: '', status: 'active' });
+    }
+    setShowModal(true);
+  };
 
+  const handleSave = async () => {
+    try {
+      if (editingBranch) {
+        await apiService.put(`/branches/${editingBranch.id}`, formData);
+      } else {
+        await apiService.post('/branches', formData);
+      }
+      setShowModal(false);
+      fetchBranches();
+    } catch (error) {
+      console.error('Error saving branch:', error);
+    }
+  };
 
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this branch?')) return;
+    try {
+      await apiService.delete(`/branches/${id}`);
+      fetchBranches();
+    } catch (error) {
+      console.error('Error deleting branch:', error);
+    }
+  };
 
-    const formatCurrency = (amount: number): string => {
-        return new Intl.NumberFormat('en-PH', {
-            style: 'currency',
-            currency: 'PHP',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
-    };
+  return (
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Branches</h2>}>
+      <Head title="Branch Data" />
+      <SharedStyles />
 
-    // Fetch branches
-    useEffect(() => {
-        const fetchBranches = async () => {
-            try {
-                const response = await apiService.get('/get-branches');
-                setBranches(response.data);
-            } catch (error) {
-                console.error('Error fetching branches:', error);
-            }
-        };
-        fetchBranches();
-    }, []);
+      <div className="admin-page">
+        <div className="page-header">
+          <h1 className="page-title"><Building2 size={20} />Branches</h1>
+          <button className="btn btn-primary" onClick={() => handleOpenModal()}><Plus size={14} />Add</button>
+        </div>
 
-    // Fetch product sales data
-    useEffect(() => {
-        const fetchProductSalesData = async () => {
-            if (!selectedBranch) return;
-            try {
-                const response = await apiService.get('/most-sold-product', {
-                    params: { branch_id: selectedBranch },
-                });
-                if (response.data.success && response.data.data.length > 0) {
-                    setProductSalesData(response.data.data);
-                } else {
-                    setProductSalesData([]); // Ensure empty state is handled
-                }
-            } catch (error) {
-                console.error('Error fetching product sales data:', error);
-            }
-        };
-        fetchProductSalesData();
-    }, [selectedBranch]);
+        <div className="stats-row">
+          <div className="stat-box"><div className="stat-label">Total Branches</div><div className="stat-value">{branches.length}</div></div>
+          <div className="stat-box"><div className="stat-label">Active</div><div className="stat-value success">{branches.filter(b => b.status === 'active').length}</div></div>
+          <div className="stat-box"><div className="stat-label">Inactive</div><div className="stat-value danger">{branches.filter(b => b.status !== 'active').length}</div></div>
+        </div>
 
-    // Fetch all sales data based on selected branch
-    useEffect(() => {
-        if (!selectedBranch) return;
+        <div className="table-container">
+          {loading ? (
+            <div className="loading"><div className="spinner"></div>Loading...</div>
+          ) : (
+            <table className="data-table">
+              <thead><tr><th>Name</th><th>Address</th><th>Contact</th><th>Manager</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {branches.length > 0 ? branches.map((branch) => (
+                  <tr key={branch.id}>
+                    <td style={{ fontWeight: 500 }}><Building2 size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />{branch.name}</td>
+                    <td className="text-muted">{branch.address}</td>
+                    <td>{branch.contact}</td>
+                    <td>{branch.manager || '-'}</td>
+                    <td><span className={`badge ${branch.status === 'active' ? 'badge-success' : 'badge-gray'}`}>{branch.status}</span></td>
+                    <td>
+                      <div className="actions">
+                        <button className="btn btn-sm btn-secondary btn-icon" onClick={() => handleOpenModal(branch)}><Edit size={14} /></button>
+                        <button className="btn btn-sm btn-danger btn-icon" onClick={() => handleDelete(branch.id)}><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : <tr><td colSpan={6}><div className="empty-state"><Building2 size={32} /><div className="empty-state-text">No branches found</div></div></td></tr>}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
 
-        apiService.get<{ success: boolean; data: number }>('/get-sales-target', {
-            params: { user_name: selectedBranch },
-        })
-            .then((response) => {
-                if (response.data.success) {
-                    setSalesTarget(response.data.data);
-                }
-            })
-            .catch((error) => {
-                console.error('Error fetching sales target:', error);
-            });
-
-        apiService.get<{ success: boolean; data: SalesData[] }>('/get-monthly-sales', {
-            params: { user_name: selectedBranch },
-        })
-            .then((response) => {
-                const data = response.data.data;
-                if (Array.isArray(data)) {
-                    setSalesData(data);
-                    setTotalSales(data.reduce((acc, item) => acc + item.sales, 0));
-                }
-            })
-            .catch((error) => {
-                console.error('Error fetching monthly sales:', error);
-            });
-
-        apiService.get<{ success: boolean; data: number }>('/get-total-clients', {
-            params: { user_name: selectedBranch },
-        })
-            .then((response) => {
-                if (response.data.success) {
-                    setTotalSalesOrders(response.data.data);
-                }
-            })
-            .catch((error) => {
-                console.error('Error fetching total sales orders:', error);
-            });
-
-        apiService.get<{ success: boolean; data: number }>('/get-total-daily-sales-orders', {
-            params: { user_name: selectedBranch },
-        })
-            .then((response) => {
-                if (response.data.success) {
-                    setTotalSalesToday(response.data.data);
-                }
-            })
-            .catch((error) => {
-                console.error('Error fetching daily sales orders:', error);
-            });
-
-        apiService.get<{ success: boolean; data: number }>('/get-total-daily-sales', {
-            params: { user_name: selectedBranch },
-        })
-            .then((response) => {
-                if (response.data.success) {
-                    setDailySalesAmount(response.data.data);
-                }
-            })
-            .catch((error) => {
-                console.error('Error fetching daily sales amount:', error);
-            });
-    }, [selectedBranch]);
-
-    // Data for pie chart
-    const totalSalesData = [
-        { name: 'Total Sales', value: totalSales },
-        { name: 'Remaining', value: Math.max(0, salesTarget - totalSales) },
-    ];
-
-    const monthlySalesWithTarget = salesData.map((data) => ({
-        ...data,
-        target: monthlyTarget,
-    }));
-
-    // ➕ HANDLE SAVING THE TARGET TO SERVER
-    const handleSaveTarget = async () => {
-        if (!selectedBranch || !modalTargetSales) return;
-
-        try {
-            await apiService.post('/sales-target', {
-                branch_id: selectedBranch,
-                target_sales: modalTargetSales,
-            });
-
-            setSalesTarget(modalTargetSales); // Update UI
-            setIsTargetModalOpen(false);
-        } catch (error) {
-            alert('Failed to save sales target.');
-            console.error('Error saving sales target:', error);
-        }
-    };
-
-    return (
-       <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Branch Data</h2>}>
-            <Head title="Admin Dashboard" />
-            <div className="py-12 bg-gray-100 overflow-y-auto max-h-screen">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-8">
-
-                    {/* Branch Selector */}
-                    <div className="mb-6">
-                        <Select
-                            value={selectedBranch || ''}
-                            onChange={(e) => setSelectedBranch(e.target.value as string)}
-                            displayEmpty
-                            variant="outlined"
-                            fullWidth
-                            aria-label="Select Branch"
-                        >
-                            <MenuItem value="" disabled>Select Branch</MenuItem>
-                            {branches.map((branch) => (
-                                <MenuItem key={branch.id} value={branch.name}>
-                                    {branch.name}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </div>
-
-                    {selectedBranch && (
-                        <>
-                            {/* Total Cards */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                                <div className="bg-white shadow-lg rounded-lg p-6">
-                                    <h3 className="text-lg font-bold mb-2">Total Sales Orders:</h3>
-                                    <p className="text-3xl font-semibold text-blue-600">
-                                        {totalSalesOrders !== null ? totalSalesOrders : 'Loading...'}
-                                    </p>
-                                </div>
-                                <div className="bg-white shadow-lg rounded-lg p-6">
-                                    <h3 className="text-lg font-bold mb-2">Sales Orders Today:</h3>
-                                    <p className="text-3xl font-semibold text-blue-600">
-                                        {totalSalesToday !== null ? totalSalesToday : 'Loading...'}
-                                    </p>
-                                </div>
-                                <div className="bg-white shadow-lg rounded-lg p-6">
-                                    <h3 className="text-lg font-bold mb-2">Daily Sales:</h3>
-                                    <p className="text-3xl font-semibold text-blue-600">
-                                        {dailySalesAmount !== null
-                                            ? formatCurrency(dailySalesAmount)
-                                            : 'Loading...'}
-                                    </p>
-                                </div>
-                            </div>
-                            {/* Button to Open Target Modal */}
-                            <div className="mb-6">
-                                <Button
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={() => {
-                                        setModalTargetSales(salesTarget);
-                                        setIsTargetModalOpen(true);
-                                    }}
-                                >
-                                    Set/Edit Sales Target
-                                </Button>
-                            </div>
-
-                            {/* Monthly Sales vs Target Chart */}
-                            <div className="bg-white shadow-lg rounded-lg p-6">
-                                <h3 className="text-xl font-semibold mb-4">Monthly Sales Target vs. Actual</h3>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={monthlySalesWithTarget}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="month" />
-                                        <YAxis />
-                                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                        <Legend />
-                                        <Bar
-                                            dataKey="sales"
-                                            fill="#1E90FF"
-                                            name="Actual Sales"
-                                           
-                                        />
-                                        <Bar dataKey="target" fill="#FF6347" name="Sales Target" />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
-
-                            {/* Rest of the charts */}
-                            <div className="flex flex-col lg:flex-row lg:space-x-4 mt-8">
-                                <div className="bg-white shadow-lg rounded-lg p-6 flex-1">
-                                    <h3 className="text-xl font-semibold mb-4">Monthly Sales Performance</h3>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <LineChart data={salesData}>
-                                            <CartesianGrid strokeDasharray="3 3" />
-                                            <XAxis dataKey="month" />
-                                            <YAxis />
-                                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                            <Legend />
-                                            <Line type="monotone" dataKey="sales" stroke="#1E90FF" />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                                <div className="bg-white shadow-lg rounded-lg p-6 flex-1">
-                                    <h3 className="text-xl font-semibold mb-4">Yearly Sales Target Status</h3>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <PieChart>
-                                            <Pie data={totalSalesData} dataKey="value" nameKey="name" outerRadius={100} label>
-                                                {totalSalesData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                    <div className="text-center mt-4 font-semibold">
-                                        Yearly Total Sales: {formatCurrency(totalSales)}
-                                    </div>
-                                    <div className={`text-center mt-2 ${totalSales >= salesTarget ? 'text-green-600' : 'text-red-600'} font-semibold`}>
-                                        {totalSales >= salesTarget
-                                            ? 'Fantastic! You have met or exceeded the sales target!'
-                                            : `You need ${formatCurrency(salesTarget - totalSales)} more to meet your sales target.`}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Mostly Sold Products Chart */}
-                            <Box sx={{ background: 'white', boxShadow: 3, borderRadius: 2, p: 6, mt: 6, border: '2px solid white' }}>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 2 }}>Mostly Sold Products</Typography>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <PieChart>
-                                        <Pie
-                                            data={productSalesData}
-                                            dataKey="total_amount"
-                                            nameKey="product_name"
-                                            cx="50%"
-                                            cy="50%"
-                                            outerRadius={100}
-                                            fill="#8884d8"
-                                            label
-                                        >
-                                            {productSalesData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                                        <Legend />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </Box>
-                        </>
-                    )}
-                </div>
-
-                {/* ➕ Sales Target Modal */}
-                {isTargetModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                        <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-                            <h3 className="text-xl font-semibold mb-4">
-                                Set Sales Target for {selectedBranch}
-                            </h3>
-
-                            {/* Formatted Editable Input */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Target Sales (PHP)
-                                </label>
-                                <input
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={formatCurrency(modalTargetSales)}
-                                    onChange={(e) => {
-                                        // Remove everything except digits
-                                        const rawValue = e.target.value.replace(/[^0-9]/g, '');
-                                        const parsedValue = rawValue === '' ? 0 : parseInt(rawValue, 10);
-                                        setModalTargetSales(parsedValue);
-                                    }}
-                                    className="w-full border border-gray-300 rounded px-3 py-2"
-                                    placeholder="₱1,000,000"
-                                />
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex justify-end space-x-3">
-                                <button
-                                    onClick={() => setIsTargetModalOpen(false)}
-                                    className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSaveTarget}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                >
-                                    Save Target
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
+      {showModal && (
+        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{editingBranch ? 'Edit Branch' : 'Add Branch'}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
-        </AdminLayout>
-    );
+            <div className="modal-body">
+              <div className="form-group"><label className="form-label">Branch Name</label><input type="text" className="form-control" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Address</label><textarea className="form-control" rows={2} value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Contact</label><input type="text" className="form-control" value={formData.contact} onChange={(e) => setFormData({ ...formData, contact: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Manager</label><input type="text" className="form-control" value={formData.manager} onChange={(e) => setFormData({ ...formData, manager: e.target.value })} /></div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select className="form-control form-select" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSave}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AdminLayout>
+  );
 };
 
-export default AdminMonthlySalesDashboard;
+export default BranchData;

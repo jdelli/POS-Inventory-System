@@ -1,182 +1,123 @@
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Stack,
-  TextField,
-  Button,
-  Paper,
-} from '@mui/material';
 import apiService from '../Services/ApiService';
+import { Megaphone, Plus, X, Trash2 } from 'lucide-react';
+import SharedStyles from './SharedStyles';
 
-// Interface for Announcement
 interface Announcement {
-  id: number;
+  id?: number;
   title: string;
   content: string;
-  date: string; // Date in YYYY-MM-DD format
+  created_at?: string;
 }
 
-const Announcement = () => {
-  // State for announcements and form fields
+const Announcements: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [newTitle, setNewTitle] = useState('');
-  const [newContent, setNewContent] = useState('');
-  const [pagination, setPagination] = useState({
-    total: 0,
-    currentPage: 1,
-    lastPage: 1,
-    perPage: 10,
-  });
-  const [loading, setLoading] = useState(false);
+  const [newAnnouncement, setNewAnnouncement] = useState<Announcement>({ title: '', content: '' });
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Fetch announcements from backend
-  useEffect(() => {
-    const fetchAnnouncements = async () => {
-      setLoading(true);
-
-      try {
-        const response = await apiService.get('/api/announcements', {
-          params: {
-            page: pagination.currentPage,
-            limit: pagination.perPage,
-          },
-        });
-
-        setAnnouncements(response.data.data); // Update announcements list
-        setPagination((prev) => ({
-          ...prev,
-          total: response.data.pagination.total,
-          lastPage: response.data.pagination.lastPage,
-        }));
-      } catch (error) {
-        console.error('Error fetching announcements:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnnouncements();
-  }, [pagination.currentPage, pagination.perPage]);
-
-  // Handle posting a new announcement
-  const handlePostAnnouncement = async () => {
-    if (newTitle.trim() === '' || newContent.trim() === '') return;
-
-    setLoading(true);
-
+  const fetchAnnouncements = async () => {
     try {
-      const response = await apiService.post('/api/announcements', {
-        title: newTitle,
-        content: newContent,
-      });
-
-      // Add the new announcement to the top of the list
-      setAnnouncements([response.data, ...announcements]);
-
-      // Clear the form fields
-      setNewTitle('');
-      setNewContent('');
+      const response = await apiService.get('/announcements');
+      setAnnouncements(response.data);
     } catch (error) {
-      console.error('Failed to post announcement:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching announcements:', error);
     }
+  };
+
+  useEffect(() => { fetchAnnouncements(); }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setNewAnnouncement({ ...newAnnouncement, [e.target.name]: e.target.value });
+  };
+
+  const handleCreate = async () => {
+    if (!newAnnouncement.title.trim() || !newAnnouncement.content.trim()) return;
+    try {
+      await apiService.post('/announcements', newAnnouncement);
+      setNewAnnouncement({ title: '', content: '' });
+      setIsModalOpen(false);
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this announcement?')) return;
+    try {
+      await apiService.delete(`/announcements/${id}`);
+      fetchAnnouncements();
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Announcements</h2>}>
       <Head title="Announcements" />
-      <Box p={2}>
-        {/* Form for Posting New Announcements */}
-        <Paper elevation={3} sx={{ p: 2, mb: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Post New Announcement
-          </Typography>
-          <Stack spacing={2}>
-            <TextField
-              label="Title"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              fullWidth
-              required
-            />
-            <TextField
-              label="Content"
-              value={newContent}
-              onChange={(e) => setNewContent(e.target.value)}
-              multiline
-              rows={4}
-              fullWidth
-              required
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handlePostAnnouncement}
-              disabled={loading}
-            >
-              {loading ? 'Posting...' : 'Post Announcement'}
-            </Button>
-          </Stack>
-        </Paper>
+      <SharedStyles />
 
-        {/* Display Existing Announcements */}
-        <Stack spacing={2}>
-          {announcements.length === 0 ? (
-            <Typography>No announcements yet.</Typography>
-          ) : (
-            announcements.map((announcement) => (
-              <Card key={announcement.id} variant="outlined">
-                <CardContent>
-                  <Typography variant="h6">{announcement.title}</Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {announcement.date
-                      ? new Date(announcement.date).toLocaleDateString()
-                      : 'Invalid Date'}
-                  </Typography>
-                  <Typography variant="body1" mt={1}>
-                    {announcement.content}
-                  </Typography>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </Stack>
+      <div className="admin-page">
+        <div className="page-header">
+          <h1 className="page-title"><Megaphone size={20} />Announcements</h1>
+          <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}><Plus size={14} />New</button>
+        </div>
 
-        {/* Pagination Controls */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-          <Button
-            variant="outlined"
-            disabled={pagination.currentPage === 1}
-            onClick={() =>
-              setPagination((prev) => ({ ...prev, currentPage: prev.currentPage - 1 }))
-            }
-          >
-            Previous
-          </Button>
+        {/* Announcement List */}
+        <div className="table-container">
+          <table className="data-table">
+            <thead>
+              <tr><th>Title</th><th>Content</th><th>Date</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              {announcements.length > 0 ? announcements.map((announcement) => (
+                <tr key={announcement.id}>
+                  <td style={{ fontWeight: 600 }}>{announcement.title}</td>
+                  <td style={{ maxWidth: 400 }}>{announcement.content.substring(0, 80)}{announcement.content.length > 80 ? '...' : ''}</td>
+                  <td><span className="badge badge-gray">{formatDate(announcement.created_at!)}</span></td>
+                  <td><button className="btn btn-sm btn-danger btn-icon" onClick={() => handleDelete(announcement.id!)}><Trash2 size={14} /></button></td>
+                </tr>
+              )) : (
+                <tr><td colSpan={4}><div className="empty-state"><Megaphone size={32} /><div className="empty-state-text">No announcements yet</div></div></td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-          <Typography sx={{ mx: 2 }}>
-            Page {pagination.currentPage} of {pagination.lastPage}
-          </Typography>
-
-          <Button
-            variant="outlined"
-            disabled={pagination.currentPage === pagination.lastPage}
-            onClick={() =>
-              setPagination((prev) => ({ ...prev, currentPage: prev.currentPage + 1 }))
-            }
-          >
-            Next
-          </Button>
-        </Box>
-      </Box>
+      {/* Create Modal */}
+      {isModalOpen && (
+        <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">New Announcement</h3>
+              <button className="modal-close" onClick={() => setIsModalOpen(false)}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label className="form-label">Title</label>
+                <input type="text" name="title" className="form-control" placeholder="Enter title" value={newAnnouncement.title} onChange={handleInputChange} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Content</label>
+                <textarea name="content" className="form-control" rows={4} placeholder="Enter content..." value={newAnnouncement.content} onChange={handleInputChange} />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleCreate}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };
 
-export default Announcement;
+export default Announcements;

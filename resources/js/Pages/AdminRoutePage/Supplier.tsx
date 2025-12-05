@@ -1,199 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import apiService from '../Services/ApiService';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  CircularProgress,
-  Typography,
-  Button,
-  TableFooter,
-  TablePagination,
-  IconButton,
-} from '@mui/material';
-import { Delete, Visibility } from '@mui/icons-material'; // Import icons
-import SupplierStocksModal from '../Props/SupplierDetails';
-import AddSupplierModal from '../Props/AddSupplierStocks';
+import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
+import apiService from '../Services/ApiService';
+import { Truck, Plus, Edit, Trash2, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import SharedStyles from './SharedStyles';
 
 interface Supplier {
   id: number;
-  supplier_name: string;
-  delivery_number: string;
-  product_category: string;
-  date: string;
-  supplier_stocks?: SupplierStock[];
+  name: string;
+  contact_person: string;
+  email: string;
+  phone: string;
+  address: string;
+  status: 'active' | 'inactive';
 }
 
-interface SupplierStock {
-  id: number;
-  supplier_id: number;
-  product_code: string;
-  product_name: string;
-  quantity: number;
-  price: number;
-  total: number;
-}
-
-const SupplierData: React.FC = () => {
+const SupplierPage: React.FC = () => {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedStocks, setSelectedStocks] = useState<SupplierStock[]>([]);
-  const [modalOpen, setModalOpen] = useState<boolean>(false);
-  const [addModalOpen, setAddModalOpen] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [formData, setFormData] = useState({ name: '', contact_person: '', email: '', phone: '', address: '', status: 'active' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [rowsPerPage, setRowsPerPage] = useState<number>(10);
-  const [totalPages, setTotalPages] = useState<number>(0);
-  const [totalItems, setTotalItems] = useState<number>(0);
-
-  const fetchSuppliers = async (page: number = 1) => {
+  const fetchSuppliers = async () => {
+    setLoading(true);
     try {
-      const response = await apiService.get('/get-supplier', {
-        params: { page },
-      });
-      console.log('Fetched Suppliers:', response.data.data);
-      setSuppliers(response.data.data);
-      setCurrentPage(response.data.meta.current_page);
-      setTotalPages(response.data.meta.last_page);
-      setTotalItems(response.data.meta.total);
-    } catch (err) {
-      setError('Failed to fetch suppliers');
+      const response = await apiService.get('/suppliers');
+      setSuppliers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching suppliers:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSuppliers(currentPage);
-  }, [currentPage]);
+  useEffect(() => { fetchSuppliers(); }, []);
 
-  const handlePageChange = (_: unknown, newPage: number) => {
-    setCurrentPage(newPage + 1); // Material-UI pages are 0-indexed; backend pages are 1-indexed.
+  const handleOpenModal = (supplier?: Supplier) => {
+    if (supplier) {
+      setEditingSupplier(supplier);
+      setFormData({ name: supplier.name, contact_person: supplier.contact_person, email: supplier.email, phone: supplier.phone, address: supplier.address, status: supplier.status });
+    } else {
+      setEditingSupplier(null);
+      setFormData({ name: '', contact_person: '', email: '', phone: '', address: '', status: 'active' });
+    }
+    setShowModal(true);
   };
 
-  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setCurrentPage(1); // Reset to the first page
-    fetchSuppliers(1);
-  };
-
-  const handleOpenStocksModal = (stocks: SupplierStock[] = []) => {
-    setSelectedStocks(stocks);
-    setModalOpen(true);
-  };
-
-  const handleCloseStocksModal = () => {
-    setModalOpen(false);
-    setSelectedStocks([]);
-  };
-
-  const handleOpenAddModal = () => {
-    setAddModalOpen(true);
-  };
-
-  const handleCloseAddModal = () => {
-    setAddModalOpen(false);
-  };
-
-  const handleSuccess = () => {
-    setAddModalOpen(false);
-    fetchSuppliers(currentPage); // Refresh data after adding a supplier
-  };
-
-  // Function to handle supplier deletion
-  const handleDeleteSupplier = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this supplier?')) return;
-
+  const handleSave = async () => {
     try {
-      await apiService.delete(`/delete-supplier-stocks/${id}`);
-      fetchSuppliers(currentPage); // Refresh the supplier list after deletion
+      if (editingSupplier) {
+        await apiService.put(`/suppliers/${editingSupplier.id}`, formData);
+      } else {
+        await apiService.post('/suppliers', formData);
+      }
+      setShowModal(false);
+      fetchSuppliers();
+    } catch (error) {
+      console.error('Error saving supplier:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Delete this supplier?')) return;
+    try {
+      await apiService.delete(`/suppliers/${id}`);
+      fetchSuppliers();
     } catch (error) {
       console.error('Error deleting supplier:', error);
     }
   };
 
-  if (error) {
-    return <Typography color="error">{error}</Typography>;
-  }
+  const filteredSuppliers = suppliers.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.contact_person.toLowerCase().includes(searchTerm.toLowerCase()));
+  const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
+  const paginatedSuppliers = filteredSuppliers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Supplier</h2>}>
-      <Head title="Supplier" />
-      <div>
-        <div className='flex justify-end mb-4'>
-          <Button variant="contained" color="primary" onClick={handleOpenAddModal}>
-          Add Supplier
-        </Button></div>
-        
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Supplier Name</TableCell>
-                <TableCell>Delivery Number</TableCell>
-                <TableCell>Product Category</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Actions</TableCell> {/* Actions column */}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {suppliers.map((supplier) => (
-                <TableRow key={supplier.id}>
-                  <TableCell>{supplier.supplier_name}</TableCell>
-                  <TableCell>{supplier.delivery_number}</TableCell>
-                  <TableCell>{supplier.product_category}</TableCell>
-                  <TableCell>{supplier.date}</TableCell>
-                  <TableCell>
-                    {/* View Stocks Button */}
-                    {supplier.supplier_stocks && supplier.supplier_stocks.length > 0 ? (
-                      <IconButton
-                        color="primary"
-                        size="small"
-                        onClick={() => handleOpenStocksModal(supplier.supplier_stocks)}
-                        title="View Stocks"
-                      >
-                        <Visibility /> {/* Eye icon */}
-                      </IconButton>
-                    ) : (
-                      <Typography>No stocks</Typography>
-                    )}
-                    {/* Delete Button */}
-                    <IconButton
-                      color="secondary"
-                      size="small"
-                      onClick={() => handleDeleteSupplier(supplier.id)}
-                      title="Delete Supplier"
-                    >
-                      <Delete /> {/* Delete icon */}
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TablePagination
-                  rowsPerPageOptions={[10, 25, 50]}
-                  count={totalItems}
-                  rowsPerPage={rowsPerPage}
-                  page={currentPage - 1} // Material-UI uses 0-based indexing
-                  onPageChange={handlePageChange}
-                  onRowsPerPageChange={handleRowsPerPageChange}
-                />
-              </TableRow>
-            </TableFooter>
-          </Table>
-          <SupplierStocksModal open={modalOpen} onClose={handleCloseStocksModal} stocks={selectedStocks} />
-          <AddSupplierModal showModal={addModalOpen} closeModal={handleCloseAddModal} onSuccess={handleSuccess} onSubmit={() => {}} />
-        </TableContainer>
+    <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Suppliers</h2>}>
+      <Head title="Suppliers" />
+      <SharedStyles />
+
+      <div className="admin-page">
+        <div className="page-header">
+          <h1 className="page-title"><Truck size={20} />Suppliers</h1>
+          <button className="btn btn-primary" onClick={() => handleOpenModal()}><Plus size={14} />Add</button>
+        </div>
+
+        <div className="filter-bar">
+          <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
+            <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+            <input type="text" className="form-control" placeholder="Search suppliers..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={{ paddingLeft: 28 }} />
+          </div>
+          <span className="text-muted" style={{ fontSize: '0.75rem' }}>{filteredSuppliers.length} suppliers</span>
+        </div>
+
+        <div className="table-container">
+          {loading ? (
+            <div className="loading"><div className="spinner"></div>Loading...</div>
+          ) : (
+            <>
+              <table className="data-table">
+                <thead><tr><th>Name</th><th>Contact</th><th>Email</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {paginatedSuppliers.length > 0 ? paginatedSuppliers.map((supplier) => (
+                    <tr key={supplier.id}>
+                      <td style={{ fontWeight: 500 }}>{supplier.name}</td>
+                      <td>{supplier.contact_person}</td>
+                      <td className="text-muted">{supplier.email}</td>
+                      <td>{supplier.phone}</td>
+                      <td><span className={`badge ${supplier.status === 'active' ? 'badge-success' : 'badge-gray'}`}>{supplier.status}</span></td>
+                      <td>
+                        <div className="actions">
+                          <button className="btn btn-sm btn-secondary btn-icon" onClick={() => handleOpenModal(supplier)}><Edit size={14} /></button>
+                          <button className="btn btn-sm btn-danger btn-icon" onClick={() => handleDelete(supplier.id)}><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  )) : <tr><td colSpan={6}><div className="empty-state"><Truck size={32} /><div className="empty-state-text">No suppliers found</div></div></td></tr>}
+                </tbody>
+              </table>
+              {totalPages > 1 && (
+                <div className="pagination">
+                  <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1}><ChevronLeft size={14} /></button>
+                  <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+                  <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages}><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
+
+      {showModal && (
+        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{editingSupplier ? 'Edit Supplier' : 'Add Supplier'}</h3>
+              <button className="modal-close" onClick={() => setShowModal(false)}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group"><label className="form-label">Name</label><input type="text" className="form-control" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Contact Person</label><input type="text" className="form-control" value={formData.contact_person} onChange={(e) => setFormData({ ...formData, contact_person: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Email</label><input type="email" className="form-control" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Phone</label><input type="text" className="form-control" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} /></div>
+              <div className="form-group"><label className="form-label">Address</label><textarea className="form-control" rows={2} value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} /></div>
+              <div className="form-group">
+                <label className="form-label">Status</label>
+                <select className="form-control form-select" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSave}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };
 
-export default SupplierData;
+export default SupplierPage;

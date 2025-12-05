@@ -2,102 +2,40 @@ import React, { useEffect, useState } from 'react';
 import AdminLayout from '@/Layouts/AdminLayout';
 import { Head } from '@inertiajs/react';
 import apiService from '../Services/ApiService';
-import ViewItemsModal from '../Props/ViewDelivery';
-import AddStocks from '../Props/AddStocks';
-import {
-  Button,
-  CircularProgress,
-  Container,
-  MenuItem,
-  Select,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Typography,
-  Box,
-  Paper,
-} from '@mui/material';
-import { Tooltip, IconButton } from '@mui/material';
-import { Visibility, Delete } from '@mui/icons-material';
-
-
-
-interface DeliveryItem {
-  id: number;
-  product_name: string;
-  quantity: number;
-  date: string;
-}
+import { Package, ChevronLeft, ChevronRight } from 'lucide-react';
+import SharedStyles from './SharedStyles';
 
 interface StockEntry {
   id: number;
-  delivery_number: string;
-  delivered_by: string;
+  product_code: string;
+  product_name: string;
+  quantity: number;
+  supplier: string;
   date: string;
-  items: DeliveryItem[];
+  expiry_date: string | null;
+  batch_number: string;
+  notes: string;
+  handled_by: string;
 }
 
-interface Auth {
-  user: {
-    name: string;
-    role: string;
-  };
-}
-
-interface InventoryManagementProps {
-  auth: Auth;
-}
-
-const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) => {
+const AdminStocksEntries: React.FC = () => {
   const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
+  const [filteredEntries, setFilteredEntries] = useState<StockEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(''); // Ensure this is a string or null
-  const [selectedYear, setSelectedYear] = useState<string | null>('');
-  const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState<boolean>(false);
-  const [isModalOpen, setModalOpen] = useState<boolean>(false);
-  const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
-  const [branches, setBranches] = useState<{ id: number; name: string }[]>([]);
-  const [selectedBranchName, setSelectedBranchName] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedMonth, setSelectedMonth] = useState<string>((new Date().getMonth() + 1).toString().padStart(2, '0'));
+  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
+  const years = Array.from({ length: 5 }, (_, i) => (new Date().getFullYear() - i).toString());
+  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-  useEffect(() => {
-    const fetchBranches = async () => {
-      try {
-        const response = await apiService.get('/get-branches');
-        setBranches(response.data);
-      } catch (error) {
-        console.error('Error fetching branches:', error);
-      }
-    };
-
-    fetchBranches();
-  }, []);
-
-   // Fetch Delivery Receipts
-   const fetchDeliveryReceipts = async () => {
-    if (!selectedBranchName) return;
-
+  const fetchStockEntries = async () => {
     setLoading(true);
     try {
-      const params = {
-        branch_name: selectedBranchName,
-        page,
-        limit,
-        ...(selectedMonth && { month: parseInt(selectedMonth) }), // Include only if `selectedMonth` exists
-        ...(selectedYear && { year: parseInt(selectedYear) }), // Include only if `selectedYear` exists
-      };
-
-      const response = await apiService.get('/admin-fetch-delivery-receipts-by-branch', { params });
-      setStockEntries(response.data.data);
-      setTotalPages(response.data.last_page);
-      setCurrentPage(response.data.current_page);
+      const response = await apiService.get('/stock-entries');
+      setStockEntries(response.data);
+      filterData(response.data, selectedMonth, selectedYear);
     } catch (error) {
       console.error('Error fetching stock entries:', error);
     } finally {
@@ -105,202 +43,84 @@ const StockEntriesTableAdmin: React.FC<InventoryManagementProps> = ({ auth }) =>
     }
   };
 
+  useEffect(() => { fetchStockEntries(); }, []);
+
   useEffect(() => {
-    fetchDeliveryReceipts();
-  }, [page, selectedBranchName, limit, selectedMonth, selectedYear]);
+    filterData(stockEntries, selectedMonth, selectedYear);
+  }, [selectedMonth, selectedYear]);
 
-  const handleAddStocksSuccess = () => {
-    fetchDeliveryReceipts();
+  const filterData = (data: StockEntry[], month: string, year: string) => {
+    const filtered = data.filter((entry) => {
+      const entryDate = new Date(entry.date);
+      return entryDate.getMonth() + 1 === parseInt(month, 10) && entryDate.getFullYear() === parseInt(year, 10);
+    });
+    setFilteredEntries(filtered);
+    setCurrentPage(1);
   };
 
+  const totalPages = Math.ceil(filteredEntries.length / itemsPerPage);
+  const paginatedEntries = filteredEntries.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-
-  const handleDeleteReceipt = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this delivery receipt?')) return;
-    
-    try {
-      // Pass the `branchId` to the API endpoint
-      await apiService.delete(`/delete-delivery-receipt/${id}`, { params: { branch_id: selectedBranchName } });
-      fetchDeliveryReceipts();
-    } catch (error) {
-      console.error('Error deleting delivery receipt:', error);
-    }
-  };
-  
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <AdminLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stock Entries</h2>}>
       <Head title="Stock Entries" />
-      <Container maxWidth="xl" sx={{ mx: 'auto' }}>
-        {/* Controls */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-          <Select
-            value={selectedBranchName || ''}
-            onChange={(e) => {
-              setSelectedBranchName(e.target.value as string);
-              setCurrentPage(1);
-            }}
-            displayEmpty
-            fullWidth
-            variant="outlined"
-            style={{ marginRight: '8px' }}
-            aria-label="Select Branch"
-          >
-            <MenuItem value="" disabled>
-              Select Branch
-            </MenuItem>
-            {branches.map((branch) => (
-              <MenuItem key={branch.id} value={branch.name}>
-                {branch.name}
-              </MenuItem>
-            ))}
-          </Select>
+      <SharedStyles />
 
-          <Select
-            value={selectedMonth ?? ''}
-            onChange={(e) => setSelectedMonth(e.target.value || '')} // Ensure the value is a string
-            displayEmpty
-            fullWidth
-            variant="outlined"
-            style={{ marginRight: '8px' }}
-            aria-label="Filter by Month"
-          >
-            <MenuItem value="">All</MenuItem>
-            {[...Array(12).keys()].map((month) => (
-              <MenuItem key={month} value={(month + 1).toString()}> {/* Ensure the value is a string */}
-                {new Date(0, month).toLocaleString('default', { month: 'long' })}
-              </MenuItem>
-            ))}
-          </Select>
+      <div className="admin-page">
+        <div className="page-header">
+          <h1 className="page-title"><Package size={20} />Stock Entries</h1>
+        </div>
 
-          <Select
-            value={selectedYear ?? ''}
-            onChange={(e) => setSelectedYear(e.target.value || '')} // Ensure the value is handled properly
-            displayEmpty
-            fullWidth
-            variant="outlined"
-            style={{ marginRight: '8px' }}
-            aria-label="Filter by Year"
-          >
-            <MenuItem value="">All</MenuItem>
-            {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
-              const year = 2020 + i; // Generate the range of years dynamically
-              return (
-                <MenuItem key={year} value={year.toString()}>
-                  {year}
-                </MenuItem>
-              );
-            })}
-          </Select>
+        <div className="filter-bar">
+          <select className="form-control form-select" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} style={{ width: 130 }}>
+            {months.map((month, index) => <option key={index} value={(index + 1).toString().padStart(2, '0')}>{month}</option>)}
+          </select>
+          <select className="form-control form-select" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} style={{ width: 100 }}>
+            {years.map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
+          <span className="text-muted" style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>{filteredEntries.length} entries found</span>
+        </div>
 
-
-          <Button
-            onClick={() => setIsAddStocksModalOpen(true)}
-            variant="contained"
-            color="primary"
-          >
-            Add Stocks
-          </Button>
-        </Box>
-
-        {/* Stock Entries Table */}
-        {loading ? (
-          <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Delivery Receipt No.</TableCell>
-                  <TableCell>Delivered By</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {stockEntries.length > 0 ? (
-                  stockEntries.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>{entry.delivery_number}</TableCell>
-                      <TableCell>{entry.delivered_by}</TableCell>
-                      <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Tooltip title="View Items">
-                          <IconButton
-                            color="primary"
-                            size="small"
-                            onClick={() => {
-                              setSelectedItems(entry.items || []);
-                              setModalOpen(true);
-                            }}
-                          >
-                            <Visibility />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Delete Receipt">
-                          <IconButton
-                            color="secondary"
-                            size="small"
-                            onClick={() => handleDeleteReceipt(entry.id)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} align="center">
-                      No records found.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
-
-        {/* Pagination */}
-        <Box display="flex" justifyContent="center" mt={4}>
-          <Button
-            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-            disabled={page === 1}
-            variant="outlined"
-          >
-            Previous
-          </Button>
-          <Typography variant="body2" style={{ margin: '0 16px' }}>
-            Page {page} of {totalPages}
-          </Typography>
-          <Button
-            onClick={() => setPage((prev) => (prev < totalPages ? prev + 1 : prev))}
-            disabled={page === totalPages}
-            variant="outlined"
-          >
-            Next
-          </Button>
-        </Box>
-
-        {/* Modals */}
-        <ViewItemsModal
-          isOpen={isModalOpen}
-          onClose={() => setModalOpen(false)}
-          items={selectedItems}
-        />
-
-        {/* Modal for Adding Stocks */}
-        <AddStocks
-          showModal={isAddStocksModalOpen}
-          closeModal={() => setIsAddStocksModalOpen(false)}
-          onSuccess={handleAddStocksSuccess}
-        />
-      </Container>
+        <div className="table-container">
+          {loading ? (
+            <div className="loading"><div className="spinner"></div>Loading...</div>
+          ) : (
+            <>
+              <table className="data-table">
+                <thead>
+                  <tr><th>Date</th><th>Code</th><th>Product</th><th>Qty</th><th>Supplier</th><th>Batch</th><th>Handler</th></tr>
+                </thead>
+                <tbody>
+                  {paginatedEntries.length > 0 ? paginatedEntries.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{formatDate(entry.date)}</td>
+                      <td><span className="code">{entry.product_code}</span></td>
+                      <td style={{ fontWeight: 500 }}>{entry.product_name}</td>
+                      <td><span className="badge badge-success">{entry.quantity}</span></td>
+                      <td>{entry.supplier}</td>
+                      <td><span className="code">{entry.batch_number}</span></td>
+                      <td className="text-muted">{entry.handled_by}</td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan={7}><div className="empty-state"><Package size={32} /><div className="empty-state-text">No entries found</div></div></td></tr>
+                  )}
+                </tbody>
+              </table>
+              {totalPages > 1 && (
+                <div className="pagination">
+                  <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => Math.max(1, p-1))} disabled={currentPage === 1}><ChevronLeft size={14} /></button>
+                  <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+                  <button className="btn btn-sm btn-secondary" onClick={() => setCurrentPage(p => Math.min(totalPages, p+1))} disabled={currentPage === totalPages}><ChevronRight size={14} /></button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </AdminLayout>
   );
 };
 
-export default StockEntriesTableAdmin;
+export default AdminStocksEntries;
