@@ -3,261 +3,104 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import ViewItemsModal from './Props/ViewDelivery';
-import AddStocks from './Props/AddStocks';
 import RequestStocks from './Props/RequestStocks';
-import { Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow, TablePagination, 
-  } from '@mui/material';
+import { Package, Eye, ChevronLeft, ChevronRight, FileBox } from 'lucide-react';
+import SharedStyles from './SharedStyles';
 
-interface DeliveryItem {
-  id: number;
-  product_name: string;
-  quantity: number;
-  date: string;
-}
+interface DeliveryItem { id: number; product_name: string; quantity: number; date: string; }
+interface StockEntry { id: number; delivery_number: string; delivered_by: string; date: string; items: DeliveryItem[]; }
+interface Auth { user: { name: string } }
 
-interface StockEntry {
-  id: number;
-  delivery_number: string;
-  delivered_by: string;
-  date: string;
-  items: DeliveryItem[];
-}
+const StockEntriesTable: React.FC<{ auth: Auth }> = ({ auth }) => {
+    const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [page, setPage] = useState<number>(1);
+    const [totalPages, setTotalPages] = useState<number>(1);
+    const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+    const [selectedYear, setSelectedYear] = useState<number | null>(null);
+    const [isModalOpen, setModalOpen] = useState<boolean>(false);
+    const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
+    const [isRequestStockModalOpen, setIsRequestStockModalOpen] = useState<boolean>(false);
 
-// Define the Auth interface
-interface Auth {
-  user: {
-    name: string;
-  };
-}
+    const fetchDeliveryReceipts = async () => {
+        setLoading(true);
+        try {
+            const params = new URLSearchParams({
+                sort_by: 'date', page: page.toString(), per_page: '10', user_name: auth.user.name,
+                month: selectedMonth ? selectedMonth.toString() : '', year: selectedYear ? selectedYear.toString() : '',
+            });
+            const response = await apiService.get(`/fetch-delivery-receipts?${params.toString()}`);
+            setStockEntries(response.data.deliveryReceipts);
+            setTotalPages(response.data.last_page);
+        } catch (error) { console.error('Error:', error); } finally { setLoading(false); }
+    };
 
-// Define the InventoryManagementProps interface
-interface InventoryManagementProps {
-  auth: Auth;
-}
+    useEffect(() => { fetchDeliveryReceipts(); }, [page, selectedMonth, selectedYear]);
 
+    const openModal = (items: DeliveryItem[]) => { setSelectedItems(items); setModalOpen(true); };
+    const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
-const StockEntriesTable: React.FC<InventoryManagementProps> = ({ auth }) => {
-  const [stockEntries, setStockEntries] = useState<StockEntry[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(10);
-  const [totalPages, setTotalPages] = useState<number>(1);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // State for selected month
-  const [selectedYear, setSelectedYear] = useState<number | null>(null); // State for selected month
-  const [isAddStocksModalOpen, setIsAddStocksModalOpen] = useState<boolean>(false);
-  const [isModalOpen, setModalOpen] = useState<boolean>(false);
-  const [selectedItems, setSelectedItems] = useState<DeliveryItem[]>([]);
-  const [isRequestStockModalOpen, setIsRequestStockModalOpen] = useState<boolean>(false);
+    const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const years = Array.from({ length: new Date().getFullYear() - 2019 }, (_, i) => 2020 + i);
 
+    return (
+        <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stocks Entries</h2>}>
+            <Head title="Stock Entries" />
+            <SharedStyles />
 
+            <div className="user-page">
+                <div className="page-header">
+                    <h1 className="page-title"><Package size={20} />Stock Entries</h1>
+                    <button className="btn btn-success" onClick={() => setIsRequestStockModalOpen(true)}>
+                        <FileBox size={14} /> Request Stock
+                    </button>
+                </div>
 
-// Fetch stock entries data with pagination and sorting by date
-const fetchDeliveryReceipts = async () => {
-  setLoading(true);
-  try {
-    const params = new URLSearchParams({
-      sort_by: 'date',
-      page: page.toString(),
-      per_page: limit.toString(),
-      user_name: auth.user.name,
-      month: selectedMonth ? selectedMonth.toString() : '',
-      year: selectedYear ? selectedYear.toString() : '',
-    });
+                <div className="filter-bar">
+                    <select className="form-control form-select" value={selectedMonth ?? ''} onChange={(e) => { setSelectedMonth(parseInt(e.target.value) || null); setPage(1); }} style={{ width: 140 }}>
+                        <option value="">All Months</option>
+                        {months.map((month, i) => <option key={i} value={i + 1}>{month}</option>)}
+                    </select>
+                    <select className="form-control form-select" value={selectedYear ?? ''} onChange={(e) => { setSelectedYear(parseInt(e.target.value) || null); setPage(1); }} style={{ width: 100 }}>
+                        <option value="">All Years</option>
+                        {years.map((year) => <option key={year} value={year}>{year}</option>)}
+                    </select>
+                    <span className="text-muted" style={{ marginLeft: 'auto', fontSize: '0.75rem' }}>{stockEntries.length} entries</span>
+                </div>
 
-
-
-    const response = await apiService.get(`/fetch-delivery-receipts?${params.toString()}`);
-    setStockEntries(response.data.deliveryReceipts);
-    setTotalPages(response.data.last_page);
-  } catch (error) {
-    console.error('Error fetching delivery receipts:', error);
-  } finally {
-    setLoading(false);
-  }
-};
-
-useEffect(() => {
-  fetchDeliveryReceipts();
-}, [ page, limit, selectedMonth, selectedYear]); 
-
-
-
-
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    if (newPage > 0 && newPage <= totalPages) {
-      setPage(newPage);
-    }
-  };
-
-  // Function to open the modal with selected items
-  const openModal = (items: DeliveryItem[]) => {
-    setSelectedItems(items);
-    setModalOpen(true);
-  };
-
-  // Callback to refetch stock entries after adding stocks
-  const handleAddStocksSuccess = () => {
-    fetchDeliveryReceipts();
-  };
-
-
-
-  return (
-    <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Stocks Entries</h2>}>
-      <Head title="Stock Entries" />
-      <div className="p-4">
-      
-        
-      
-
-       {/* Date Range Filters */}
-       <div className="mb-4 flex justify-between items-center"> {/* Flexbox with space-between */}
-          {/* Month Picker */}
-          <div className="flex items-end gap-4">
-            {/* Month Picker */}
-            <div>
-              <label className="text-gray-700 block">Filtered by Month</label>
-              <select
-                value={selectedMonth ?? ''}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value) || null)}
-                className="mt-1 p-2 border rounded w-full"
-              >
-                <option value="">All</option>
-                {[...Array(12).keys()].map((month) => (
-                  <option key={month} value={month + 1}>
-                    {new Date(0, month).toLocaleString('default', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
+                <div className="table-container">
+                    {loading ? <div className="loading"><div className="spinner"></div>Loading...</div> : (
+                        <>
+                            <table className="data-table">
+                                <thead><tr><th>DR No.</th><th>Delivered By</th><th>Date</th><th>Items</th><th>Action</th></tr></thead>
+                                <tbody>
+                                    {stockEntries.length > 0 ? stockEntries.map((entry) => (
+                                        <tr key={entry.id}>
+                                            <td><span className="code">{entry.delivery_number}</span></td>
+                                            <td style={{ fontWeight: 500 }}>{entry.delivered_by}</td>
+                                            <td>{formatDate(entry.date)}</td>
+                                            <td><span className="badge badge-primary">{entry.items.length}</span></td>
+                                            <td><button className="btn btn-sm btn-primary" onClick={() => openModal(entry.items)}><Eye size={14} /> View</button></td>
+                                        </tr>
+                                    )) : <tr><td colSpan={5}><div className="empty-state"><Package size={24} /><div className="empty-state-text">No records</div></div></td></tr>}
+                                </tbody>
+                            </table>
+                            {totalPages > 1 && (
+                                <div className="pagination">
+                                    <button className="btn btn-sm btn-secondary" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}><ChevronLeft size={14} /></button>
+                                    <span className="pagination-info">Page {page} of {totalPages}</span>
+                                    <button className="btn btn-sm btn-secondary" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}><ChevronRight size={14} /></button>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
 
-            {/* Year Picker */}
-            <div>
-              <label className="text-gray-700 block">Filtered by Year</label>
-              <select
-                value={selectedYear ?? ''}
-                onChange={(e) =>
-                  setSelectedYear(e.target.value ? parseInt(e.target.value) : null)
-                }
-                className="mt-1 p-2 border rounded w-full"
-              >
-                <option value="">All</option>
-                {[...Array(new Date().getFullYear() - 2020 + 1)].map((_, i) => {
-                  const year = 2020 + i;
-                  return (
-                    <option key={year} value={year}>
-                      {year}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-          </div>
-
-
-
-          <Button
-            variant="contained"
-            color="success"
-            onClick={() => setIsRequestStockModalOpen(true)}
-          >
-            Request Stock
-          </Button>
-        </div>
-
-    {/* Stock Entries Table */}
-    <TableContainer className="bg-white shadow-md rounded-lg">
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Delivery Receipt No.</TableCell>
-            <TableCell>Delivered By</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {loading ? (
-            <TableRow>
-              <TableCell colSpan={4} className="text-center py-4">
-                Loading...
-              </TableCell>
-            </TableRow>
-          ) : stockEntries.length > 0 ? (
-            stockEntries.map((entry) => (
-              <TableRow key={entry.id} hover>
-                <TableCell>{entry.delivery_number}</TableCell>
-                <TableCell>{entry.delivered_by}</TableCell>
-                <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    onClick={() => openModal(entry.items)}
-                  >
-                    View Items
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={4} className="text-center py-4">
-                No records found.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
-
-    {/* Pagination Controls */}
-    <div className="mt-4">
-      <TablePagination
-        component="div"
-        count={totalPages * 10} // Adjust based on total number of records
-        page={page - 1} // Material UI uses zero-based index
-        onPageChange={(e, newPage) => handlePageChange(newPage + 1)} // Zero-based index for pagination
-        rowsPerPage={10}
-        rowsPerPageOptions={[10]}
-        nextIconButtonProps={{
-          disabled: page === totalPages,
-        }}
-        backIconButtonProps={{
-          disabled: page === 1,
-        }}
-      />
-    </div>
-  </div>
-
-      {/* Modal for Viewing Items */}
-      <ViewItemsModal
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
-        items={selectedItems}
-      />
-
-      {/* Modal for Adding Stocks */}
-      <AddStocks
-        showModal={isAddStocksModalOpen}
-        closeModal={() => setIsAddStocksModalOpen(false)}
-        onSuccess={handleAddStocksSuccess}
-      />
-      {/* Modal for Requesting Stock */}
-    <RequestStocks
-      isOpen={isRequestStockModalOpen}
-      onClose={() => setIsRequestStockModalOpen(false)}
-      auth={auth}
-    />
-    </AuthenticatedLayout>
-  );
+            <ViewItemsModal isOpen={isModalOpen} onClose={() => setModalOpen(false)} items={selectedItems} />
+            <RequestStocks isOpen={isRequestStockModalOpen} onClose={() => setIsRequestStockModalOpen(false)} auth={auth} />
+        </AuthenticatedLayout>
+    );
 };
 
 export default StockEntriesTable;

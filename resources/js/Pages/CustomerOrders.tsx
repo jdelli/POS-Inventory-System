@@ -2,338 +2,250 @@ import React, { useState, useEffect } from 'react';
 import apiService from './Services/ApiService';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
-import { Button, Card, CardContent, Typography, Box,
-  Dialog,
-   DialogActions,
-    DialogContent,
-     DialogTitle,
-     Table, TableBody,
-      TableCell, TableContainer, TableHead, TableRow, Select, MenuItem, FormControl, InputLabel
- } from '@mui/material';
+import { ShoppingCart, Eye, X, Check, Forward } from 'lucide-react';
+import SharedStyles from './SharedStyles';
 
 interface Order {
-  id: number;
-  product_name: string;
-  quantity: number;
-  price: number;
-  total: number;
+    id: number;
+    product_name: string;
+    quantity: number;
+    price: number;
+    total: number;
 }
 
 interface Customer {
-  id: number;
-  name: string;
-  phone: string;
-  address: string;
-  branch: string;
-  created_at: string;
-  updated_at: string;
-  orders: Order[];
-}
-
-interface Auth {
-  user: {
+    id: number;
     name: string;
-  };
+    phone: string;
+    address: string;
+    branch: string;
+    created_at: string;
+    updated_at: string;
+    orders: Order[];
 }
 
 interface Branch {
-  id: number;
-  name: string;
+    id: number;
+    name: string;
 }
-
-
 
 interface InventoryManagementProps {
-  auth: Auth;
+    auth: { user: { name: string } };
 }
 
-
 const CustomerOrders: React.FC<InventoryManagementProps> = ({ auth }) => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [doneCustomers, setDoneCustomers] = useState<number[]>([]);
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null); // Fix duplicated state
-  const [branches, setBranches] = useState<Branch[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+    const [doneCustomers, setDoneCustomers] = useState<number[]>([]);
+    const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
+    const [branches, setBranches] = useState<Branch[]>([]);
 
-
-
-  // Helper function to format currency as ₱100,000 without decimals
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-PH', {
-        style: 'currency',
-        currency: 'PHP',
-        minimumFractionDigits: 0, // No decimal places
-        maximumFractionDigits: 0, // No decimal places
-    }).format(amount);
-  };
-
-  // Fetch branches
-  useEffect(() => {
-    const fetchBranches = async () => {
-      try {
-        const response = await apiService.get('/get-branches');
-        setBranches(response.data);
-      } catch (error) {
-        console.error('Error fetching branches:', error);
-      }
+    const formatCurrency = (amount: number): string => {
+        return new Intl.NumberFormat('en-PH', {
+            style: 'currency',
+            currency: 'PHP',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount);
     };
 
-    fetchBranches();
-  }, []);
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const response = await apiService.get('/get-branches');
+                setBranches(response.data);
+            } catch (error) {
+                console.error('Error fetching branches:', error);
+            }
+        };
+        fetchBranches();
+    }, []);
 
-  const fetchCustomers = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.get('/orders', {
-        params: { username: auth.user.name },
-      });
-      if (response.data.success) {
-        setCustomers(response.data.customers);
-      } else {
-        throw new Error('Failed to fetch customers.');
-      }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred while fetching customers.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchCustomers = async () => {
+        try {
+            setLoading(true);
+            const response = await apiService.get('/orders', { params: { username: auth.user.name } });
+            if (response.data.success) {
+                setCustomers(response.data.customers);
+            } else {
+                throw new Error('Failed to fetch customers.');
+            }
+        } catch (err: any) {
+            setError(err.message || 'An error occurred while fetching customers.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+    useEffect(() => { fetchCustomers(); }, []);
 
-  const markAsDone = async (customerId: number) => {
-    try {
-      const response = await apiService.put(`/update-status/${customerId}`);
-      if (response.data.success) {
-        setDoneCustomers((prev) => [...prev, customerId]);
-        setIsModalOpen(false);
-      } else {
-        throw new Error(response.data.message || 'Failed to update status.');
-      }
-    } catch (error) {
-      console.error('Error updating customer order status:', error);
-      alert('An error occurred while updating the status.');
-    }
-    fetchCustomers();
-  };
-
-  const updateBranch = async (customerId: number, branch: string) => {
-    try {
-      const response = await apiService.put(`/update-branch/${customerId}`, { branch });
-      if (response.data.success) {
-        alert('Branch updated successfully!');
+    const markAsDone = async (customerId: number) => {
+        try {
+            const response = await apiService.put(`/update-status/${customerId}`);
+            if (response.data.success) {
+                setDoneCustomers((prev) => [...prev, customerId]);
+                setIsModalOpen(false);
+            }
+        } catch (error) {
+            console.error('Error updating customer order status:', error);
+        }
         fetchCustomers();
-      } else {
-        throw new Error(response.data.message || 'Failed to update branch.');
-      }
-    } catch (error) {
-      console.error('Error updating branch:', error);
-      alert('An error occurred while updating the branch.');
+    };
+
+    const updateBranch = async (customerId: number, branch: string) => {
+        try {
+            const response = await apiService.put(`/update-branch/${customerId}`, { branch });
+            if (response.data.success) {
+                fetchCustomers();
+                setIsModalOpen(false);
+            }
+        } catch (error) {
+            console.error('Error updating branch:', error);
+        }
+    };
+
+    const openModal = (customer: Customer) => {
+        setSelectedCustomer(customer);
+        setSelectedBranch(customer.branch);
+        setIsModalOpen(true);
+    };
+
+    if (error) {
+        return (
+            <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Customer Orders</h2>}>
+                <Head title="Customer Orders" />
+                <SharedStyles />
+                <div className="user-page">
+                    <div className="empty-state">
+                        <div className="text-danger mb-2">{error}</div>
+                        <button className="btn btn-primary" onClick={fetchCustomers}>Retry</button>
+                    </div>
+                </div>
+            </AuthenticatedLayout>
+        );
     }
-  };
 
-  const openModal = (customer: Customer) => {
-    setSelectedCustomer(customer);
-    setSelectedBranch(customer.branch);
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedCustomer(null);
-  };
-
-
-  
-  if (error)
     return (
-      <div className="flex flex-col items-center p-6">
-        <p className="text-red-500 font-bold">{error}</p>
-        <button
-          onClick={fetchCustomers}
-          className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-        >
-          Retry
-        </button>
-      </div>
+        <AuthenticatedLayout header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Customer Orders</h2>}>
+            <Head title="Customer Orders" />
+            <SharedStyles />
+
+            <div className="user-page">
+                <div className="page-header">
+                    <h1 className="page-title">
+                        <ShoppingCart size={20} />
+                        Customer Orders
+                    </h1>
+                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>{customers.length} orders</span>
+                </div>
+
+                {loading ? (
+                    <div className="loading"><div className="spinner"></div>Loading...</div>
+                ) : customers.length > 0 ? (
+                    <div className="table-container">
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Customer</th>
+                                    <th>Phone</th>
+                                    <th>Address</th>
+                                    <th>Items</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {customers.map((customer) => (
+                                    <tr key={customer.id} style={{ borderLeft: doneCustomers.includes(customer.id) ? '3px solid #059669' : 'none' }}>
+                                        <td style={{ fontWeight: 500 }}>{customer.name}</td>
+                                        <td>{customer.phone}</td>
+                                        <td className="text-muted">{customer.address}</td>
+                                        <td><span className="badge badge-primary">{customer.orders.length}</span></td>
+                                        <td className="currency">{formatCurrency(customer.orders.reduce((sum, o) => sum + (o.total || 0), 0))}</td>
+                                        <td>
+                                            <button className="btn btn-sm btn-primary" onClick={() => openModal(customer)}>
+                                                <Eye size={14} /> View
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="empty-state">
+                        <ShoppingCart size={32} />
+                        <div className="empty-state-text">No customer orders</div>
+                    </div>
+                )}
+            </div>
+
+            {isModalOpen && selectedCustomer && (
+                <div className="modal-backdrop" onClick={() => setIsModalOpen(false)}>
+                    <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">Orders for {selectedCustomer.name}</h3>
+                            <button className="modal-close" onClick={() => setIsModalOpen(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="info-grid mb-3">
+                                <div className="info-item"><div className="info-label">Phone</div><div className="info-value">{selectedCustomer.phone}</div></div>
+                                <div className="info-item"><div className="info-label">Address</div><div className="info-value">{selectedCustomer.address}</div></div>
+                            </div>
+
+                            {selectedCustomer.orders.length > 0 ? (
+                                <table className="data-table">
+                                    <thead>
+                                        <tr><th>Product</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedCustomer.orders.map((order) => (
+                                            <tr key={order.id}>
+                                                <td>{order.product_name}</td>
+                                                <td className="font-bold">{order.quantity}</td>
+                                                <td>{formatCurrency(order.price || 0)}</td>
+                                                <td className="currency">{formatCurrency(order.total || 0)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style={{ background: '#F3F4F6' }}>
+                                            <td colSpan={3} className="text-right font-bold">Grand Total:</td>
+                                            <td className="currency font-bold">{formatCurrency(selectedCustomer.orders.reduce((sum, o) => sum + (o.total || 0), 0))}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            ) : (
+                                <div className="empty-state"><ShoppingCart size={24} /><div className="empty-state-text">No orders</div></div>
+                            )}
+
+                            <div className="mt-3">
+                                <label className="form-label">Forward to Branch</label>
+                                <div className="flex gap-2">
+                                    <select className="form-control form-select" value={selectedBranch || ''} onChange={(e) => setSelectedBranch(e.target.value)} style={{ flex: 1 }}>
+                                        <option value="" disabled>Select branch</option>
+                                        {branches.map((branch) => <option key={branch.id} value={branch.name}>{branch.name}</option>)}
+                                    </select>
+                                    <button className="btn btn-primary" onClick={() => selectedBranch && updateBranch(selectedCustomer.id, selectedBranch)}>
+                                        <Forward size={14} /> Forward
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-success" onClick={() => markAsDone(selectedCustomer.id)}>
+                                <Check size={14} /> Mark as Done
+                            </button>
+                            <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </AuthenticatedLayout>
     );
-
-  return (
-    <AuthenticatedLayout
-      header={
-        <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-          Customer Orders
-        </h2>
-      }
-    >
-      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <Box>
-          {customers.length > 0 ? (
-            customers.map((customer) => (
-              <Card
-                key={customer.id}
-                sx={{
-                  backgroundColor: 'white',
-                  boxShadow: 3,
-                  borderRadius: 2,
-                  mb: 2,
-                  border: doneCustomers.includes(customer.id) ? '2px solid green' : '1px solid #e0e0e0',
-                  '&:hover': { boxShadow: 6 },
-                  transition: 'box-shadow 0.3s',
-                }}
-              >
-                <CardContent>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    {customer.name}
-                  </Typography>
-                  <Typography variant="body1" color="textSecondary" mb={1}>
-                    <strong>Phone:</strong> {customer.phone}
-                  </Typography>
-                  <Typography variant="body1" color="textSecondary">
-                    <strong>Address:</strong> {customer.address}
-                  </Typography>
-
-                  <Button
-                    onClick={() => openModal(customer)}
-                    variant="contained"
-                    color="primary"
-                    fullWidth
-                    sx={{ mt: 2 }}
-                  >
-                    View Orders
-                  </Button>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Typography variant="body1" color="textSecondary">
-              No customers found.
-            </Typography>
-          )}
-        </Box>
-
-
-        {isModalOpen && selectedCustomer && (
-  <Dialog open={isModalOpen} onClose={closeModal} maxWidth="lg" fullWidth>
-    <DialogTitle>
-      Orders for {selectedCustomer.name}
-      <Button
-        onClick={closeModal}
-        sx={{
-          position: 'absolute',
-          top: 8,
-          right: 8,
-          color: 'red',
-        }}
-      >
-        &times;
-      </Button>
-    </DialogTitle>
-    <DialogContent>
-      {selectedCustomer.orders.length > 0 ? (
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Product Name</TableCell>
-                <TableCell>Quantity</TableCell>
-                <TableCell>Price</TableCell>
-                <TableCell>Total</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {selectedCustomer.orders.map((order) => (
-                <TableRow key={order.id}>
-                <TableCell>{order.product_name}</TableCell>
-                <TableCell>{order.quantity}</TableCell>
-                <TableCell>
-                    {/* Format Price */}
-                    {formatCurrency(order.price || 0)}
-                </TableCell>
-                <TableCell>
-                    {/* Format Total */}
-                    {formatCurrency(order.total || 0)}
-                </TableCell>
-            </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      ) : (
-        <Typography variant="body1" color="textSecondary">
-          No orders found for this customer.
-        </Typography>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px' }}>
-          <Typography variant="h6" fontWeight="bold">
-              Total:
-          </Typography>
-          <Typography variant="h6" fontWeight="bold">
-              {/* Format Total */}
-              {formatCurrency(
-                  selectedCustomer.orders.reduce((sum, order) => sum + (Number(order.total) || 0), 0)
-              )}
-          </Typography>
-      </div>
-      <FormControl variant="outlined" sx={{ marginTop: 2 }}>
-        <InputLabel>Forward to</InputLabel>
-        <Select
-          value={selectedBranch || ''}
-          onChange={(e) => setSelectedBranch(e.target.value)}
-          label="Forward to"
-        >
-          <MenuItem value="" disabled>
-            Forward to
-          </MenuItem>
-          {branches.map((branch) => (
-            <MenuItem key={branch.id} value={branch.name}>
-              {branch.name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <Button
-        onClick={() => {
-          if (selectedBranch) {
-            updateBranch(selectedCustomer.id, selectedBranch);
-            setIsModalOpen(false);
-          } else {
-            alert('Please select a valid branch before updating.');
-          }
-        }}
-        
-        variant="contained"
-        color="primary"
-        sx={{ marginTop: 3 }}
-      >
-        Update Branch
-      </Button>
-    </DialogContent>
-
-    <DialogActions>
-      <Button
-        onClick={() => markAsDone(selectedCustomer.id)}
-        variant="contained"
-        color="success"
-      >
-        Done
-      </Button>
-      <Button onClick={closeModal} variant="contained">
-        Close
-      </Button>
-    </DialogActions>
-  </Dialog>
-)}
-      </div>
-    </AuthenticatedLayout>
-  );
 };
 
 export default CustomerOrders;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 import apiService from '../Services/ApiService';
+import { X, Package, Plus, Trash2, Send, Search } from 'lucide-react';
 
 interface Item {
   name: string;
@@ -17,22 +18,21 @@ interface Auth {
 }
 
 interface RequestStocksProps {
-    isOpen: boolean;
-    onClose: () => void;
-    auth: Auth;
+  isOpen: boolean;
+  onClose: () => void;
+  auth: Auth;
 }
 
 const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth }) => {
-  if (!isOpen) return null; // Hide modal when `isOpen` is false
+  if (!isOpen) return null;
 
-  const [requestItems, setRequestItems] = useState<Item[]>([{product_code: '', name: '', quantity: 0 }]);
+  const [requestItems, setRequestItems] = useState<Item[]>([{ product_code: '', name: '', quantity: 0 }]);
   const [searchTerms, setSearchTerms] = useState<string[]>(['']);
   const [productSuggestions, setProductSuggestions] = useState<Item[][]>([[]]);
   const [date, setDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Set today's date when the component mounts
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     setDate(today);
@@ -43,10 +43,7 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
       if (term.length > 0) {
         apiService
           .get('/search-products', {
-            params: {
-              q: term, // Search query
-              user_name: auth.user.name, // Pass the username to the backend
-            },
+            params: { q: term, user_name: auth.user.name },
           })
           .then((response) => {
             const updatedSuggestions = [...productSuggestions];
@@ -76,11 +73,9 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
       i === index ? { ...item, id: product.id, product_code: product.product_code, name: product.name, price: product.price } : item
     );
     setRequestItems(updatedItems);
-
     const updatedSearchTerms = [...searchTerms];
     updatedSearchTerms[index] = '';
     setSearchTerms(updatedSearchTerms);
-
     const updatedSuggestions = [...productSuggestions];
     updatedSuggestions[index] = [];
     setProductSuggestions(updatedSuggestions);
@@ -93,27 +88,26 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
   };
 
   const addRequestItem = () => {
-    setRequestItems([...requestItems, {product_code: '', name: '', quantity: 0 }]);
+    setRequestItems([...requestItems, { product_code: '', name: '', quantity: 0 }]);
     setSearchTerms([...searchTerms, '']);
     setProductSuggestions([...productSuggestions, []]);
   };
 
   const removeRequestItem = (index: number) => {
+    if (requestItems.length === 1) return;
     setRequestItems((prev) => prev.filter((_, i) => i !== index));
     setSearchTerms((prev) => prev.filter((_, i) => i !== index));
     setProductSuggestions((prev) => prev.filter((_, i) => i !== index));
   };
 
   const submitStockRequest = async () => {
-    // Prevent double-clicking by setting isSubmitting to true
     setIsSubmitting(true);
-    
     const payload = { branch_id: auth.user.name, date, items: requestItems };
     try {
       const response = await apiService.post('/add-stock-request', payload);
       if (response.data.success) {
         alert('Stock request submitted successfully!');
-        onClose(); // Close modal
+        onClose();
         resetForm();
       } else {
         setError('Failed to submit stock request.');
@@ -122,7 +116,6 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
       console.error('Error submitting stock request:', error);
       setError('An error occurred while submitting the stock request.');
     } finally {
-      // Reset isSubmitting to false after the request is complete
       setIsSubmitting(false);
     }
   };
@@ -138,101 +131,306 @@ const StockRequestModal: React.FC<RequestStocksProps> = ({ isOpen, onClose, auth
   return (
     <>
       <Head title="Stock Request" />
-      {isOpen && (
-        <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-75 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl h-auto flex flex-col">
-            <h2 className="text-lg font-bold mb-4">Request Stock</h2>
+      <div className="modal-backdrop">
+        <div className="modal modal-lg">
+          {/* Header */}
+          <div className="modal-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Package size={16} />
+              <h3 className="modal-title">Request Stock</h3>
+            </div>
+            <button className="modal-close" onClick={() => { onClose(); resetForm(); }}>
+              <X size={16} />
+            </button>
+          </div>
 
+          {/* Body */}
+          <div className="modal-body">
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <strong className="font-bold">Error:</strong>
-                <span className="block sm:inline"> {error}</span>
+              <div className="alert alert-danger">
+                <strong>Error:</strong> {error}
               </div>
             )}
 
-            <div className="max-h-60 overflow-y-auto flex-grow mt-5 mb-1">
+            {/* Items List */}
+            <div className="items-container">
               {requestItems.map((item, index) => (
-                <div key={index} className="grid grid-cols-4 gap-4 mb-4">
-                  <div className="col-span-1">
-                    <label className="block text-sm font-medium mb-1">Product Code</label>
+                <div key={index} className="item-row">
+                  <div className="form-group" style={{ flex: '0 0 120px' }}>
+                    <label className="form-label">Product Code</label>
                     <input
                       type="text"
                       value={item.product_code}
-                      onChange={(e) => handleItemChange(index, 'product_code', e.target.value)}
-                      className="border rounded w-full p-2"
+                      className="form-control"
                       readOnly
-                      required
+                      placeholder="—"
                     />
                   </div>
-                  <div className="col-span-1">
-                    <label className="block text-sm font-medium mb-1">Item Name</label>
-                    <input
-                      type="text"
-                      value={item.name}
-                      onChange={(e) => handleSearchTermChange(index, e.target.value)}
-                      className="border border-gray-300 p-2 w-full rounded"
-                      placeholder="Search Item"
-                    />
+                  <div className="form-group" style={{ flex: 1, position: 'relative' }}>
+                    <label className="form-label">Item Name</label>
+                    <div style={{ position: 'relative' }}>
+                      <Search size={14} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => handleSearchTermChange(index, e.target.value)}
+                        className="form-control"
+                        placeholder="Search item..."
+                        style={{ paddingLeft: '28px' }}
+                      />
+                    </div>
                     {productSuggestions[index] && productSuggestions[index].length > 0 && (
-                      <ul className="border mt-2 max-h-32 overflow-y-auto bg-white rounded">
+                      <ul className="suggestions-list">
                         {productSuggestions[index].map((product) => (
                           <li
                             key={product.id}
-                            className="cursor-pointer p-2 hover:bg-gray-200"
                             onClick={() => handleSuggestionClick(index, product)}
                           >
-                            {product.name}
+                            <span className="code">{product.product_code}</span>
+                            <span>{product.name}</span>
                           </li>
                         ))}
                       </ul>
                     )}
                   </div>
-                  <div className="col-span-1">
-                    <label className="block text-sm font-medium mb-1">Quantity</label>
+                  <div className="form-group" style={{ flex: '0 0 100px' }}>
+                    <label className="form-label">Quantity</label>
                     <input
                       type="number"
                       value={item.quantity}
                       onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                      className="border border-gray-300 p-2 w-full rounded"
-                      placeholder="Quantity"
+                      className="form-control"
+                      min="1"
                     />
                   </div>
                   <button
                     type="button"
                     onClick={() => removeRequestItem(index)}
-                    className="text-red-500 hover:text-red-700 mt-6 col-span-1"
-                    aria-label="Remove Item"
+                    className="btn btn-icon btn-danger"
+                    style={{ marginTop: '1.25rem' }}
+                    disabled={requestItems.length === 1}
                   >
-                    &times;
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ))}
-              <button
-                onClick={addRequestItem}
-                className="mb-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700"
-              >
-                Add Item
-              </button>
             </div>
 
-            <div className="flex justify-end space-x-4">
-            <button
-              onClick={submitStockRequest}
-              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-700"
-              disabled={isSubmitting} // Disable the button if submitting
-            >
-              Submit
+            <button onClick={addRequestItem} className="btn btn-secondary" style={{ marginTop: '0.5rem' }}>
+              <Plus size={14} /> Add Item
             </button>
-              <button
-                onClick={() => { onClose(); resetForm(); }}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="modal-footer">
+            <span style={{ fontSize: '0.75rem', color: '#6B7280', marginRight: 'auto' }}>
+              {requestItems.length} item{requestItems.length !== 1 ? 's' : ''}
+            </span>
+            <button onClick={() => { onClose(); resetForm(); }} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button onClick={submitStockRequest} className="btn btn-success" disabled={isSubmitting}>
+              <Send size={14} />
+              {isSubmitting ? 'Submitting...' : 'Submit Request'}
+            </button>
           </div>
         </div>
-      )}
+      </div>
+
+      <style>{`
+        .modal-backdrop {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+        .modal {
+          background: #FFFFFF;
+          border-radius: 4px;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+          max-height: 85vh;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+          font-size: 13px;
+        }
+        .modal-lg { width: 700px; max-width: 95vw; }
+        .modal-header {
+          background: linear-gradient(135deg, #0F766E 0%, #0D9488 100%);
+          color: white;
+          padding: 0.625rem 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .modal-title { font-size: 0.875rem; font-weight: 600; margin: 0; }
+        .modal-close {
+          background: transparent;
+          border: none;
+          color: white;
+          cursor: pointer;
+          padding: 0.25rem;
+          display: flex;
+          opacity: 0.8;
+          transition: opacity 0.15s;
+        }
+        .modal-close:hover { opacity: 1; }
+        .modal-body {
+          padding: 1rem;
+          overflow-y: auto;
+          max-height: calc(85vh - 110px);
+        }
+        .modal-footer {
+          padding: 0.75rem 1rem;
+          background: #F9FAFB;
+          border-top: 1px solid #D1D5DB;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+        .alert {
+          padding: 0.5rem 0.75rem;
+          border-radius: 3px;
+          font-size: 0.8125rem;
+          margin-bottom: 0.75rem;
+        }
+        .alert-danger {
+          background: #FEE2E2;
+          border: 1px solid #FECACA;
+          color: #991B1B;
+        }
+        .items-container {
+          max-height: 300px;
+          overflow-y: auto;
+          padding-right: 0.5rem;
+        }
+        .item-row {
+          display: flex;
+          gap: 0.75rem;
+          align-items: flex-start;
+          padding: 0.75rem;
+          background: #F9FAFB;
+          border: 1px solid #E5E7EB;
+          border-radius: 4px;
+          margin-bottom: 0.5rem;
+        }
+        .form-group { margin-bottom: 0; }
+        .form-label {
+          display: block;
+          font-size: 0.6875rem;
+          font-weight: 600;
+          color: #6B7280;
+          margin-bottom: 0.25rem;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+        .form-control {
+          width: 100%;
+          padding: 0.375rem 0.5rem;
+          font-size: 0.8125rem;
+          border: 1px solid #D1D5DB;
+          border-radius: 3px;
+          background: #FFFFFF;
+          color: #374151;
+          font-family: inherit;
+        }
+        .form-control:focus {
+          outline: none;
+          border-color: #0F766E;
+          box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.15);
+        }
+        .form-control:read-only {
+          background: #F3F4F6;
+          color: #6B7280;
+        }
+        .suggestions-list {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #D1D5DB;
+          border-radius: 3px;
+          max-height: 150px;
+          overflow-y: auto;
+          z-index: 10;
+          list-style: none;
+          padding: 0;
+          margin: 2px 0 0;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .suggestions-list li {
+          padding: 0.5rem 0.75rem;
+          cursor: pointer;
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+          font-size: 0.8125rem;
+        }
+        .suggestions-list li:hover { background: #F3F4F6; }
+        .code {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.6875rem;
+          background: #E5E7EB;
+          padding: 0.125rem 0.375rem;
+          border-radius: 2px;
+          color: #374151;
+        }
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.375rem;
+          padding: 0.375rem 0.75rem;
+          font-size: 0.8125rem;
+          font-weight: 500;
+          border-radius: 3px;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          border: 1px solid transparent;
+          font-family: inherit;
+        }
+        .btn-icon {
+          width: 28px;
+          height: 28px;
+          padding: 0;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .btn-secondary {
+          background: #F9FAFB;
+          color: #374151;
+          border-color: #D1D5DB;
+        }
+        .btn-secondary:hover { background: #E5E7EB; }
+        .btn-success {
+          background: #059669;
+          color: white;
+          border-color: #047857;
+        }
+        .btn-success:hover { background: #047857; }
+        .btn-success:disabled {
+          background: #9CA3AF;
+          border-color: #9CA3AF;
+          cursor: not-allowed;
+        }
+        .btn-danger {
+          background: #DC2626;
+          color: white;
+          border-color: #B91C1C;
+        }
+        .btn-danger:hover { background: #B91C1C; }
+        .btn-danger:disabled {
+          background: #F3F4F6;
+          color: #9CA3AF;
+          border-color: #D1D5DB;
+          cursor: not-allowed;
+        }
+      `}</style>
     </>
   );
 };

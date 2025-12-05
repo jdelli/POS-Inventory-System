@@ -1,43 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Pusher from 'pusher-js';
-import {
-    Box,
-    List,
-    ListItem,
-    ListItemAvatar,
-    Avatar,
-    Typography,
-    TextField,
-    Paper,
-    Divider,
-    IconButton,
-    ListItemButton,
-    Badge,
-    Tooltip,
-} from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
+import { MessageCircle, Send, Users, Circle } from 'lucide-react';
 import echo from './echo';
 import apiService from './Services/ApiService';
+import SharedStyles from './SharedStyles';
 
-
-interface User {
-    id: number;
-    name: string;
-    avatar?: string; // Optional avatar URL
-}
-
-interface ChatMessage {
-    id: number;
-    sender_id: number;
-    receiver_id: number;
-    message: string;
-    created_at: string;
-}
-
-interface SendMessagePayload {
-    receiver_id: number;
-    message: string;
-}
+interface User { id: number; name: string; avatar?: string; }
+interface ChatMessage { id: number; sender_id: number; receiver_id: number; message: string; created_at: string; }
 
 const UserListWithChat: React.FC = () => {
     const [users, setUsers] = useState<User[]>([]);
@@ -47,344 +16,143 @@ const UserListWithChat: React.FC = () => {
     const [newMessage, setNewMessage] = useState<string>('');
     const chatContainerRef = useRef<HTMLDivElement | null>(null);
     const [notifications, setNotifications] = useState<{ [userId: number]: number }>({});
-    
-
-
-   
 
     const handleUserClick = async (userId: number) => {
         setSelectedUserId(userId);
-    
         try {
             const res = await apiService.get('/notifications');
-    
             const userNotifications = res.data.filter((n: any) => n.chat.sender_id === userId);
-    
             for (const notif of userNotifications) {
                 await apiService.put(`/notifications/${notif.id}/read`, {});
             }
-    
-            setNotifications((prev) => {
-                const updated = { ...prev };
-                delete updated[userId];
-                return updated;
-            });
-        } catch (error) {
-            console.error('Error marking notifications as read:', error);
-        }
+            setNotifications((prev) => { const updated = { ...prev }; delete updated[userId]; return updated; });
+        } catch (error) { console.error('Error:', error); }
     };
 
     useEffect(() => {
         if (!currentUserId) return;
-    
         const fetchNotifications = async () => {
             try {
                 const response = await apiService.get('/notifications');
-    
-                const notificationCounts: { [userId: number]: number } = {};
-    
-                response.data.forEach((notif: any) => {
-                    const senderId = notif.chat.sender_id;
-                    notificationCounts[senderId] = (notificationCounts[senderId] || 0) + 1;
-                });
-    
-                setNotifications(notificationCounts);
-            } catch (error) {
-                console.error('Error fetching notifications:', error);
-            }
+                const counts: { [userId: number]: number } = {};
+                response.data.forEach((n: any) => { counts[n.chat.sender_id] = (counts[n.chat.sender_id] || 0) + 1; });
+                setNotifications(counts);
+            } catch (error) { console.error('Error:', error); }
         };
-    
-        // Using Echo to listen for real-time events
         const channel = echo.channel(`chat.${currentUserId}`);
-    
-        const listener = (event: any) => {
-            console.log('🔔 New message:', event.chat);
-    
-            // Update notifications on new message
-            setNotifications((prev: any) => {
-                const senderId = event.chat.sender_id;
-                const updatedNotifications = { ...prev };
-                updatedNotifications[senderId] = (updatedNotifications[senderId] || 0) + 1;
-                return updatedNotifications;
-            });
-    
-            // Optionally, you can call fetchNotifications() here to refresh notifications
-            fetchNotifications(); // This will update the notification counts in real-time
-        };
-    
-        // Listen for 'MessageSent' event
-        channel.listen('.message.sent', listener); // This should work as it matches the broadcastAs in Laravel
-    
-        // Initial notification fetch when component mounts
+        channel.listen('.message.sent', () => fetchNotifications());
         fetchNotifications();
-    
-        // Cleanup to leave the channel when the component unmounts
-        return () => {
-            echo.leave(`chat.${currentUserId}`);
-        };
+        return () => { echo.leave(`chat.${currentUserId}`); };
     }, [currentUserId]);
-    
-    
 
-
-
-    // Fetch current user
     useEffect(() => {
-        const fetchCurrentUser = async () => {
-            try {
-                const res = await apiService.get('/current-user');
-                setCurrentUserId(res.data.id);
-            } catch (error) {
-                console.error('Error fetching current user:', error);
-            }
-        };
-
-        fetchCurrentUser();
+        apiService.get('/current-user').then((res) => setCurrentUserId(res.data.id)).catch((e) => console.error('Error:', e));
     }, []);
 
-    // Fetch users
     useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const response = await apiService.get<User[]>('/users');
-                setUsers(response.data);
-            } catch (error) {
-                console.error('Error fetching users:', error);
-            }
-        };
-
-        fetchUsers();
+        apiService.get<User[]>('/users').then((response) => setUsers(response.data)).catch((e) => console.error('Error:', e));
     }, []);
 
-    // Fetch messages when a user is selected
     useEffect(() => {
         if (!selectedUserId) return;
-
-        const fetchMessages = async () => {
-            try {
-                const response = await apiService.get<ChatMessage[]>(`/chat/${selectedUserId}`);
-                setMessages(response.data);
-            } catch (error) {
-                console.error('Error fetching messages:', error);
-            }
-        };
-
-        fetchMessages();
+        apiService.get<ChatMessage[]>(`/chat/${selectedUserId}`).then((response) => setMessages(response.data)).catch((e) => console.error('Error:', e));
     }, [selectedUserId]);
 
-    // Setup Pusher for real-time messaging
     useEffect(() => {
         if (!currentUserId) return;
-
-        const pusher = new Pusher(import.meta.env.VITE_REVERB_APP_KEY, {
-            wsHost: import.meta.env.VITE_REVERB_HOST,
-            wsPort: parseInt(import.meta.env.VITE_REVERB_PORT, 10),
-            forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https',
-            cluster: 'mt1',
-            enabledTransports: ['ws', 'wss'],
-        });
-
+        const pusher = new Pusher(import.meta.env.VITE_REVERB_APP_KEY, { wsHost: import.meta.env.VITE_REVERB_HOST, wsPort: parseInt(import.meta.env.VITE_REVERB_PORT, 10), forceTLS: import.meta.env.VITE_REVERB_SCHEME === 'https', cluster: 'mt1', enabledTransports: ['ws', 'wss'] });
         const channel = pusher.subscribe(`chat.${currentUserId}`);
         channel.bind('message.sent', (data: { chat: ChatMessage }) => {
-            const msg = data.chat;
-            if (msg.sender_id === selectedUserId || msg.receiver_id === selectedUserId) {
-                setMessages((prev) => [...prev, msg]);
-            }
+            if (data.chat.sender_id === selectedUserId || data.chat.receiver_id === selectedUserId) setMessages((prev) => [...prev, data.chat]);
         });
-
-        return () => {
-            pusher.unsubscribe(`chat.${currentUserId}`);
-        };
+        return () => { pusher.unsubscribe(`chat.${currentUserId}`); };
     }, [currentUserId, selectedUserId]);
 
-    // Scroll to bottom of chat container
-    useEffect(() => {
-        if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-    }, [messages]);
+    useEffect(() => { chatContainerRef.current?.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior: 'smooth' }); }, [messages]);
 
     const sendMessage = async () => {
         if (!selectedUserId || newMessage.trim() === '') return;
-
-        const payload: SendMessagePayload = {
-            receiver_id: selectedUserId,
-            message: newMessage,
-        };
-
-        const tempMessage: ChatMessage = {
-            id: Date.now(),
-            sender_id: currentUserId!,
-            receiver_id: selectedUserId,
-            message: newMessage,
-            created_at: new Date().toISOString(),
-        };
-
-        setMessages((prev) => [...prev, tempMessage]);
-
-        try {
-            await apiService.post('/chat/send', payload);
-            setNewMessage('');
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
+        setMessages((prev) => [...prev, { id: Date.now(), sender_id: currentUserId!, receiver_id: selectedUserId, message: newMessage, created_at: new Date().toISOString() }]);
+        try { await apiService.post('/chat/send', { receiver_id: selectedUserId, message: newMessage }); setNewMessage(''); } catch (error) { console.error('Error:', error); }
     };
 
-     return (
-        <Box sx={{ display: 'flex', height: '100vh', padding: 2 }}>
-            {/* User List */}
-            <Paper sx={{ width: '30%', borderRight: '1px solid #ccc', padding: 2, overflowY: 'auto' }}>
-                <Typography variant="h6" gutterBottom>
-                    Contacts
-                </Typography>
-                <Divider />
-                <List>
-                    {users.map((user) => (
-                        <ListItem key={user.id} disablePadding>
-                            <ListItemButton
-                                selected={selectedUserId === user.id}
-                                onClick={() => handleUserClick(user.id)}
-                                sx={{
-                                    '&.Mui-selected': {
-                                        backgroundColor: '#f0f0f0',
-                                    },
-                                }}
-                            >
-                                <ListItemAvatar>
-                                    <Badge
-                                        color="secondary"
-                                        badgeContent={notifications[user.id] || 0}
-                                        invisible={notifications[user.id] === 0}
-                                    >
-                                        <Avatar alt={user.name} src={user.avatar || ''} />
-                                    </Badge>
-                                </ListItemAvatar>
-                                <Typography variant="body1">{user.name}</Typography>
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
-                </List>
-            </Paper>
+    const formatTime = (dateString: string) => new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
-            {/* Chat Interface */}
-            <Box sx={{ flex: 1, p: 2, bgcolor: '#f5f7fa', borderRadius: 2, maxHeight: '100%', overflow: 'auto' }}>
-                {selectedUserId ? (
-                    <>
-                        <Typography variant="h5" gutterBottom>
-                            Chat with {users.find((u) => u.id === selectedUserId)?.name}
-                        </Typography>
-                        <Divider sx={{ mb: 2 }} />
+    return (
+        <>
+            <SharedStyles />
+            <style>{`
+                .chat-container { display: flex; height: 100vh; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; }
+                .chat-sidebar { width: 200px; background: #FAFBFC; border-right: 1px solid #E2E5E9; display: flex; flex-direction: column; }
+                .chat-sidebar-header { padding: 10px 12px; background: #F1F5F9; border-bottom: 1px solid #E2E5E9; font-weight: 600; font-size: 0.75rem; display: flex; align-items: center; gap: 6px; color: #374151; }
+                .chat-user { padding: 8px 12px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #F3F4F6; transition: background 0.12s; }
+                .chat-user:hover { background: #F3F4F6; }
+                .chat-user.active { background: #CCFBF1; }
+                .chat-user-name { flex: 1; font-size: 0.75rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .chat-user-badge { background: #EF4444; color: white; font-size: 0.5625rem; font-weight: 700; padding: 1px 5px; border-radius: 8px; }
+                .chat-main { flex: 1; display: flex; flex-direction: column; background: #F3F4F6; }
+                .chat-main-header { padding: 10px 16px; background: #FFFFFF; border-bottom: 1px solid #E2E5E9; font-weight: 600; font-size: 0.8125rem; display: flex; align-items: center; gap: 8px; }
+                .chat-messages { flex: 1; overflow-y: auto; padding: 12px; }
+                .chat-message { display: flex; margin-bottom: 8px; }
+                .chat-message.sent { justify-content: flex-end; }
+                .chat-message-bubble { max-width: 70%; padding: 8px 12px; border-radius: 6px; font-size: 0.8125rem; }
+                .chat-message.received .chat-message-bubble { background: white; border: 1px solid #E2E5E9; }
+                .chat-message.sent .chat-message-bubble { background: #0F766E; color: white; }
+                .chat-message-time { font-size: 0.625rem; opacity: 0.7; margin-top: 4px; }
+                .chat-message.sent .chat-message-time { text-align: right; }
+                .chat-input { padding: 10px 12px; background: white; border-top: 1px solid #E2E5E9; display: flex; gap: 8px; }
+                .chat-input input { flex: 1; padding: 8px 12px; border: 1px solid #D1D5DB; border-radius: 4px; font-size: 0.8125rem; font-family: inherit; }
+                .chat-input input:focus { outline: none; border-color: #0F766E; }
+                .chat-input button { padding: 8px 16px; background: #0F766E; color: white; border: none; border-radius: 4px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500; font-size: 0.75rem; }
+                .chat-input button:hover { background: #0D9488; }
+                .chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #9CA3AF; }
+            `}</style>
 
-                        <Paper
-                            ref={chatContainerRef}
-                            elevation={0}
-                            sx={{
-                                maxHeight: '70vh',
-                                overflowY: 'auto',
-                                p: 2,
-                                mb: 2,
-                                backgroundColor: '#ffffff',
-                                borderRadius: 2,
-                                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                            }}
-                        >
-                            {messages.map((msg) => {
-                                const isCurrentUser = msg.sender_id === currentUserId;
-                                const user = users.find((u) => u.id === msg.sender_id);
-                                return (
-                                    <Box
-                                        key={msg.id}
-                                        sx={{
-                                            display: 'flex',
-                                            flexDirection: isCurrentUser ? 'row-reverse' : 'row',
-                                            alignItems: 'flex-start',
-                                            mb: 2,
-                                            gap: 1,
-                                        }}
-                                    >
-                                        <Tooltip title={user?.name || 'User'}>
-                                            <Avatar
-                                                alt={isCurrentUser ? 'You' : user?.name || 'User'}
-                                                src={user?.avatar || ''}
-                                            />
-                                        </Tooltip>
+            <div className="chat-container">
+                <div className="chat-sidebar">
+                    <div className="chat-sidebar-header"><Users size={14} /> Contacts</div>
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                        {users.map((user) => (
+                            <div key={user.id} className={`chat-user ${selectedUserId === user.id ? 'active' : ''}`} onClick={() => handleUserClick(user.id)}>
+                                <Circle size={8} fill={notifications[user.id] ? '#10B981' : '#D1D5DB'} stroke="none" />
+                                <span className="chat-user-name">{user.name}</span>
+                                {notifications[user.id] > 0 && <span className="chat-user-badge">{notifications[user.id]}</span>}
+                            </div>
+                        ))}
+                    </div>
+                </div>
 
-                                        <Box
-                                            sx={{
-                                                maxWidth: '70%',
-                                                p: 1.5,
-                                                borderRadius: 3,
-                                                bgcolor: isCurrentUser ? '#DCF8C6' : '#E5E5EA',
-                                                color: 'black',
-                                                boxShadow: 1,
-                                                transition: 'all 0.3s ease',
-                                            }}
-                                        >
-                                            <Typography
-                                                variant="subtitle2"
-                                                sx={{ fontWeight: 600, mb: 0.5 }}
-                                            >
-                                                {isCurrentUser ? 'You' : user?.name}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                                                {msg.message}
-                                            </Typography>
-                                            <Tooltip
-                                                title={new Date(msg.created_at).toLocaleString()}
-                                                placement="top"
-                                            >
-                                                <Typography
-                                                    variant="caption"
-                                                    color="text.secondary"
-                                                    sx={{ mt: 0.5, display: 'block', textAlign: isCurrentUser ? 'right' : 'left' }}
-                                                >
-                                                    {new Date(msg.created_at).toLocaleTimeString([], {
-                                                        hour: '2-digit',
-                                                        minute: '2-digit',
-                                                    })}
-                                                </Typography>
-                                            </Tooltip>
-                                        </Box>
-                                    </Box>
-                                );
-                            })}
-                        </Paper>
-
-                        <Box
-                            sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                p: 1,
-                                bgcolor: 'white',
-                                borderRadius: 2,
-                                boxShadow: 1,
-                            }}
-                        >
-                            <TextField
-                                fullWidth
-                                size="small"
-                                variant="outlined"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type a message..."
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') sendMessage();
-                                }}
-                            />
-                            <IconButton color="primary" onClick={sendMessage} sx={{ borderRadius: 2 }}>
-                                <SendIcon />
-                            </IconButton>
-                        </Box>
-                    </>
-                ) : (
-                    <Typography variant="body1" sx={{ mt: 2 }}>
-                        Select a contact to start chatting
-                    </Typography>
-                )}
-            </Box>
-
-        </Box>
+                <div className="chat-main">
+                    {selectedUserId ? (
+                        <>
+                            <div className="chat-main-header">
+                                <MessageCircle size={16} />
+                                {users.find((u) => u.id === selectedUserId)?.name}
+                            </div>
+                            <div className="chat-messages" ref={chatContainerRef}>
+                                {messages.map((msg) => (
+                                    <div key={msg.id} className={`chat-message ${msg.sender_id === currentUserId ? 'sent' : 'received'}`}>
+                                        <div className="chat-message-bubble">
+                                            <div>{msg.message}</div>
+                                            <div className="chat-message-time">{formatTime(msg.created_at)}</div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="chat-input">
+                                <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." onKeyDown={(e) => e.key === 'Enter' && sendMessage()} />
+                                <button onClick={sendMessage}><Send size={14} /> Send</button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="chat-empty">
+                            <MessageCircle size={40} />
+                            <div style={{ marginTop: 8, fontSize: '0.875rem' }}>Select a contact to start chatting</div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
     );
 };
 

@@ -490,11 +490,22 @@ const CompactLayoutStyles = () => (
 
 export default function AdminLayout({ header, children }: PropsWithChildren<{ header?: ReactNode }>) {
     const { user, token } = usePage().props.auth;
-    const [drawerOpen, setDrawerOpen] = useState(true);
+    const [drawerOpen, setDrawerOpen] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('admin-sidebar-open');
+            return saved !== null ? saved === 'true' : true;
+        }
+        return true;
+    });
     const [chatOpen, setChatOpen] = useState(false);
     const [totalUnreadMessages, setTotalUnreadMessages] = useState(0);
     const [currentUserId, setCurrentUserId] = useState<number | null>(user?.id ?? null);
     const [branchMenuOpen, setBranchMenuOpen] = useState(false);
+
+    // Persist sidebar state
+    useEffect(() => {
+        localStorage.setItem('admin-sidebar-open', String(drawerOpen));
+    }, [drawerOpen]);
 
     useEffect(() => {
         if (token) {
