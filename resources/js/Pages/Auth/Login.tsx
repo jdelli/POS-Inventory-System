@@ -1,11 +1,7 @@
-import { FormEventHandler } from 'react';
-import Checkbox from '@/Components/Checkbox';
+import { FormEventHandler, useState } from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { Mail, Lock, Eye, EyeOff, ChevronRight } from 'lucide-react';
 
 export default function Login({ status, canResetPassword }: { status?: string, canResetPassword: boolean }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -14,9 +10,10 @@ export default function Login({ status, canResetPassword }: { status?: string, c
         remember: false,
     });
 
+    const [showPassword, setShowPassword] = useState(false);
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
-
         post(route('login'), {
             onFinish: () => reset('password'),
         });
@@ -26,137 +23,181 @@ export default function Login({ status, canResetPassword }: { status?: string, c
         <GuestLayout>
             <Head title="Log in" />
 
-            {status && <div className="mb-4 font-medium text-sm text-green-600">{status}</div>}
+            <h1 className="auth-title">Welcome Back</h1>
+            <p className="auth-subtitle">Sign in to access your dashboard</p>
+
+            {status && <div className="status-success">{status}</div>}
 
             <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        isFocused={true}
-                        onChange={(e) => setData('email', e.target.value)}
-                    />
-
-                    <InputError message={errors.email} className="mt-2" />
+                <div className="form-group">
+                    <label className="form-label" htmlFor="email">Email Address</label>
+                    <div style={{ position: 'relative' }}>
+                        <Mail 
+                            size={18} 
+                            style={{ 
+                                position: 'absolute', 
+                                left: '14px', 
+                                top: '50%', 
+                                transform: 'translateY(-50%)', 
+                                color: '#94A3B8',
+                                pointerEvents: 'none'
+                            }} 
+                        />
+                        <input
+                            id="email"
+                            type="email"
+                            name="email"
+                            value={data.email}
+                            className="form-input"
+                            style={{ paddingLeft: '44px' }}
+                            autoComplete="username"
+                            autoFocus
+                            placeholder="you@example.com"
+                            onChange={(e) => setData('email', e.target.value)}
+                        />
+                    </div>
+                    {errors.email && <p className="form-error">{errors.email}</p>}
                 </div>
 
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="current-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
+                <div className="form-group">
+                    <label className="form-label" htmlFor="password">Password</label>
+                    <div style={{ position: 'relative' }}>
+                        <Lock 
+                            size={18} 
+                            style={{ 
+                                position: 'absolute', 
+                                left: '14px', 
+                                top: '50%', 
+                                transform: 'translateY(-50%)', 
+                                color: '#94A3B8',
+                                pointerEvents: 'none'
+                            }} 
+                        />
+                        <input
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            name="password"
+                            value={data.password}
+                            className="form-input"
+                            style={{ paddingLeft: '44px', paddingRight: '48px' }}
+                            autoComplete="current-password"
+                            placeholder="••••••••"
+                            onChange={(e) => setData('password', e.target.value)}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{
+                                position: 'absolute',
+                                right: '14px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#94A3B8',
+                                display: 'flex',
+                                padding: '4px',
+                                borderRadius: '4px',
+                                transition: 'color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#64748B'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#94A3B8'}
+                        >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                    </div>
+                    {errors.password && <p className="form-error">{errors.password}</p>}
                 </div>
 
-                <div className="block mt-4">
-                    <label className="flex items-center">
-                        <Checkbox
+                <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    marginBottom: '1.5rem',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem'
+                }}>
+                    <label className="form-checkbox-group">
+                        <input
+                            type="checkbox"
                             name="remember"
                             checked={data.remember}
                             onChange={(e) => setData('remember', e.target.checked)}
+                            className="form-checkbox"
                         />
-                        <span className="ms-2 text-sm text-gray-600">Remember me</span>
+                        <span className="form-checkbox-label">Remember me</span>
                     </label>
-                </div>
 
-                <div className="flex items-center justify-end mt-4">
                     {canResetPassword && (
-                        <Link
-                            href={route('password.request')}
-                            className="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                            Forgot your password?
+                        <Link href={route('password.request')} className="form-link">
+                            Forgot password?
                         </Link>
                     )}
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Log in
-                    </PrimaryButton>
                 </div>
+
+                <button type="submit" className="btn-primary" disabled={processing}>
+                    {processing ? 'Signing in...' : 'Sign In'}
+                    {!processing && <ChevronRight size={18} />}
+                </button>
+
+                <p style={{ 
+                    textAlign: 'center', 
+                    marginTop: '1.5rem', 
+                    fontSize: '0.875rem', 
+                    color: '#64748B',
+                    margin: '1.5rem 0 0'
+                }}>
+                    Don't have an account?{' '}
+                    <Link href={route('register')} className="form-link">Create one</Link>
+                </p>
             </form>
 
-
-
-                    {/* note for testing */}
-                    
-                    <div className="mt-6 text-sm text-gray-700">
-                    <p className="font-semibold mb-2">Note: Use any of the following credentials to log in:</p>
-                    
-                                    <ul className="space-y-3">
-                <li className="bg-yellow-100 border-l-4 border-yellow-500 p-4 rounded-lg shadow-md">
-                    <div className="flex justify-between items-center">
-                    <span className="font-bold text-yellow-800 text-lg">[Admin]</span>
-                    <span className="text-gray-500 text-sm">Account</span>
+            {/* Demo Credentials */}
+            <div className="credentials-box">
+                <p className="credentials-title">Demo Credentials</p>
+                
+                <div className="credential-item admin">
+                    <div className="credential-label">Admin Account</div>
+                    <div className="credential-grid">
+                        <div>
+                            <span style={{ fontSize: '0.6875rem', color: '#94A3B8', display: 'block', marginBottom: '2px' }}>Email</span>
+                            <div className="credential-value">admin@gmail.com</div>
+                        </div>
+                        <div>
+                            <span style={{ fontSize: '0.6875rem', color: '#94A3B8', display: 'block', marginBottom: '2px' }}>Password</span>
+                            <div className="credential-value">admin12345</div>
+                        </div>
                     </div>
-                    <div className="mt-2">
-                    <div className="flex items-center space-x-2">
-                        <span className="font-medium text-gray-700">Email:</span>
-                        <span className="text-gray-900">admin@gmail.com</span>
-                    </div>
-                    <div className="flex items-center space-x-2 mt-1">
-                        <span className="font-medium text-gray-700">Password:</span>
-                        <span className="text-gray-900">admin12345</span>
-                    </div>
-                    </div>
-                </li>
-                </ul>
-
-
-             <div className="mt-5">
-                <span className="font-bold text-yellow-800">[Branches]</span>
-                <table className="min-w-full table-auto mt-3 border-collapse border border-gray-300">
-                    <thead>
-                    <tr className="bg-gray-100">
-                        <th className="px-4 py-2 border border-gray-300 text-left">Email</th>
-                        <th className="px-4 py-2 border border-gray-300 text-left">Password</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr>
-                        <td className="px-4 py-2 border border-gray-300">sanmateo@gmail.com</td>
-                        <td className="px-4 py-2 border border-gray-300">sanmateo12345</td>
-                    </tr>
-                    <tr>
-                        <td className="px-4 py-2 border border-gray-300">cainta@gmail.com</td>
-                        <td className="px-4 py-2 border border-gray-300">cainta12345</td>
-                    </tr>
-                    <tr>
-                        <td className="px-4 py-2 border border-gray-300">pasig@gmail.com</td>
-                        <td className="px-4 py-2 border border-gray-300">pasig12345</td>
-                    </tr>
-                    <tr>
-                        <td className="px-4 py-2 border border-gray-300">makati@gmail.com</td>
-                        <td className="px-4 py-2 border border-gray-300">makati12345</td>
-                    </tr>
-                    <tr>
-                        <td className="px-4 py-2 border border-gray-300">quezoncity@gmail.com</td>
-                        <td className="px-4 py-2 border border-gray-300">quezoncity12345</td>
-                    </tr>
-                    <tr>
-                        <td className="px-4 py-2 border border-gray-300">sjdm@gmail.com</td>
-                        <td className="px-4 py-2 border border-gray-300">sjdm12345</td>
-                    </tr>
-                    </tbody>
-                </table>
                 </div>
 
-
-                </div>
-
+                <details>
+                    <summary>View Branch Accounts</summary>
+                    <div>
+                        {[
+                            { email: 'sanmateo@gmail.com', pass: 'sanmateo12345' },
+                            { email: 'cainta@gmail.com', pass: 'cainta12345' },
+                            { email: 'pasig@gmail.com', pass: 'pasig12345' },
+                            { email: 'makati@gmail.com', pass: 'makati12345' },
+                            { email: 'quezoncity@gmail.com', pass: 'quezoncity12345' },
+                            { email: 'sjdm@gmail.com', pass: 'sjdm12345' },
+                        ].map((cred, idx) => (
+                            <div key={idx} className="credential-item" style={{ padding: '0.625rem 0.875rem', marginBottom: '0.375rem' }}>
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center', 
+                                    flexWrap: 'wrap', 
+                                    gap: '0.25rem' 
+                                }}>
+                                    <span className="credential-value" style={{ fontSize: '0.75rem' }}>{cred.email}</span>
+                                    <span style={{ fontSize: '0.6875rem', color: '#64748B', fontFamily: 'inherit' }}>{cred.pass}</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </details>
+            </div>
         </GuestLayout>
     );
 }
