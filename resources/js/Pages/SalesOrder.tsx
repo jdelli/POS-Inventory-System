@@ -3,6 +3,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import apiService from './Services/ApiService';
 import Receipt from './Props/Receipt';
+import BarcodeScanner from '@/Components/BarcodeScanner';
 import axios from 'axios';
 import {
     Receipt as ReceiptIcon,
@@ -108,6 +109,7 @@ const POSSalesOrder: React.FC<{ auth: Auth }> = ({ auth }) => {
     const [historyLoading, setHistoryLoading] = useState<boolean>(true);
     const [isOrderDetailModalOpen, setIsOrderDetailModalOpen] = useState<boolean>(false);
     const [selectedOrder, setSelectedOrder] = useState<SalesOrder | null>(null);
+    const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
 
     const formatCurrency = (amount: number): string =>
         new Intl.NumberFormat('en-PH', {
@@ -282,6 +284,22 @@ const POSSalesOrder: React.FC<{ auth: Auth }> = ({ auth }) => {
         return 'pos-stock-ok';
     };
 
+    const handleScan = (code: string) => {
+        const product = products.find(p => p.product_code === code);
+        if (product) {
+            if (product.quantity > 0) {
+                addToCart(product);
+                setIsScannerOpen(false);
+            } else {
+                alert('Product is out of stock');
+                setIsScannerOpen(false);
+            }
+        } else {
+            alert('Product not found on current page');
+            setIsScannerOpen(false);
+        }
+    };
+
     const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const years = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
@@ -332,6 +350,9 @@ const POSSalesOrder: React.FC<{ auth: Auth }> = ({ auth }) => {
                                         <X size={14} />
                                     </button>
                                 )}
+                                <button className="pos-search-scan ml-2 p-1 text-gray-500 hover:text-gray-700" onClick={() => setIsScannerOpen(true)} title="Scan Barcode">
+                                    <Camera size={18} />
+                                </button>
                             </div>
 
                             {/* Category Tabs */}
@@ -619,6 +640,13 @@ const POSSalesOrder: React.FC<{ auth: Auth }> = ({ auth }) => {
 
             {isOrderDetailModalOpen && selectedOrder && (
                 <Receipt isOpen={isOrderDetailModalOpen} onClose={closeOrderDetailModal} selectedOrder={selectedOrder} />
+            )}
+
+            {isScannerOpen && (
+                <BarcodeScanner
+                    onDetected={handleScan}
+                    onClose={() => setIsScannerOpen(false)}
+                />
             )}
         </AuthenticatedLayout>
     );
